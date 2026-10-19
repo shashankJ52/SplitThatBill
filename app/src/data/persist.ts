@@ -9,10 +9,11 @@ export interface Repository {
   save(s: AppState): Promise<void>
 }
 
-export const localRepository: Repository = {
+/** A repository that keeps one copy of the state in this browser under the given key. */
+export const localKeyRepository = (key: string): Repository => ({
   async load() {
     try {
-      const s = (await get(KEY)) as AppState | undefined
+      const s = (await get(key)) as AppState | undefined
       return s && s.v === 1 ? s : null
     } catch {
       return null
@@ -20,9 +21,11 @@ export const localRepository: Repository = {
   },
   async save(s) {
     try {
-      await set(KEY, s)
+      await set(key, s)
     } catch {
       /* storage can be blocked or full; the app keeps working in memory */
     }
   },
-}
+})
+
+export const localRepository = localKeyRepository(KEY)

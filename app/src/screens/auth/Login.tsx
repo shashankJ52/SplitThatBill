@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
 import * as A from '../../data/actions'
+import { useAccount } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import { DEMO_PASSWORD, FRESH_LOCK, loginAttempt, type Lockout } from '../../domain/auth'
 import { EMAIL_RE } from '../../domain/util'
@@ -13,6 +14,8 @@ export function Login() {
   const nav = useNavigate()
   const s = useAppState()
   const store = useStore()
+  const account = useAccount()
+  const [busy, setBusy] = useState(false)
   const toast = useToast()
   const [lock, setLock] = useUiState<Lockout>('auth.lock', FRESH_LOCK)
   const [, setForgot] = useUiState('auth.fe', '')
@@ -20,11 +23,24 @@ export function Login() {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
 
-  const submit = () => {
+  const submit = async () => {
     const now = Date.now()
     if (now >= lock.lockUntil) {
       if (!EMAIL_RE.test(email.trim())) return setErr('Enter a valid email')
       if (!pw) return setErr('Enter your password')
+    }
+    if (account) {
+      // while locked, nothing is sent to the server
+      if (now < lock.lockUntil) return setErr(loginAttempt(lock, now, false).msg ?? '')
+      setBusy(true)
+      const res = await account.signIn(email.trim(), pw)
+      setBusy(false)
+      const a = loginAttempt(lock, now, !res.err)
+      setLock(a.lock)
+      if (res.err) return setErr(res.err.startsWith('Could not') ? res.err : (a.msg ?? res.err))
+      nav('/groups', { replace: true, state: { anim: 'fade' } })
+      toast('Welcome back')
+      return
     }
     const correct = email.trim().toLowerCase() === s.profile.email.toLowerCase() && pw === s.password
     const r = loginAttempt(lock, now, correct)
@@ -46,9 +62,9 @@ export function Login() {
           <button className="linkbtn" onClick={() => { setForgot(email.trim()); nav('/forgot') }}>Forgot password?</button>
         </div>
         <ErrBar msg={err} />
-        <button className="primary" onClick={submit}>Log in</button>
+        <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
         <Social />
-        {s.password === DEMO_PASSWORD && <div className="bar info" style={{ marginTop: 16 }}>Demo account: {s.profile.email} · {DEMO_PASSWORD}</div>}
+        {!account && s.password === DEMO_PASSWORD && <div className="bar info" style={{ marginTop: 16 }}>Demo account: {s.profile.email} · {DEMO_PASSWORD}</div>}
         <div style={{ textAlign: 'center', marginTop: 6 }} className="mute">
           New here? <button className="linkbtn" onClick={() => nav('/signup', { replace: true })}>Create account</button>
         </div>

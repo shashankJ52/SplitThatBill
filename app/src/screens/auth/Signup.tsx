@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
+import { useAccount } from '../../data/account'
 import { useAppState } from '../../data/store'
 import { normTag, signupProblem, tagStatus } from '../../domain/auth'
 import { ME } from '../../domain/types'
+import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { ErrBar, Meter, PwField, Social } from './parts'
 
@@ -17,6 +19,8 @@ export interface PendingSignup {
 export function Signup() {
   const nav = useNavigate()
   const s = useAppState()
+  const account = useAccount()
+  const toast = useToast()
   const [pending, setPending] = useUiState<PendingSignup | null>('auth.su', null)
   const [name, setName] = useState(pending?.name ?? '')
   const [email, setEmail] = useState(pending?.email ?? '')
@@ -24,12 +28,34 @@ export function Signup() {
   const [pw, setPw] = useState(pending?.pw ?? '')
   const [terms, setTerms] = useState(false)
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  // the database has the final say on whether a tag is free
+  const [remote, setRemote] = useState<{ tag: string; free: boolean | null } | null>(null)
   const taken = Object.values(s.people).filter((p) => p.id !== ME && p.tag).map((p) => p.tag as string)
-  const st = tagStatus(tag, taken)
+  const local = tagStatus(tag, account ? [] : taken)
+  const free = remote && remote.tag === normTag(tag) ? remote.free : undefined
+  const st = local === 'ok' && free === false ? 'taken' : local
 
-  const submit = () => {
-    const problem = signupProblem({ name, email, tag, pw, terms }, taken, s.profile.email)
+  useEffect(() => {
+    if (!account || local !== 'ok') return
+    const t = normTag(tag)
+    const h = setTimeout(() => void account.tagAvailable(t).then((f) => setRemote({ tag: t, free: f })), 400)
+    return () => clearTimeout(h)
+  }, [account, local, tag])
+
+  const submit = async () => {
+    const problem = signupProblem({ name, email, tag, pw, terms }, account ? [] : taken, account ? undefined : s.profile.email)
     if (problem) return setErr(problem)
+    if (account) {
+      setBusy(true)
+      const r = await account.signUp({ name: name.trim(), email: email.trim(), tag: normTag(tag), password: pw })
+      setBusy(false)
+      if (r.err) return setErr(r.err)
+      if (r.needsConfirm) return toast('Check your email to confirm your address, then log in.')
+      nav('/groups', { replace: true, state: { anim: 'fade' } })
+      toast(`Welcome, ${name.trim().split(' ')[0]}! Your account is ready.`)
+      return
+    }
     setPending({ name: name.trim(), email: email.trim(), tag: normTag(tag), pw })
     nav('/verify')
   }
@@ -61,7 +87,7 @@ export function Signup() {
           <span className="mute" style={{ fontSize: 14 }}>I agree to the Terms and Privacy Policy</span>
         </label>
         <ErrBar msg={err} />
-        <button className="primary" onClick={submit}>Create account</button>
+        <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
         <Social />
         <div style={{ textAlign: 'center', marginTop: 14 }} className="mute">
           Already have an account? <button className="linkbtn" onClick={() => nav('/login', { replace: true })}>Log in</button>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
 import * as A from '../../data/actions'
+import { useAccount } from '../../data/account'
 import { useStore } from '../../data/store'
 import { Bullet } from '../../ui/bits'
 
@@ -14,12 +15,14 @@ const SLIDES = [
 export function Welcome() {
   const nav = useNavigate()
   const store = useStore()
+  const account = useAccount()
   const [i, setI] = useState(0)
   const x0 = useRef<number | null>(null)
   const s = SLIDES[i]
-  const skip = () => {
-    // exploring the demo means using the sample account
-    if (!store.get().signedIn) store.update(A.signIn)
+  const skip = async () => {
+    // exploring the demo means using sample data that stays on this device
+    if (account) await account.enterDemo()
+    else if (!store.get().signedIn) store.update(A.signIn)
     nav('/groups', { replace: true, state: { anim: 'fade' } })
   }
   return (

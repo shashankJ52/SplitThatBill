@@ -1,6 +1,7 @@
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
-import { useAppState, useStore } from '../data/store'
+import { useAccount, useAccountMode } from '../data/account'
+import { useAppState, useSaveStatus, useStore } from '../data/store'
 import { ME } from '../domain/types'
 import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/ProfileSheet'
 import { Bullet } from '../ui/bits'
@@ -17,10 +18,17 @@ export function AccountTab() {
   const sheet = useSheet()
   const toast = useToast()
   const nav = useNavigate()
+  const account = useAccount()
+  const live = useAccountMode() === 'cloud'
+  const saveStatus = useSaveStatus()
   const { toggle } = useTheme()
   const p = s.profile
 
-  const edit = (f: ProfileField) => sheet.open(profileTitle(f), (close) => <ProfileSheet field={f} close={close} />)
+  const edit = (f: ProfileField) => {
+    if (live && f === 'email') return toast("Changing your email isn't available yet")
+    open(f)
+  }
+  const open = (f: ProfileField) => sheet.open(profileTitle(f), (close) => <ProfileSheet field={f} close={close} />)
   const share = async () => {
     const t = `Add me on SplitThatBill: @${p.tag} ${window.location.origin}/u/${p.tag}`
     try {
@@ -37,9 +45,10 @@ export function AccountTab() {
         <p className="mute">You'll need to sign in again to see your groups.</p>
         <button
           className="primary"
-          onClick={() => {
+          onClick={async () => {
             close()
-            store.update(A.signOut)
+            if (account) await account.signOut()
+            else store.update(A.signOut)
             resetUiState()
             nav('/welcome', { replace: true, state: { anim: 'back' } })
             toast('Logged out')
@@ -102,7 +111,9 @@ export function AccountTab() {
         <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>
         <h2>Appearance</h2>
         <button className="secondary" onClick={toggle}>Switch light / dark</button>
-        <h2>Demo tools</h2>
+        {!live && <h2>Demo tools</h2>}
+        {!live && (
+          <>
         <div className="btnrow">
           <button className="secondary" onClick={() => { store.update((x) => A.reloadSample(x, Date.now())); resetUiState(); toast('Sample data reloaded') }}>Reload sample data</button>
           <button className="secondary" onClick={confirmClear}>Clear all data</button>
@@ -110,8 +121,16 @@ export function AccountTab() {
         <button className="secondary" style={{ marginBottom: 10 }} onClick={friendBill}>Demo: friend adds a bill</button>
         <button className="secondary" style={{ marginBottom: 10 }} onClick={friendRemind}>Demo: friend sends me a reminder</button>
         <button className="secondary" style={{ marginBottom: 12 }} onClick={() => nav('/welcome', { state: { anim: 'fade' } })}>Demo: show onboarding and sign up</button>
+          </>
+        )}
         <button className="secondary danger" onClick={logout}>Log out</button>
-        <p className="mute" style={{ fontSize: 12 }}>Signed in as {s.people[ME]?.tag ? `@${s.people[ME].tag}` : p.email}. Data is kept on this device until the cloud account is connected.</p>
+        <p className="mute" style={{ fontSize: 12 }}>
+          {live
+            ? `Signed in as ${p.email}. ${saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? "Couldn't save. Will retry when you're back online." : 'All changes saved to your account.'}`
+            : account
+              ? 'Demo mode: sample data kept on this device only. Log out and create an account to save your own.'
+              : `Signed in as ${s.people[ME]?.tag ? `@${s.people[ME].tag}` : p.email}. Data is kept on this device.`}
+        </p>
       </div>
     </Screen>
   )

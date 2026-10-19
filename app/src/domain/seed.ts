@@ -122,3 +122,8 @@ export function emptyState(profile: AppState['profile'], password: string): AppS
     ledgers: [], notifs: [], notes: [], noteOrder: [], hidden: [], sent: [],
   }
 }
+
+/** What the app holds while nobody is signed in: no data at all. */
+export function loggedOutState(): AppState {
+  return { ...emptyState({ name: '', email: '', tag: '' }, ''), signedIn: false }
+}

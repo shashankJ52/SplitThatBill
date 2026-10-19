@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import * as A from '../data/actions'
+import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { normTag, passwordProblem, tagStatus } from '../domain/auth'
 import { ME } from '../domain/types'
@@ -15,24 +16,38 @@ export function ProfileSheet({ field, close }: { field: ProfileField; close: () 
   const s = useAppState()
   const store = useStore()
   const toast = useToast()
+  const account = useAccount()
+  const live = useAccountMode() === 'cloud'
   const p = s.profile
   const [v, setV] = useState(field === 'tag' ? `@${p.tag}` : field === 'name' ? p.name : field === 'email' ? p.email : '')
   const [cur, setCur] = useState('')
   const [nw, setNw] = useState('')
   const [con, setCon] = useState('')
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const taken = Object.values(s.people).filter((x) => x.id !== ME && x.tag).map((x) => x.tag as string)
-  const st = field === 'tag' ? tagStatus(v, taken) : ''
+  const st = field === 'tag' ? tagStatus(v, live ? [] : taken) : ''
+
+  /** Run a call to the backend, show its error or close with a message. */
+  const remote = async (run: () => Promise<{ err?: string }>, done: string) => {
+    setBusy(true)
+    const r = await run()
+    setBusy(false)
+    if (r.err) return setErr(r.err)
+    close()
+    toast(done)
+  }
 
   const save = () => {
     if (field === 'pw') {
       if (!cur) return setErr('Enter your current password')
-      if (cur !== s.password) return setErr('Current password is wrong')
+      if (!live && cur !== s.password) return setErr('Current password is wrong')
       const bad = passwordProblem(nw)
       if (bad) return setErr(bad)
       if (nw === cur) return setErr('New password must be different')
       if (nw !== con) return setErr("Passwords don't match")
+      if (live && account) return void remote(() => account.changePassword(cur, nw), 'Password changed')
       store.update((x) => A.setPassword(x, nw))
       close()
       return toast('Password changed')
@@ -40,6 +55,7 @@ export function ProfileSheet({ field, close }: { field: ProfileField; close: () 
     const t = v.trim()
     if (field === 'name') {
       if (!t) return setErr("Name can't be empty")
+      if (live && account) return void remote(() => account.updateProfile({ name: t }), 'Saved')
       store.update((x) => A.setProfile(x, { name: t }))
     } else if (field === 'email') {
       if (!EMAIL_RE.test(t)) return setErr('Enter a valid email')
@@ -47,7 +63,8 @@ export function ProfileSheet({ field, close }: { field: ProfileField; close: () 
     } else {
       const tag = normTag(t)
       if (!TAG_RE.test(tag)) return setErr('3–20 letters, numbers or underscores')
-      if (tag !== p.tag && tagStatus(tag, taken) === 'taken') return setErr(`@${tag} is taken`)
+      if (tag !== p.tag && tagStatus(tag, live ? [] : taken) === 'taken') return setErr(`@${tag} is taken`)
+      if (live && account) return void remote(() => account.updateProfile({ tag }), 'Saved')
       store.update((x) => A.setProfile(x, { tag }))
     }
     close()
@@ -76,7 +93,7 @@ export function ProfileSheet({ field, close }: { field: ProfileField; close: () 
       )}
       {err && <div className="bar bad" role="alert" style={{ marginTop: 10 }}>{err}</div>}
       <div style={{ height: 10 }} />
-      <button className="primary" onClick={save}>Save</button>
+      <button className="primary" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
     </>
   )
 }
