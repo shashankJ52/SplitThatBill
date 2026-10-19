@@ -1,0 +1,45 @@
+/* Design tokens ported from the approved wireframe (wireframe/index.html). */
+:root {
+  --font: 'Helvetica Neue', Helvetica, 'Nimbus Sans', 'Liberation Sans', Arial, sans-serif;
+  --bg: #000;
+  --fg: #fff;
+  --card: #151515;
+  --line: #2c2c2c;
+  --mute: #9a9fa5;
+  --btn-bg: #fff;
+  --btn-fg: #000;
+  --red: #ee352e;
+  --green: #00933c;
+  --green-t: #3ccf74;
+  --red-t: #ff6b64;
+  --yellow: #fccc0a;
+  --blue: #0039a6;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme='light'] {
+  --bg: #fff;
+  --fg: #000;
+  --card: #f2f2f0;
+  --line: #d9d9d5;
+  --mute: #5d6166;
+  --btn-bg: #000;
+  --btn-fg: #fff;
+  --green-t: #00793a;
+  --red-t: #c9201a;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; }
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
