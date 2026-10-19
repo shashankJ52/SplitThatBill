@@ -1,0 +1,66 @@
+import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { FlowProvider } from '../flow/FlowProvider'
+import { BillPage } from '../screens/BillPage'
+import { GroupPage } from '../screens/GroupPage'
+import { GroupsTab } from '../screens/GroupsTab'
+import { PersonPage } from '../screens/PersonPage'
+import { PublicBill } from '../screens/PublicBill'
+import { SheetProvider } from '../ui/Sheet'
+import { ToastProvider } from '../ui/Toast'
+import { Assign } from '../screens/flow/Assign'
+import { Capture } from '../screens/flow/Capture'
+import { Details } from '../screens/flow/Details'
+import { DraftPreview } from '../screens/flow/DraftPreview'
+import { Export } from '../screens/flow/Export'
+import { Privacy } from '../screens/flow/Privacy'
+import { Review } from '../screens/flow/Review'
+import { Summary } from '../screens/flow/Summary'
+import { AccountTab } from '../screens/AccountTab'
+import { AlertsTab } from '../screens/AlertsTab'
+import { Forgot } from '../screens/auth/Forgot'
+import { Login } from '../screens/auth/Login'
+import { Reset } from '../screens/auth/Reset'
+import { Signup } from '../screens/auth/Signup'
+import { Verify } from '../screens/auth/Verify'
+import { Welcome } from '../screens/auth/Welcome'
+import { Shell } from './Shell'
+
+export const router = createBrowserRouter([
+  {
+    // Providers live inside the router so sheets and toasts can use router hooks.
+    element: (
+      <ToastProvider>
+        <SheetProvider>
+          <FlowProvider>
+            <Shell />
+          </FlowProvider>
+        </SheetProvider>
+      </ToastProvider>
+    ),
+    children: [
+      { path: '/', element: <Navigate to="/groups" replace /> },
+      { path: '/groups', element: <GroupsTab /> },
+      { path: '/groups/:gid', element: <GroupPage /> },
+      { path: '/bill/:id', element: <BillPage /> },
+      { path: '/person/:pid', element: <PersonPage /> },
+      { path: '/preview/draft', element: <DraftPreview /> },
+      { path: '/preview/:id', element: <PublicBill /> },
+      { path: '/alerts', element: <AlertsTab /> },
+      { path: '/account', element: <AccountTab /> },
+      { path: '/scan', element: <Capture /> },
+      { path: '/scan/privacy', element: <Privacy /> },
+      { path: '/scan/review', element: <Review /> },
+      { path: '/scan/assign', element: <Assign /> },
+      { path: '/scan/details', element: <Details /> },
+      { path: '/scan/summary', element: <Summary /> },
+      { path: '/scan/export', element: <Export /> },
+      { path: '/welcome', element: <Welcome /> },
+      { path: '/signup', element: <Signup /> },
+      { path: '/verify', element: <Verify /> },
+      { path: '/login', element: <Login /> },
+      { path: '/forgot', element: <Forgot /> },
+      { path: '/reset', element: <Reset /> },
+      { path: '*', element: <Navigate to="/groups" replace /> },
+    ],
+  },
+])
