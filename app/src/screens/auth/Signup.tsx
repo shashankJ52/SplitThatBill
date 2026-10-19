@@ -51,7 +51,12 @@ export function Signup() {
       const r = await account.signUp({ name: name.trim(), email: email.trim(), tag: normTag(tag), password: pw })
       setBusy(false)
       if (r.err) return setErr(r.err)
-      if (r.needsConfirm) return toast('Check your email to confirm your address, then log in.')
+      if (r.needsConfirm) {
+        // the password stays on this screen only; the code step needs just the email
+        setPending({ name: name.trim(), email: email.trim(), tag: normTag(tag), pw: '' })
+        nav('/verify')
+        return
+      }
       nav('/groups', { replace: true, state: { anim: 'fade' } })
       toast(`Welcome, ${name.trim().split(' ')[0]}! Your account is ready.`)
       return

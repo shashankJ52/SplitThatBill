@@ -25,6 +25,9 @@ export interface Account {
   tagAvailable(tag: string): Promise<boolean | null>
   updateProfile(patch: { name?: string; tag?: string }): Promise<Result>
   changePassword(current: string, next: string): Promise<Result>
+  /** Finish sign-up with the 6-digit code from the email. */
+  verifySignup(email: string, code: string): Promise<Result>
+  resendSignup(email: string): Promise<Result>
   requestReset(email: string): Promise<Result>
   setNewPassword(password: string): Promise<Result>
   /** Pull the latest from the database (another device may have changed things). */
@@ -157,6 +160,18 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
       if (/current password|incorrect|invalid/i.test(error.message)) return { err: 'Current password is wrong' }
       if (/same/i.test(error.message)) return { err: 'New password must be different' }
       return { err: error.message }
+    },
+
+    async verifySignup(email, code) {
+      const { data, error } = await client.auth.verifyOtp({ email, token: code, type: 'signup' })
+      if (error || !data.user || !data.session) return { err: "That code isn't right or has expired. Check it or request a new one." }
+      return enterCloud(data.user.id, email)
+    },
+
+    async resendSignup(email) {
+      const { error } = await client.auth.resend({ type: 'signup', email })
+      if (error && /rate limit|seconds/i.test(error.message)) return { err: 'Please wait a minute before asking for another code.' }
+      return error ? { err: 'Could not send a new code. Try again.' } : {}
     },
 
     async requestReset(email) {

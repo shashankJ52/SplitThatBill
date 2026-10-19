@@ -3,7 +3,8 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
 import * as A from '../../data/actions'
 import { useStore } from '../../data/store'
-import { checkCode, DEMO_CODE, maskEmail } from '../../domain/auth'
+import { useAccount } from '../../data/account'
+import { checkCode, DEMO_CODE, MAX_CODE_TRIES, maskEmail } from '../../domain/auth'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { ErrBar } from './parts'
@@ -15,6 +16,8 @@ export function Verify() {
   const nav = useNavigate()
   const store = useStore()
   const toast = useToast()
+  const account = useAccount()
+  const [busy, setBusy] = useState(false)
   const [pending, setPending] = useUiState<PendingSignup | null>('auth.su', null)
   const [code, setCode] = useState('')
   const [tries, setTries] = useState(0)
@@ -32,7 +35,23 @@ export function Verify() {
   if (!pending) return done ? null : <Navigate to="/signup" replace />
   const first = pending.name.split(' ')[0]
 
-  const submit = () => {
+  const submit = async () => {
+    if (account) {
+      if (!/^\d{6}$/.test(code.trim())) return setErr('Enter the 6-digit code')
+      if (tries >= MAX_CODE_TRIES) return setErr('Too many tries. Request a new code.')
+      setBusy(true)
+      const res = await account.verifySignup(pending.email, code.trim())
+      setBusy(false)
+      if (res.err) {
+        setTries(tries + 1)
+        return setErr(res.err)
+      }
+      setDone(true)
+      setPending(null)
+      nav('/groups', { replace: true, state: { anim: 'fade' } })
+      toast(`Welcome, ${first}! Your account is ready.`)
+      return
+    }
     const r = checkCode(tries, code)
     setTries(r.tries)
     if (!r.ok) return setErr(r.msg ?? '')
@@ -42,8 +61,12 @@ export function Verify() {
     nav('/groups', { replace: true, state: { anim: 'fade' } })
     toast(`Welcome, ${first}! Your account is ready.`)
   }
-  const resend = () => {
+  const resend = async () => {
     if (cool > 0) return
+    if (account) {
+      const r = await account.resendSignup(pending.email)
+      if (r.err) return setErr(r.err)
+    }
     setTries(0)
     setErr('')
     setCool(COOL)
@@ -56,12 +79,12 @@ export function Verify() {
       <div className="vbody">
         <p className="sub">We sent a 6-digit code to <b style={{ color: 'var(--fg)' }}>{maskEmail(pending.email)}</b>. It expires in 10 minutes.</p>
         <label className="f" htmlFor="vf-code" style={{ marginTop: 0 }}>Code</label>
-        <input id="vf-code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" placeholder="••••••" value={code} style={{ fontSize: 28, letterSpacing: '.35em', textAlign: 'center' }} onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+        <input id="vf-code" inputMode="numeric" maxLength={6} autoComplete="one-time-code" placeholder="••••••" value={code} style={{ fontSize: 28, letterSpacing: '.35em', textAlign: 'center' }} onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && void submit()} />
         <ErrBar msg={err} style={{ marginTop: 10 }} />
-        <div className="bar info" style={{ marginTop: 10 }}>Demo code: {DEMO_CODE}</div>
-        <button className="primary" onClick={submit}>Verify and continue</button>
+        {!account && <div className="bar info" style={{ marginTop: 10 }}>Demo code: {DEMO_CODE}</div>}
+        <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Checking…' : 'Verify and continue'}</button>
         <div style={{ height: 10 }} />
-        <button className="secondary" disabled={cool > 0} onClick={resend}>{cool > 0 ? `Resend code (${cool}s)` : 'Resend code'}</button>
+        <button className="secondary" disabled={cool > 0} onClick={() => void resend()}>{cool > 0 ? `Resend code (${cool}s)` : 'Resend code'}</button>
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <button className="linkbtn" onClick={() => nav(-1)}>Change email</button>
         </div>
