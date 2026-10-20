@@ -9,6 +9,7 @@ import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { ErrBar } from './parts'
 import type { PendingSignup } from './Signup'
+import { readPending, writePending } from './pendingSignup'
 
 const COOL = 10
 
@@ -18,7 +19,15 @@ export function Verify() {
   const toast = useToast()
   const account = useAccount()
   const [busy, setBusy] = useState(false)
-  const [pending, setPending] = useUiState<PendingSignup | null>('auth.su', null)
+  const [uiPending, setUiPending] = useUiState<PendingSignup | null>('auth.su', null)
+  // with a real account the person is remembered for the browser session, so refreshing this page keeps the code step
+  const [stored, setStored] = useState(readPending)
+  const pending: PendingSignup | null = account ? (stored ? { ...stored, pw: '' } : null) : uiPending
+  const clearPending = () => {
+    setUiPending(null)
+    setStored(null)
+    writePending(null)
+  }
   const [code, setCode] = useState('')
   const [tries, setTries] = useState(0)
   const [err, setErr] = useState('')
@@ -34,6 +43,7 @@ export function Verify() {
 
   if (!pending) return done ? null : <Navigate to="/signup" replace />
   const first = pending.name.split(' ')[0]
+  const welcome = first ? `Welcome, ${first}! Your account is ready.` : 'Welcome! Your account is ready.'
 
   const submit = async () => {
     if (account) {
@@ -47,9 +57,9 @@ export function Verify() {
         return setErr(res.err)
       }
       setDone(true)
-      setPending(null)
+      clearPending()
       nav('/groups', { replace: true, state: { anim: 'fade' } })
-      toast(`Welcome, ${first}! Your account is ready.`)
+      toast(welcome)
       return
     }
     const r = checkCode(tries, code)
@@ -57,9 +67,9 @@ export function Verify() {
     if (!r.ok) return setErr(r.msg ?? '')
     store.update(() => A.createAccount({ name: pending.name, email: pending.email, tag: pending.tag }, pending.pw))
     setDone(true)
-    setPending(null)
+    clearPending()
     nav('/groups', { replace: true, state: { anim: 'fade' } })
-    toast(`Welcome, ${first}! Your account is ready.`)
+    toast(welcome)
   }
   const resend = async () => {
     if (cool > 0) return

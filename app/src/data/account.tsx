@@ -19,7 +19,8 @@ export interface Account {
   /** true after following a password-reset link */
   recovering(): boolean
   signUp(p: { name: string; email: string; tag: string; password: string }): Promise<Result & { needsConfirm?: boolean }>
-  signIn(email: string, password: string): Promise<Result>
+  /** needsConfirm: the account exists but the emailed code was never entered. */
+  signIn(email: string, password: string): Promise<Result & { needsConfirm?: boolean }>
   signOut(): Promise<void>
   enterDemo(): Promise<void>
   /** null when the check could not be made */
@@ -181,6 +182,7 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
 
     async signIn(email, password) {
       const { data, error } = await client.auth.signInWithPassword({ email, password })
+      if (error?.code === 'email_not_confirmed' || /not confirmed/i.test(error?.message ?? '')) return { err: 'Your email is not confirmed yet.', needsConfirm: true }
       if (error || !data.user) return { err: 'Wrong email or password' }
       return enterCloud(data.user.id, email)
     },

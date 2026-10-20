@@ -7,12 +7,14 @@ import { normTag, signupProblem, tagStatus } from '../../domain/auth'
 import { ME } from '../../domain/types'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
+import { readPending, writePending } from './pendingSignup'
 import { ErrBar, Meter, PwField, Social } from './parts'
 
 export interface PendingSignup {
   name: string
   email: string
   tag: string
+  /** only kept in memory, and only for the demo (no backend) sign-up */
   pw: string
 }
 
@@ -22,9 +24,11 @@ export function Signup() {
   const account = useAccount()
   const toast = useToast()
   const [pending, setPending] = useUiState<PendingSignup | null>('auth.su', null)
-  const [name, setName] = useState(pending?.name ?? '')
-  const [email, setEmail] = useState(pending?.email ?? '')
-  const [tag, setTag] = useState(pending ? `@${pending.tag}` : '')
+  const [stored] = useState(readPending)
+  const back = pending ?? stored
+  const [name, setName] = useState(back?.name ?? '')
+  const [email, setEmail] = useState(back?.email ?? '')
+  const [tag, setTag] = useState(back?.tag ? `@${back.tag}` : '')
   const [pw, setPw] = useState(pending?.pw ?? '')
   const [terms, setTerms] = useState(false)
   const [err, setErr] = useState('')
@@ -53,7 +57,7 @@ export function Signup() {
       if (r.err) return setErr(r.err)
       if (r.needsConfirm) {
         // the password stays on this screen only; the code step needs just the email
-        setPending({ name: name.trim(), email: email.trim(), tag: normTag(tag), pw: '' })
+        writePending({ name: name.trim(), email: email.trim(), tag: normTag(tag) })
         nav('/verify')
         return
       }

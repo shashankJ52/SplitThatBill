@@ -6,6 +6,7 @@ import { useAccount } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import { DEMO_PASSWORD, FRESH_LOCK, loginAttempt, type Lockout } from '../../domain/auth'
 import { EMAIL_RE } from '../../domain/util'
+import { writePending } from './pendingSignup'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { ErrBar, PwField, Social } from './parts'
@@ -37,6 +38,15 @@ export function Login() {
       setBusy(false)
       const a = loginAttempt(lock, now, !res.err)
       setLock(a.lock)
+      if (res.needsConfirm) {
+        // the account exists but the emailed code was never entered: send a new one and go to the code page
+        setLock(FRESH_LOCK)
+        writePending({ name: '', email: email.trim(), tag: '' })
+        void account.resendSignup(email.trim())
+        toast('Your email is not confirmed yet. We sent you a new code.')
+        nav('/verify')
+        return
+      }
       if (res.err) return setErr(res.err.startsWith('Could not') ? res.err : (a.msg ?? res.err))
       nav('/groups', { replace: true, state: { anim: 'fade' } })
       toast('Welcome back')
