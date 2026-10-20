@@ -1,4 +1,4 @@
-import { DbError, type Db } from '../data/cloud/cloudRepository.ts'
+import { DbError, LOAD_SPECS, type Db, type LoadTable } from '../data/cloud/cloudRepository.ts'
 import type { Loaded, WriteTable } from '../data/cloud/rows.ts'
 import type { TestDb } from './harness.ts'
 
@@ -18,36 +18,34 @@ export function pgliteDb(t: TestDb, userId: string): Db {
   const conflictKey = (table: WriteTable) => (table === 'members' ? ['group_id', 'person_id'] : table === 'notes' ? ['user_id', 'id'] : ['id'])
   const val = (v: unknown) => (v !== null && typeof v === 'object' ? JSON.stringify(v) : v)
 
+  /** Like the real API: one statement for the whole batch, every row with the same columns, a missing value becomes NULL. */
   async function write(table: WriteTable, rows: Record<string, unknown>[], merge: boolean) {
-    for (const row of rows) {
-      const r = table === 'notes' ? { user_id: userId, ...row } : row
-      const cols = Object.keys(r)
-      const key = conflictKey(table)
-      const set = cols.filter((c) => !key.includes(c)).map((c) => `${c} = excluded.${c}`).join(', ')
-      const sql = `insert into ${table} (${cols.join(', ')}) values (${cols.map((_, i) => `$${i + 1}`).join(', ')}) on conflict (${key.join(', ')}) ${merge && set ? `do update set ${set}` : 'do nothing'}`
-      await q(sql, cols.map((c) => val(r[c])))
-    }
+    if (!rows.length) return
+    const all = rows.map((row) => (table === 'notes' ? { user_id: userId, ...row } : row))
+    const cols = [...new Set(all.flatMap((r) => Object.keys(r)))]
+    const key = conflictKey(table)
+    const set = cols.filter((c) => !key.includes(c)).map((c) => `${c} = excluded.${c}`).join(', ')
+    const params: unknown[] = []
+    const values = all.map((r) => `(${cols.map((c) => { params.push(val(r[c] ?? null)); return `$${params.length}` }).join(', ')})`).join(', ')
+    await q(`insert into ${table} (${cols.join(', ')}) values ${values} on conflict (${key.join(', ')}) ${merge && set ? `do update set ${set}` : 'do nothing'}`, params)
   }
 
   return {
     userId,
     async loadAll() {
-      const sel = (sql: string) => q(sql)
+      /** Read one table with the same columns and order the real adapter uses. */
+      const read = (table: LoadTable) => {
+        const spec: { cols: readonly string[]; order: readonly string[]; where?: Record<string, string> } = LOAD_SPECS[table]
+        const col = (c: string) =>
+          c === 'created_at' || c === 'updated_at' || c === 'joined_at' ? ISO(c) : c === 'bill_date' || c === 'pay_date' ? `${c}::text as ${c}` : c
+        const where = Object.entries(spec.where ?? {}).map(([k, v]) => `${k} = '${v}'`).join(' and ')
+        return q(`select ${spec.cols.map(col).join(', ')} from ${table}${where ? ` where ${where}` : ''} order by ${spec.order.join(', ')}`)
+      }
       const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
-        sel(`select name, email, tag from profiles where id = '${userId}'`),
-        sel(`select note_order, hidden from prefs`),
-        sel(`select id, kind, name, color, simplify, owner_id, invite_code, ${ISO('created_at')} from groups`),
-        sel(`select group_id, person_id, user_id, display_name, role, status, ${ISO('created_at')}, ${ISO('joined_at')} from members`),
-        sel(`select id, name, tag from profiles`),
-        sel(`select group_id, user_id, ${ISO('created_at')} from join_requests where status = 'pending'`),
-        sel(`select id, group_id, created_by, bill_date::text as bill_date, token, data, ${ISO('created_at')} from bills`),
-        sel(`select id, group_id, bill_id, author_id, text, sys, ${ISO('created_at')} from comments`),
-        sel(`select id, group_id, created_by, pay_date::text as pay_date, data, ${ISO('created_at')} from payments`),
-        sel(`select id, group_id, title, memo, ${ISO('created_at')}, ${ISO('updated_at')} from lists`),
-        sel(`select id, group_id, list_id, text, done, done_by, position, ${ISO('created_at')} from list_items`),
-        sel(`select id, data from notes`),
-        sel(`select id, data, ${ISO('created_at')} from notifs`),
-        sel(`select id, data from sent_reminders`),
+        q(`select name, email, tag from profiles where id = '${userId}'`),
+        q(`select note_order, hidden from prefs`),
+        read('groups'), read('members'), read('profiles'), read('join_requests'), read('bills'), read('comments'), read('payments'),
+        read('lists'), read('list_items'), read('notes'), read('notifs'), read('sent_reminders'),
       ])
       return {
         userId,

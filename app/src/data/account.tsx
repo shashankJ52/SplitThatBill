@@ -70,6 +70,7 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
   let userId = ''
   /** invites already attempted this session, so a refusal is not retried forever */
   const invitesTried = new Set<string>()
+  const reloaded = new Set<string>()
   const listeners = new Set<() => void>()
   const setMode = (m: AccountMode) => {
     mode = m
@@ -84,6 +85,7 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
     userEmail = ''
     userId = ''
     invitesTried.clear()
+    reloaded.clear()
     setMode('out')
   }
 
@@ -128,7 +130,10 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
         invitesTried.add(`${x.gid}:${x.pid}`)
         await client.rpc('invite_user', { gid: x.gid, uid: x.pid })
       }
-      if (todo.length) await api.reload()
+      // a group just saved for the first time: reload so it shows its roles and invites (once per group, so a refusal cannot loop)
+      const fresh = store.get().ledgers.filter((l) => !l.roles && !reloaded.has(l.id))
+      fresh.forEach((l) => reloaded.add(l.id))
+      if (todo.length || fresh.length) await api.reload()
     } finally {
       inviting = false
     }

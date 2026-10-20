@@ -38,15 +38,39 @@ export class DbError extends Error {
 const CHUNK = 200
 const PAGE = 1000
 
+/**
+ * What to read from each table and in which order (needed for paging). Shared by the real database adapter and the
+ * one used in tests, so the tests run the very same queries.
+ */
+export const LOAD_SPECS = {
+  groups: { cols: ['id', 'kind', 'name', 'color', 'simplify', 'owner_id', 'invite_code', 'created_at'], order: ['id'] },
+  members: { cols: ['group_id', 'person_id', 'user_id', 'display_name', 'role', 'status', 'created_at', 'joined_at'], order: ['group_id', 'person_id'] },
+  profiles: { cols: ['id', 'name', 'tag'], order: ['id'] },
+  join_requests: { cols: ['group_id', 'user_id', 'created_at'], order: ['group_id', 'user_id'], where: { status: 'pending' } },
+  bills: { cols: ['id', 'group_id', 'created_by', 'bill_date', 'token', 'data', 'created_at'], order: ['id'] },
+  comments: { cols: ['id', 'group_id', 'bill_id', 'author_id', 'text', 'sys', 'created_at'], order: ['id'] },
+  payments: { cols: ['id', 'group_id', 'created_by', 'pay_date', 'data', 'created_at'], order: ['id'] },
+  lists: { cols: ['id', 'group_id', 'title', 'memo', 'created_at', 'updated_at'], order: ['id'] },
+  list_items: { cols: ['id', 'group_id', 'list_id', 'text', 'done', 'done_by', 'position', 'created_at'], order: ['id'] },
+  notes: { cols: ['id', 'data'], order: ['id'] },
+  notifs: { cols: ['id', 'data', 'created_at'], order: ['id'] },
+  sent_reminders: { cols: ['id', 'data'], order: ['id'] },
+} as const
+export type LoadTable = keyof typeof LOAD_SPECS
+
 /** Turn a Supabase client into the Db interface for one signed-in user. */
 export function supabaseDb(c: SupabaseClient, userId: string): Db {
   const fail = (e: { message: string; code?: string } | null) => {
     if (e) throw new DbError(e.message, e.code ?? '')
   }
-  const all = async <T,>(table: string, cols: string): Promise<T[]> => {
+  const all = async <T,>(table: LoadTable): Promise<T[]> => {
+    const spec: { cols: readonly string[]; order: readonly string[]; where?: Record<string, string> } = LOAD_SPECS[table]
     const out: T[] = []
     for (let from = 0; ; from += PAGE) {
-      const { data, error } = await c.from(table).select(cols).order('id').range(from, from + PAGE - 1)
+      let q = c.from(table).select(spec.cols.join(', '))
+      for (const [k, v] of Object.entries(spec.where ?? {})) q = q.eq(k, v)
+      for (const col of spec.order) q = q.order(col)
+      const { data, error } = await q.range(from, from + PAGE - 1)
       fail(error)
       const rows = (data ?? []) as unknown as T[]
       out.push(...rows)
@@ -64,27 +88,26 @@ export function supabaseDb(c: SupabaseClient, userId: string): Db {
       const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
         c.from('profiles').select('name, email, tag').eq('id', userId).single(),
         c.from('prefs').select('note_order, hidden').eq('user_id', userId).maybeSingle(),
-        all<Loaded['groups'][number]>('groups', 'id, kind, name, color, simplify, owner_id, invite_code, created_at'),
-        all<Loaded['members'][number]>('members', 'group_id, person_id, user_id, display_name, role, status, created_at, joined_at'),
-        all<Loaded['profiles'][number]>('profiles', 'id, name, tag'),
-        c.from('join_requests').select('group_id, user_id, created_at').eq('status', 'pending'),
-        all<Loaded['bills'][number]>('bills', 'id, group_id, created_by, bill_date, token, data, created_at'),
-        all<Loaded['comments'][number]>('comments', 'id, group_id, bill_id, author_id, text, sys, created_at'),
-        all<Loaded['payments'][number]>('payments', 'id, group_id, created_by, pay_date, data, created_at'),
-        all<Loaded['lists'][number]>('lists', 'id, group_id, title, memo, created_at, updated_at'),
-        all<Loaded['listItems'][number]>('list_items', 'id, group_id, list_id, text, done, done_by, position, created_at'),
-        all<Loaded['notes']>('notes', 'id, data'),
-        all<Loaded['notifs']>('notifs', 'id, data, created_at'),
-        all<Loaded['sent']>('sent_reminders', 'id, data'),
+        all<Loaded['groups'][number]>('groups'),
+        all<Loaded['members'][number]>('members'),
+        all<Loaded['profiles'][number]>('profiles'),
+        all<Loaded['requests'][number]>('join_requests'),
+        all<Loaded['bills'][number]>('bills'),
+        all<Loaded['comments'][number]>('comments'),
+        all<Loaded['payments'][number]>('payments'),
+        all<Loaded['lists'][number]>('lists'),
+        all<Loaded['listItems'][number]>('list_items'),
+        all<Loaded['notes']>('notes'),
+        all<Loaded['notifs']>('notifs'),
+        all<Loaded['sent']>('sent_reminders'),
       ])
       fail(profile.error)
       fail(prefs.error)
-      fail(requests.error)
       return {
         userId,
         profile: profile.data as Profile,
         prefs: (prefs.data as Prefs | null) ?? null,
-        groups, members, profiles, requests: (requests.data ?? []) as Loaded['requests'], bills, comments, payments, lists, listItems,
+        groups, members, profiles, requests, bills, comments, payments, lists, listItems,
         notes: notes as unknown as Loaded['notes'], notifs: notifs as unknown as Loaded['notifs'], sent: sent as unknown as Loaded['sent'],
       }
     },

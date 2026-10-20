@@ -109,7 +109,9 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
     for (const m of active) roles[t(m.person_id)] = m.role
     const mine = roles[ME]
     const isAdmin = mine === 'owner' || mine === 'admin'
-    const memberIds = active.map((m) => t(m.person_id)).sort((a, b) => (a === ME ? -1 : b === ME ? 1 : 0))
+    // you first, then the owner, then everyone else in the order they joined
+    const rank = (m: MemberRow) => (t(m.person_id) === ME ? 0 : m.role === 'owner' ? 1 : 2)
+    const memberIds = active.slice().sort((a, b) => rank(a) - rank(b) || byCreated({ created_at: a.created_at, id: a.person_id }, { created_at: b.created_at, id: b.person_id })).map((m) => t(m.person_id))
     const invited = ms.filter((m) => m.status === 'invited').map((m) => t(m.person_id))
     const former = ms.filter((m) => m.status === 'removed' || m.status === 'left').map((m) => t(m.person_id))
     const other = g.kind === 'one' ? [...memberIds, ...invited, ...former].find((p) => p !== ME) : undefined
@@ -216,7 +218,7 @@ export function toSnapshot(s: AppState, userId: string, pos: Positions): Snapsho
     if (role === 'owner' || role === 'admin') {
       for (const p of l.members) {
         const person = s.people[p]
-        if (p !== ME && person && !person.user) add('members', `${l.id}:${p}`, { group_id: l.id, person_id: p, display_name: person.name })
+        if (p !== ME && person && !person.user) add('members', `${l.id}:${p}`, { group_id: l.id, person_id: p, user_id: null, display_name: person.name, role: 'member', status: 'active' })
       }
     }
     for (const b of l.bills) {
