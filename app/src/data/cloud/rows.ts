@@ -1,5 +1,5 @@
 import type { PersonId } from '../../money/types'
-import type { AppBill, AppLedger, AppPayment, AppState, JoinRequest, Notif, NoteList, Person, Profile, Role, SentReminder } from '../../domain/types'
+import type { Layout, AppBill, AppLedger, AppPayment, AppState, JoinRequest, Notif, NoteList, Person, Profile, Role, SentReminder } from '../../domain/types'
 import { ME } from '../../domain/types'
 
 /**
@@ -24,6 +24,8 @@ export interface DataRow { id: string; data: Record<string, unknown>; created_at
 export interface Prefs {
   note_order: string[]
   hidden: string[]
+  /** how the Groups tab is arranged */
+  layout: Layout
 }
 
 /** Everything one signed-in person can see. */
@@ -174,6 +176,7 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
     notes: notes.map((n) => omit(n.data, ['_pos']) as unknown as NoteList),
     noteOrder: l.prefs?.note_order ?? [],
     hidden: l.prefs?.hidden ?? [],
+    layout: l.prefs?.layout ?? {},
     sent: l.sent.map((n) => ({ ...(t(n.data) as unknown as SentReminder), id: n.id })),
   }
 }
@@ -239,7 +242,7 @@ export function toSnapshot(s: AppState, userId: string, pos: Positions): Snapsho
   }
   for (const n of s.notes) add('notes', n.id, { data: { ...n, _pos: pos.of(n.id) } })
   for (const n of s.notifs) add('notifs', n.id, { data: un(omit(n, ['id'])) })
-  return { profile: s.profile, rows, prefs: { note_order: s.noteOrder, hidden: s.hidden } }
+  return { profile: s.profile, rows, prefs: { note_order: s.noteOrder, hidden: s.hidden, layout: s.layout ?? {} } }
 }
 
 // ---------- finding what changed ----------

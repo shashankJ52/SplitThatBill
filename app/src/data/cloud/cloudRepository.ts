@@ -87,7 +87,7 @@ export function supabaseDb(c: SupabaseClient, userId: string): Db {
     async loadAll() {
       const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
         c.from('profiles').select('name, email, tag').eq('id', userId).single(),
-        c.from('prefs').select('note_order, hidden').eq('user_id', userId).maybeSingle(),
+        c.from('prefs').select('note_order, hidden, layout').eq('user_id', userId).maybeSingle(),
         all<Loaded['groups'][number]>('groups'),
         all<Loaded['members'][number]>('members'),
         all<Loaded['profiles'][number]>('profiles'),

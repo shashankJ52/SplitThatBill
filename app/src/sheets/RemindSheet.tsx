@@ -2,8 +2,8 @@ import { useState } from 'react'
 import * as A from '../data/actions'
 import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
-import { isShared } from '../domain/membership'
-import { ledgerById, ledgerName, pairBalance, pairInGroup, realGroups } from '../domain/selectors'
+import { balanceWith, reminderRoute } from '../domain/membership'
+import { ledgerById, ledgerName, pairBalance, pairInGroup } from '../domain/selectors'
 import { ago, fmt, uid } from '../domain/util'
 import { Avatar } from '../ui/bits'
 import { useToast } from '../ui/Toast'
@@ -31,13 +31,16 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
   const [text, setText] = useState(initial)
   const last = s.sent.filter((x) => x.to === pid && (x.gid ?? null) === (gid ?? null)).sort((x, y) => y.ts - x.ts)[0]
   const nm = person.name
+  // with a real account a reminder needs a split you are both active in (a group or a 1-1); a demo or local friend always works
+  const route = reminderRoute(s, pid, g)
+  const inApp = live ? !!route.via : person.user
 
   const send = async () => {
     if (live && account) {
       // with a real account the reminder goes through the server, in the group where you share the most
-      const via = g ?? realGroups(s).filter((x) => isShared(x) && x.members.includes(pid)).sort((x, y) => Math.abs(pairInGroup(y, pid)) - Math.abs(pairInGroup(x, pid)))[0]
-      if (!via) return toast(`You and ${nm} do not share a group that can carry a reminder yet.`)
-      const r = await account.sendReminder(via.id, pid, Math.abs(g ? a : pairInGroup(via, pid)) || Math.abs(a), text.trim())
+      const via = route.via
+      if (!via) return toast(route.waiting ? `${nm} has not accepted your invitation yet.` : `You and ${nm} are not in a shared split yet.`)
+      const r = await account.sendReminder(via.id, pid, Math.abs(g ? a : balanceWith(via, pid)) || Math.abs(a), text.trim())
       if (r.err) return toast(r.err)
       close()
       return toast(`Reminder sent to ${nm}. Only they will see it.`)
@@ -86,11 +89,11 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
           <label className="f" htmlFor="rm-text" style={{ marginTop: 0 }}>Message (optional)</label>
           <textarea id="rm-text" rows={4} maxLength={280} value={text} onChange={(e) => setText(e.target.value)} aria-describedby="rm-note" />
           <div className="mute" id="rm-note" style={{ marginTop: 6 }}>
-            {person.user ? `🔒 Only ${nm} will see this, in their alerts.${g ? ` Nobody else in ${where}.` : ''}` : `${nm} isn't on the app yet, so copy the message or send it on WhatsApp.`}
+            {inApp ? `🔒 Only ${nm} will see this, in their alerts.${g ? ` Nobody else in ${where}.` : ''}` : live && route.waiting ? `${nm} has not accepted your invitation yet. Once they do, reminders go straight to their alerts. For now, copy the message or send it on WhatsApp.` : `${nm} isn't on the app yet, so copy the message or send it on WhatsApp.`}
           </div>
           {last && <div className="bar info" style={{ marginTop: 10 }}>You reminded {nm} {ago(last.ts)}.</div>}
           <div style={{ height: 12 }} />
-          {person.user ? (
+          {inApp ? (
             <button className="primary" onClick={() => void send()}>Send reminder</button>
           ) : (
             <>

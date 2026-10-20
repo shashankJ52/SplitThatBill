@@ -1,15 +1,19 @@
 import { useRef, type PointerEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
-import { useAppState } from '../data/store'
-import { filteredGroups, filteredPeople, letterOf, overallTotals, personName, type BalanceFilter } from '../domain/selectors'
+import * as A from '../data/actions'
+import { useAppState, useStore } from '../data/store'
+import { arrangedGroups, arrangedPeople, letterOf, overallTotals, personName, type BalanceFilter } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
-import { fmt } from '../domain/util'
+import { fmt, today } from '../domain/util'
 import { GroupSheet } from '../sheets/GroupSheet'
 import { PickSheet } from '../sheets/PickSheet'
 import { Avatar, Bullet, Empty } from '../ui/bits'
+import { ReorderList } from '../ui/ReorderList'
+import { reorderSubset } from '../ui/reorder'
 import { useSheet } from '../ui/Sheet'
+import { useToast } from '../ui/Toast'
 import { useUiState } from '../ui/uiState'
 import { pairBalance } from '../domain/selectors'
 
@@ -23,14 +27,16 @@ export function GroupsTab() {
   const s = useAppState()
   const nav = useNavigate()
   const sheet = useSheet()
+  const store = useStore()
+  const toast = useToast()
   const [filter, setFilter] = useUiState<BalanceFilter>('groups.filter', 'net')
   const [exp, setExp] = useUiState<'lines' | 'people' | null>('groups.exp', null)
   const drag = useRef<{ k: 'lines' | 'people'; y: number; x: number } | null>(null)
   const swallow = useRef(false)
 
   const t = overallTotals(s)
-  const groups = filteredGroups(s, filter)
-  const people = filteredPeople(s, filter)
+  const groups = arrangedGroups(s, filter)
+  const people = arrangedPeople(s, filter)
   const allGroups = s.ledgers.filter((l) => l.kind === 'group').length
 
   const pickTile = (f: BalanceFilter) => setFilter(filter === f && f !== 'net' ? 'net' : f)
@@ -82,19 +88,25 @@ export function GroupsTab() {
           {head('lines', 'Your lines', '+ New', 'New group', () => sheet.open('New group', (close) => <GroupSheet close={close} onCreated={(id) => nav(`/groups/${id}`)} />))}
           <div className="sscroll">
             {groups.length ? (
-              groups.map((g, i) => {
-                const n = myNet(g, ME)
-                return (
-                  <Link key={g.id} className="card tap row rise" style={{ ['--i' as string]: i }} to={`/groups/${g.id}`}>
-                    <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={46} />
-                    <div className="grow">
-                      <div className="gname">{g.name}</div>
-                      <div className="mute">{g.members.length} {g.members.length === 1 ? 'person' : 'people'}</div>
-                    </div>
-                    {n < 0 ? <span className="stat r">owe {fmt(-n)}</span> : n > 0 ? <span className="stat g">owed {fmt(n)}</span> : <span className="stat mute">settled up</span>}
-                  </Link>
-                )
-              })
+              <ReorderList
+                onReorder={(keys) => store.update((st) => A.setGroupOrder(st, reorderSubset(arrangedGroups(st, 'net').map((g) => g.id), keys)))}
+                items={groups.map((g) => {
+                  const n = myNet(g, ME)
+                  return {
+                    key: g.id,
+                    node: (
+                      <Link className="card tap row ncf" to={`/groups/${g.id}`}>
+                        <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={46} />
+                        <div className="grow">
+                          <div className="gname">{g.name}</div>
+                          <div className="mute">{g.members.length} {g.members.length === 1 ? 'person' : 'people'}</div>
+                        </div>
+                        {n < 0 ? <span className="stat r">owe {fmt(-n)}</span> : n > 0 ? <span className="stat g">owed {fmt(n)}</span> : <span className="stat mute">settled up</span>}
+                      </Link>
+                    ),
+                  }
+                })}
+              />
             ) : (
               <Empty title={allGroups ? (filter === 'owe' ? 'You owe nothing in groups' : 'Nobody owes you in groups') : 'No groups yet'}>
                 {allGroups ? 'Tap Net to see all your groups.' : 'Tap + New to make one for your apartment, trip or friend crew.'}
@@ -106,22 +118,34 @@ export function GroupsTab() {
           {head('people', 'People', 'Find', 'Find or add someone', () => sheet.open('Find someone', (close) => <PickSheet mode="f" close={close} onPick={(v) => nav(`/person/${v.slice(2)}`)} />))}
           <div className="sscroll">
             {people.length ? (
-              people.map((x, i) => {
-                const parts = pairBalance(s, x.p).parts.length
-                return (
-                  <Link key={x.p} className="card tap row rise" style={{ ['--i' as string]: i }} to={`/person/${x.p}`}>
-                    <Avatar pid={x.p} size={46} />
-                    <div className="grow">
-                      <div className="gname">{personName(s, x.p)}</div>
-                      <div className="mute">1-1{parts > 1 ? ` + ${parts - 1} group${parts > 2 ? 's' : ''}` : ''}</div>
-                    </div>
-                    <span className={`stat ${x.t > 0 ? 'g' : 'r'}`}>{x.t > 0 ? `owes you ${fmt(x.t)}` : `you owe ${fmt(-x.t)}`}</span>
-                  </Link>
-                )
-              })
+              <ReorderList
+                dismissLabel="Remove"
+                onReorder={(keys) => store.update((st) => A.setPeopleOrder(st, reorderSubset(arrangedPeople(st, 'net').map((x) => x.p), keys)))}
+                onDismiss={(pid) => {
+                  store.update((st) => A.dismissPerson(st, pid, today()))
+                  toast(`${personName(s, pid)} removed from People. They come back when something new happens.`, () => store.update((st) => A.undismissPerson(st, pid)))
+                }}
+                items={people.map((x) => {
+                  const parts = pairBalance(s, x.p).parts.length
+                  return {
+                    key: x.p,
+                    swipe: x.settled,
+                    node: (
+                      <Link className="card tap row ncf" to={`/person/${x.p}`}>
+                        <Avatar pid={x.p} size={46} />
+                        <div className="grow">
+                          <div className="gname">{personName(s, x.p)}</div>
+                          <div className="mute">1-1{parts > 1 ? ` + ${parts - 1} group${parts > 2 ? 's' : ''}` : ''}</div>
+                        </div>
+                        {x.settled ? <span className="stat mute">settled up</span> : <span className={`stat ${x.t > 0 ? 'g' : 'r'}`}>{x.t > 0 ? `owes you ${fmt(x.t)}` : `you owe ${fmt(-x.t)}`}</span>}
+                      </Link>
+                    ),
+                  }
+                })}
+              />
             ) : (
               <Empty small title={filter === 'owe' ? 'You owe no one 1-1' : filter === 'owed' ? 'No one owes you 1-1' : 'No 1-1 balances'}>
-                {filter === 'net' ? 'People you split with one-on-one show up here while money is outstanding.' : 'Tap Net to see everyone.'}
+                {filter === 'net' ? "People you split with one-on-one show up here. Settled-up ones stay for a while; swipe them away when you are done." : 'Tap Net to see everyone.'}
               </Empty>
             )}
           </div>

@@ -92,12 +92,20 @@ export const transfers = (ledger: Ledger): Transfer[] => (ledger.simplify ? simp
 
 export const myNet = (ledger: Ledger, me: PersonId): Cents => nets(ledger)[me] ?? 0
 
+/**
+ * Is this person part of the ledger's money? Members count, but so does anyone named in a bill or payment, so a friend
+ * who has been invited but has not accepted yet (or has left) still has their balance counted.
+ */
+export function involves(L: Pick<Ledger, 'members' | 'bills' | 'payments'>, p: PersonId): boolean {
+  return L.members.includes(p) || L.bills.some((b) => b.people.includes(p) || b.payer === p || (b.paid != null && p in b.paid)) || L.payments.some((x) => x.from === p || x.to === p)
+}
+
 /** Combined balance with one person across every ledger (positive: they owe me). */
 export function pairNet(ledgers: Ledger[], me: PersonId, pid: PersonId) {
   let tot = 0
   const parts: { ledger: Ledger; amt: Cents }[] = []
   for (const L of ledgers) {
-    if (!L.members.includes(pid) || !L.members.includes(me)) continue
+    if (!involves(L, pid) || !involves(L, me)) continue
     let amt = 0
     for (const t of transfers(L)) {
       if (t.from === pid && t.to === me) amt += t.amt
@@ -143,7 +151,7 @@ export function planPayment(
   let rem = amt
   const steps: PaymentStep[] = []
   const shared = ledgers
-    .filter((L) => L.members.includes(pid) && L.members.includes(me))
+    .filter((L) => involves(L, pid) && involves(L, me))
     .sort((a, b) => Number(b.kind === 'one') - Number(a.kind === 'one'))
   for (const L of shared) {
     for (const t of transfers(L)) {
@@ -154,6 +162,6 @@ export function planPayment(
       }
     }
   }
-  if (rem > 0) steps.push({ ledger: ledgers.find((L) => L.kind === 'one' && L.members.includes(pid)) ?? null, amt: rem })
+  if (rem > 0) steps.push({ ledger: ledgers.find((L) => L.kind === 'one' && involves(L, pid)) ?? null, amt: rem })
   return { from, to, steps }
 }

@@ -345,6 +345,32 @@ describe('reminders', () => {
   })
 })
 
+describe('reminders in a 1-1 split', () => {
+  it('reach the other person when you have no group together', async () => {
+    const one = randomUUID()
+    await t.as(ann, async () => {
+      await t.sql(`insert into groups (id, kind, owner_id) values ($1, 'one', $2)`, [one, ann])
+      await t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, $2, 'Ann', 'owner', 'active')`, [one, ann])
+      await t.sql('select invite_user($1, $2)', [one, ben])
+    })
+    await t.as(ben, () => t.sql('select accept_invite($1)', [one]))
+    await t.as(ann, () => t.sql(`select send_reminder($1, $2, 2500, 'Hey Ben, you owe me')`, [one, ben]))
+    const got = await t.as(ben, () => t.sql(`select data from notifs`))
+    const r = got.map((x) => x.data as { kind?: string; msg?: string; sub?: string }).find((d) => d.kind === 'remind')
+    expect(r?.msg).toBe('Hey Ben, you owe me')
+    expect(r?.sub).toBe('a 1-1 split · $25.00')
+  })
+  it('cannot go to someone who has been invited but has not accepted', async () => {
+    const one = randomUUID()
+    await t.as(ann, async () => {
+      await t.sql(`insert into groups (id, kind, owner_id) values ($1, 'one', $2)`, [one, ann])
+      await t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, $2, 'Ann', 'owner', 'active')`, [one, ann])
+      await t.sql('select invite_user($1, $2)', [one, ben])
+    })
+    await fails(t.as(ann, () => t.sql(`select send_reminder($1, $2, 100, 'x')`, [one, ben])), /cannot get reminders/)
+  })
+})
+
 describe('the public bill link', () => {
   beforeEach(() => annCreatesGroup())
   it('shows the bill and first names only, to anyone, without logging in', async () => {

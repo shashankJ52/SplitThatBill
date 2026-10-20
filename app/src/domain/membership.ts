@@ -85,3 +85,26 @@ export function memberActions(l: AppLedger, target: MemberLine): { promote: bool
     transfer: owner && !target.contact,
   }
 }
+
+/**
+ * Where an in-app reminder to one person can be sent from. A reminder travels through a ledger you are both active in,
+ * a group or a 1-1 split, and the best one is where you share the most. If there is none but they have been invited
+ * and have not accepted, `waiting` is true so the screen can say so instead of failing.
+ */
+export function reminderRoute(s: AppState, pid: PersonId, only?: AppLedger): { via: AppLedger | null; waiting: boolean } {
+  const both = (l: AppLedger) => isShared(l) && !!l.roles?.[pid] && !!l.roles?.[ME]
+  const pool = only ? [only] : s.ledgers
+  const best = pool.filter(both).sort((a, b) => Math.abs(balanceWith(b, pid)) - Math.abs(balanceWith(a, pid)))[0] ?? null
+  const waiting = !best && s.ledgers.some((l) => l.invited?.includes(pid))
+  return { via: best, waiting }
+}
+
+/** What one person owes me (positive) or I owe them (negative) inside one ledger. */
+export function balanceWith(l: AppLedger, pid: PersonId): Cents {
+  let amt = 0
+  for (const t of transfers(l as never)) {
+    if (t.from === pid && t.to === ME) amt += t.amt
+    if (t.from === ME && t.to === pid) amt -= t.amt
+  }
+  return amt
+}

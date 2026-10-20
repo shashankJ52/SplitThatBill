@@ -188,6 +188,7 @@ button.secondary.pillb{width:auto;flex:none;padding:6px 14px;font-size:14px;bord
 .dotb{width:10px;height:10px;border-radius:5px;border:0;background:var(--line);cursor:pointer;padding:0;transition:width .3s var(--ease),background .3s}.dotb.on{width:28px;background:var(--fg)}
 .chiprow{flex:none;display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.chiprow::-webkit-scrollbar{display:none}.chiprow .fchip{flex:none;margin:0}
 #notes-box .ncard{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;transition:box-shadow .2s,opacity .2s}
+.nc.lifted{position:relative;z-index:6;box-shadow:0 12px 32px rgba(0,0,0,.55);opacity:.96;transition:none}
 .ncard.lifted{position:relative;z-index:6;box-shadow:0 12px 32px rgba(0,0,0,.55);opacity:.96;transition:none}
 .sign button.secondary.remindbtn,.sign button.secondary.pillb{color:#fff;border-color:#fff}
 .remindbtn{display:inline-flex;align-items:center;gap:6px;color:#fff;border-color:#fff;flex:none}

@@ -43,7 +43,7 @@ export function pgliteDb(t: TestDb, userId: string): Db {
       }
       const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
         q(`select name, email, tag from profiles where id = '${userId}'`),
-        q(`select note_order, hidden from prefs`),
+        q(`select note_order, hidden, layout from prefs`),
         read('groups'), read('members'), read('profiles'), read('join_requests'), read('bills'), read('comments'), read('payments'),
         read('lists'), read('list_items'), read('notes'), read('notifs'), read('sent_reminders'),
       ])
@@ -72,7 +72,7 @@ export function pgliteDb(t: TestDb, userId: string): Db {
       await q(`select remove_member($1, $2)`, [groupId, personId])
     },
     async savePrefs(p) {
-      await q(`insert into prefs (user_id, note_order, hidden) values ($1, $2, $3) on conflict (user_id) do update set note_order = excluded.note_order, hidden = excluded.hidden`, [userId, JSON.stringify(p.note_order), JSON.stringify(p.hidden)])
+      await q(`insert into prefs (user_id, note_order, hidden, layout) values ($1, $2, $3, $4) on conflict (user_id) do update set note_order = excluded.note_order, hidden = excluded.hidden, layout = excluded.layout`, [userId, JSON.stringify(p.note_order), JSON.stringify(p.hidden), JSON.stringify(p.layout)])
     },
     async saveProfile(p) {
       await q(`update profiles set name = $1, tag = $2 where id = $3`, [p.name, p.tag, userId])

@@ -3,7 +3,7 @@ import { makeBill } from './bills'
 import { emptyState } from './seed'
 import type { AppLedger, AppState } from './types'
 import { ME } from './types'
-import { isAdmin, isOwner, memberActions, memberLines, myRole, pendingInvites, removalCheck, writeOffPayments } from './membership'
+import { balanceWith, isAdmin, isOwner, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
 import { balanceOf } from './membership'
 import { nets } from '../money'
 
@@ -102,5 +102,35 @@ describe('what you may do to a member', () => {
   it('an unshared group offers no member actions', () => {
     const { s, l } = setup({ roles: undefined })
     expect(memberActions(l, lines(l, s)[A])).toEqual({ promote: false, demote: false, remove: false, transfer: false })
+  })
+})
+
+describe('where a reminder can be sent from', () => {
+  const one = (over: Partial<AppLedger> = {}): AppLedger => ({ id: 'o', kind: 'one', with: A, simplify: false, members: [ME, A], bills: [bill(ME, [ME, A], 2000)], payments: [], lists: [], roles: { [ME]: 'owner', [A]: 'member' }, ...over })
+  const stateOf = (...ledgers: AppLedger[]): AppState => ({ ...emptyState(profile, ''), ledgers, people: { [ME]: { id: ME, name: 'You', user: true }, [A]: { id: A, name: 'Ann', user: true, tag: 'ann' } } })
+
+  it('a 1-1 split carries a reminder, even with no group at all', () => {
+    const r = reminderRoute(stateOf(one()), A)
+    expect(r.via?.id).toBe('o')
+    expect(r.waiting).toBe(false)
+  })
+  it('picks the ledger where you share the most when there are several', () => {
+    const group = setup({ members: [ME, A], bills: [bill(ME, [ME, A], 20000)], roles: { [ME]: 'owner', [A]: 'member' } }).l
+    expect(reminderRoute(stateOf(one(), group), A).via?.id).toBe('g')
+    expect(balanceWith(group, A)).toBe(10000)
+    expect(balanceWith(one(), A)).toBe(1000)
+  })
+  it('says they are waiting when the friend was invited but has not accepted', () => {
+    const pending = one({ members: [ME], roles: { [ME]: 'owner' }, invited: [A] })
+    expect(reminderRoute(stateOf(pending), A)).toEqual({ via: null, waiting: true })
+  })
+  it('has no route for someone you do not share a split with', () => {
+    expect(reminderRoute(stateOf(), A)).toEqual({ via: null, waiting: false })
+  })
+  it('for a single group, only that group counts', () => {
+    const l = one()
+    const group = setup({ members: [ME, A], bills: [bill(ME, [ME, A], 20000)], roles: { [ME]: 'owner', [A]: 'member' } }).l
+    expect(reminderRoute(stateOf(l, group), A, l).via?.id).toBe('o') // the bigger group is ignored
+    expect(reminderRoute(stateOf(l), A, group).via?.id).toBe('g')
   })
 })

@@ -227,3 +227,14 @@ export const createAccount = (profile: Profile, password: string): S => emptySta
 export const reloadSample = (s: S, now: number): S => ({ ...seedState(now), profile: s.profile, password: s.password, signedIn: s.signedIn })
 /** Wipe groups, people, alerts and notes but keep the account. */
 export const clearAllData = (s: S): S => ({ ...emptyState(s.profile, s.password), signedIn: s.signedIn })
+
+// ---------- how the Groups tab is arranged ----------
+export const setGroupOrder = (s: S, ids: string[]): S => ({ ...s, layout: { ...s.layout, groups: ids } })
+export const setPeopleOrder = (s: S, ids: PersonId[]): S => ({ ...s, layout: { ...s.layout, people: ids } })
+/** Swipe a settled-up person away. They return when there is new activity with them. */
+export const dismissPerson = (s: S, pid: PersonId, date: string): S => ({ ...s, layout: { ...s.layout, dismissed: { ...s.layout?.dismissed, [pid]: date } } })
+export function undismissPerson(s: S, pid: PersonId): S {
+  const { [pid]: _gone, ...rest } = s.layout?.dismissed ?? {}
+  void _gone
+  return { ...s, layout: { ...s.layout, dismissed: rest } }
+}

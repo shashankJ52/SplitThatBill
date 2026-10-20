@@ -66,6 +66,50 @@ export function filteredPeople(s: AppState, f: BalanceFilter) {
     .sort((a, b) => Math.abs(b.t) - Math.abs(a.t))
 }
 
+// ---------- arranging the Groups tab ----------
+/** Put items in the order the person chose. Anything they never placed keeps its default order, after the placed ones. */
+export function orderBy<T>(items: T[], key: (x: T) => string, order?: string[]): T[] {
+  if (!order?.length) return items
+  const pos = new Map(order.map((k, i) => [k, i]))
+  const placed = items.filter((x) => pos.has(key(x))).sort((a, b) => (pos.get(key(a)) as number) - (pos.get(key(b)) as number))
+  return [...placed, ...items.filter((x) => !pos.has(key(x)))]
+}
+
+export const arrangedGroups = (s: AppState, f: BalanceFilter) => orderBy(filteredGroups(s, f), (g) => g.id, s.layout?.groups)
+
+/** How many people the list aims to show, counting settled-up ones that fill the gaps. */
+export const PEOPLE_SHOWN = 5
+
+export interface PersonRow {
+  p: PersonId
+  /** what they owe you (positive) or you owe them (negative) across everything */
+  t: Cents
+  settled: boolean
+}
+
+/**
+ * People you have split with one-on-one. Anyone with money outstanding is listed, biggest first. When that leaves room,
+ * the most recent settled-up people fill it (tagged "settled up") instead of vanishing. A settled person you swiped away
+ * stays gone until something new happens with them. Your own drag order wins over the default.
+ */
+export function arrangedPeople(s: AppState, f: BalanceFilter): PersonRow[] {
+  const owing: PersonRow[] = filteredPeople(s, f).map((x) => ({ ...x, settled: false }))
+  let settled: PersonRow[] = []
+  if (f === 'net') {
+    const dismissed = s.layout?.dismissed ?? {}
+    const room = Math.max(0, PEOPLE_SHOWN - owing.length)
+    settled = others(s)
+      .map((p) => ({ p, L: oneLedger(s, p) }))
+      .filter((x): x is { p: PersonId; L: AppLedger } => !!x.L && (x.L.bills.length > 0 || x.L.payments.length > 0))
+      .filter((x) => pairBalance(s, x.p).tot === 0)
+      .filter((x) => !(dismissed[x.p] && dismissed[x.p] >= lastActivity(x.L)))
+      .sort((a, b) => (lastActivity(b.L) < lastActivity(a.L) ? -1 : lastActivity(b.L) > lastActivity(a.L) ? 1 : 0))
+      .slice(0, room)
+      .map((x) => ({ p: x.p, t: 0, settled: true }))
+  }
+  return orderBy([...owing, ...settled], (x) => x.p, s.layout?.people)
+}
+
 // ---------- recents for the scan picker ----------
 export function lastActivity(l: AppLedger): string {
   let d = ''

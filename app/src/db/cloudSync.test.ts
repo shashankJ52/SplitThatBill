@@ -95,6 +95,18 @@ describe('one person, two devices', () => {
     expect(b.state.hidden).toEqual(['x'])
   })
 
+  it('how you arranged the Groups tab follows you to another device', async () => {
+    const a = await device(ann)
+    const g1 = (await annHasGroup(a)).gid
+    const g2 = uid()
+    await a.edit((s) => A.createGroup(s, { id: g2, name: 'Second', color: '#00933C', simplify: true, members: [ME] }))
+    await a.edit((s) => A.dismissPerson(A.setPeopleOrder(A.setGroupOrder(s, [g2, g1]), ['x', 'y']), 'x', '2026-10-21'))
+    const b = await device(ann)
+    expect(b.state.layout).toEqual({ groups: [g2, g1], people: ['x', 'y'], dismissed: { x: '2026-10-21' } })
+    await b.edit((s) => A.undismissPerson(s, 'x'))
+    expect((await a.reload()).layout?.dismissed).toEqual({})
+  })
+
   it('edits and deletions on one device reach the other', async () => {
     const a = await device(ann)
     const { gid, sam } = await annHasGroup(a)

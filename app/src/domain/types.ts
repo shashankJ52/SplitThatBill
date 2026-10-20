@@ -122,6 +122,16 @@ export interface SentReminder {
   ts: number
 }
 
+/** How you like your Groups tab arranged. Personal, so it is not shared with the people in your groups. */
+export interface Layout {
+  /** group ids in the order you dragged them */
+  groups?: string[]
+  /** person ids in the order you dragged them */
+  people?: string[]
+  /** settled-up people you swiped away, with the date; they come back when something new happens */
+  dismissed?: Record<PersonId, string>
+}
+
 export interface AppState {
   v: 1
   profile: Profile
@@ -137,4 +147,6 @@ export interface AppState {
   /** Short notes hidden from the personal window */
   hidden: string[]
   sent: SentReminder[]
+  /** how the Groups tab is arranged; missing on data saved before this existed */
+  layout?: Layout
 }
