@@ -22,6 +22,8 @@ async function boot() {
     const refresh = () => void acct.refresh()
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && refresh())
     window.addEventListener('online', refresh)
+    // a friend may add a bill or tick a list while this screen is open
+    setInterval(() => document.visibilityState === 'visible' && refresh(), 30_000)
   } else {
     // No backend settings: start from sample data and keep changes in this browser.
     const saved = await localRepository.load()

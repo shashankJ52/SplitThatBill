@@ -36,6 +36,13 @@ export async function createTestDb(): Promise<TestDb> {
     await db.exec(readFileSync(join(MIGRATIONS, f), 'utf8'))
   }
   const sql: TestDb['sql'] = async (text, params) => (await db.query(text, params as unknown[])).rows as Record<string, unknown>[]
+  // Switching person is two statements, so two callers at once would trample each other. Take turns.
+  let turn: Promise<unknown> = Promise.resolve()
+  const exclusive = <T>(fn: () => Promise<T>): Promise<T> => {
+    const run = turn.then(fn, fn)
+    turn = run.catch(() => undefined)
+    return run
+  }
   const reset = async () => {
     await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false)`)
   }
@@ -49,21 +56,23 @@ export async function createTestDb(): Promise<TestDb> {
       ])
       return r[0].id as string
     },
-    async as(uid, fn) {
-      await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${uid}', false)`)
-      try {
-        return await fn()
-      } finally {
-        await reset()
-      }
-    },
-    async anon(fn) {
-      await db.exec(`set role anon`)
-      try {
-        return await fn()
-      } finally {
-        await reset()
-      }
-    },
+    as: (uid, fn) =>
+      exclusive(async () => {
+        await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${uid}', false)`)
+        try {
+          return await fn()
+        } finally {
+          await reset()
+        }
+      }),
+    anon: (fn) =>
+      exclusive(async () => {
+        await db.exec(`set role anon`)
+        try {
+          return await fn()
+        } finally {
+          await reset()
+        }
+      }),
   }
 }

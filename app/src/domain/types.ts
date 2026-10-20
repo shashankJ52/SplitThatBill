@@ -46,10 +46,12 @@ export interface AppPayment extends Payment {
   img?: string | null
   /** payments split across several ledgers share one link id */
   linkId?: string
+  /** who recorded it; missing means you */
+  by?: PersonId
 }
 
 export interface ListItem {
-  id: number
+  id: string
   t: string
   done: boolean
   doneBy?: PersonId | null
@@ -64,11 +66,33 @@ export interface NoteList {
   ts: number
 }
 
+export type Role = 'owner' | 'admin' | 'member'
+
+/** Someone who opened the group link and is waiting for an admin to let them in. */
+export interface JoinRequest {
+  pid: PersonId
+  name: string
+  tag?: string
+  ts: number
+}
+
 export interface AppLedger extends Omit<Ledger, 'bills' | 'payments'> {
   name?: string
   color?: string
   /** the other person in a 1-1 ledger */
   with?: PersonId
+  /** the owner, once the group is shared; missing on a group only you have */
+  owner?: PersonId
+  /** who may do what in a shared group */
+  roles?: Record<PersonId, Role>
+  /** invited but not yet accepted */
+  invited?: PersonId[]
+  /** left or removed; kept so old bills still show their names */
+  former?: PersonId[]
+  /** the group link code, when the link is on (admins only) */
+  inviteCode?: string | null
+  /** waiting to join through the group link (admins only) */
+  requests?: JoinRequest[]
   bills: AppBill[]
   payments: AppPayment[]
   lists: NoteList[]

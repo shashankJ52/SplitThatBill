@@ -138,10 +138,10 @@ describe('notes and lists', () => {
     expect(next.notes[1].title).toBe('Edited')
   })
   it('ticks items and records who got it in groups', () => {
-    const s = A.toggleNoteItem(fresh(), { ctx: 'g', gid: 'g1' }, 'gl1', 1, ME)
+    const s = A.toggleNoteItem(fresh(), { ctx: 'g', gid: 'g1' }, 'gl1', '1', ME)
     const item = ledgerById(s, 'g1')!.lists[0].items[0]
     expect(item).toMatchObject({ done: true, doneBy: ME })
-    expect(ledgerById(A.toggleNoteItem(s, { ctx: 'g', gid: 'g1' }, 'gl1', 1, ME), 'g1')!.lists[0].items[0]).toMatchObject({ done: false, doneBy: null })
+    expect(ledgerById(A.toggleNoteItem(s, { ctx: 'g', gid: 'g1' }, 'gl1', '1', ME), 'g1')!.lists[0].items[0]).toMatchObject({ done: false, doneBy: null })
   })
   it('keeps the order of notes that were off screen when saving a dragged order', () => {
     let s = A.setNoteOrder(fresh(), ['n:m3', 'n:m1', 'n:m2'])
@@ -249,5 +249,28 @@ describe('account actions', () => {
     expect(a.signedIn).toBe(true)
     expect(a.ledgers).toEqual([])
     expect(a.people.me.tag).toBe('alex')
+  })
+})
+
+describe('ids', () => {
+  it('older saved checklists with numeric item ids are upgraded to strings', async () => {
+    const { withStringItemIds } = await import('./persist')
+    const { seedState } = await import('../domain/seed')
+    const s = seedState(Date.UTC(2026, 9, 19, 12))
+    const old = { ...s, notes: s.notes.map((n) => ({ ...n, items: n.items.map((x, i) => ({ ...x, id: i + 1 as unknown as string })) })) }
+    const fixed = withStringItemIds(old)
+    expect(fixed.notes[0].items.every((x) => typeof x.id === 'string')).toBe(true)
+    expect(fixed.notes[0].items[0].id).toBe('1')
+  })
+  it('new ids are real UUIDs, derived ids are stable, and share tokens are long', async () => {
+    const { uid, derivedId, isUuid, token } = await import('../domain/util')
+    expect(isUuid(uid('x'))).toBe(true)
+    expect(uid()).not.toBe(uid())
+    const base = uid()
+    expect(derivedId(base, 3)).toBe(derivedId(base, 3))
+    expect(derivedId(base, 3)).not.toBe(derivedId(base, 4))
+    expect(isUuid(derivedId(base, 3))).toBe(true)
+    expect(derivedId('pay', 2)).toBe('pay_2')
+    expect(token()).toHaveLength(20)
   })
 })

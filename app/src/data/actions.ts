@@ -4,7 +4,7 @@ import { ev, makeBill, item } from '../domain/bills'
 import { findBill, ledgerById, noteKey, oneLedger, pairInGroup, realGroups, type NoteEntry } from '../domain/selectors'
 import type { AppBill, AppLedger, AppPayment, AppState, Comment, NoteList, Notif, Profile, SentReminder } from '../domain/types'
 import { ME } from '../domain/types'
-import { fmt, TAG_RE } from '../domain/util'
+import { derivedId, fmt, TAG_RE } from '../domain/util'
 
 type S = AppState
 const mapLedger = (s: S, id: string, fn: (l: AppLedger) => AppLedger): S => ({
@@ -123,7 +123,7 @@ export function applyPersonPayment(s: S, p: PersonPaymentInput): { state: S; ste
       state = r.state
       id = r.id
     }
-    state = addPayment(state, id, { id: `${p.id}_${i}`, linkId: p.id, from: plan.from, to: plan.to, amt: step.amt, date: p.date, note: p.note, img: p.img ?? null })
+    state = addPayment(state, id, { id: derivedId(p.id, i), linkId: p.id, from: plan.from, to: plan.to, amt: step.amt, date: p.date, note: p.note, img: p.img ?? null })
     steps.push({ ledgerId: id, amt: step.amt })
   })
   return { state, steps }
@@ -153,7 +153,7 @@ export const deleteNote = (s: S, st: Store, id: string): S => ({
   noteOrder: s.noteOrder.filter((k) => k !== (st.ctx === 'n' ? `n:${id}` : `g:${st.gid}:${id}`)),
   hidden: s.hidden.filter((k) => k !== (st.ctx === 'n' ? `n:${id}` : `g:${st.gid}:${id}`)),
 })
-export const toggleNoteItem = (s: S, st: Store, noteId: string, itemId: number, by: PersonId): S =>
+export const toggleNoteItem = (s: S, st: Store, noteId: string, itemId: string, by: PersonId): S =>
   setStore(s, st, (l) =>
     l.map((n) => (n.id === noteId ? { ...n, items: n.items.map((x) => (x.id === itemId ? { ...x, done: !x.done, doneBy: !x.done ? by : null } : x)) } : n)),
   )

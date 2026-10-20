@@ -31,7 +31,7 @@ export function NoteSheet({ ctx, gid, id, title: startTitle, close }: { ctx: 'n'
   const addItem = () => {
     const t = add.trim()
     if (!t) return toast('Type an item first')
-    setItems([...items, { id: Math.max(0, ...items.map((x) => x.id)) + 1, t, done: false, doneBy: null }])
+    setItems([...items, { id: uid(), t, done: false, doneBy: null }])
     setAdd('')
   }
   const save = () => {

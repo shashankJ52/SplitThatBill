@@ -62,7 +62,8 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
 
   async function enterCloud(userId: string, email: string): Promise<Result> {
     try {
-      const r = createCloudRepository(supabaseDb(client, userId))
+      // a change the database refused (for example one you are not allowed to make) is dropped; show what is really stored
+      const r = createCloudRepository(supabaseDb(client, userId), () => setTimeout(() => void api.refresh(), 0))
       const state = await r.load()
       repo = r
       userEmail = email

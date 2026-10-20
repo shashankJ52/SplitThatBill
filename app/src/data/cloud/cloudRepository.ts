@@ -2,72 +2,118 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AppState, Profile } from '../../domain/types'
 import type { Repository } from '../persist'
 import {
-  DELETE_ORDER, UPSERT_ORDER, diff, fromLoaded, markSynced, Positions, toSnapshot,
-  type DbRow, type Loaded, type Prefs, type Row, type Synced, type Table,
+  DELETE_ORDER, UPDATE_COLS, WRITE_ORDER, diff, emptySynced, fromLoaded, markSynced, Positions, toSnapshot,
+  type Loaded, type Prefs, type Row, type Synced, type WriteTable,
 } from './rows'
-import { emptySynced } from './rows'
 
-/** The few database calls the sync needs. A fake version of this is used in tests. */
+/** The few database calls the sync needs. A fake or a local-Postgres version of this is used in tests. */
 export interface Db {
-  selectAll(table: Table): Promise<DbRow[]>
-  profile(): Promise<Profile>
-  prefs(): Promise<Prefs | null>
-  upsert(table: Table, rows: Record<string, unknown>[]): Promise<void>
-  remove(table: Table, ids: string[]): Promise<void>
+  userId: string
+  loadAll(): Promise<Loaded>
+  /** Add rows. Rows that already exist are left alone, so a retry after a half-finished save is safe. */
+  insert(table: WriteTable, rows: Record<string, unknown>[]): Promise<void>
+  /** Add rows or change existing ones. */
+  upsert(table: WriteTable, rows: Record<string, unknown>[]): Promise<void>
+  /** Change one row by id (members use "groupId:personId"). */
+  update(table: WriteTable, id: string, cols: Record<string, unknown>): Promise<void>
+  remove(table: WriteTable, ids: string[]): Promise<void>
+  /** Take a contact out of a group (members are never deleted, so history keeps names). */
+  removeMember(groupId: string, personId: string): Promise<void>
   savePrefs(p: Prefs): Promise<void>
   saveProfile(p: Profile): Promise<void>
 }
 
-const PAGE = 1000
+/** A refusal the database will always repeat (not allowed, bad data), as opposed to a network hiccup. */
+export class DbError extends Error {
+  readonly code: string
+  constructor(message: string, code: string) {
+    super(message)
+    this.code = code
+  }
+  get permanent() {
+    return /^(22|23|42|P0|PGRST)/.test(this.code)
+  }
+}
+
 const CHUNK = 200
+const PAGE = 1000
 
 /** Turn a Supabase client into the Db interface for one signed-in user. */
 export function supabaseDb(c: SupabaseClient, userId: string): Db {
-  const fail = (e: { message: string } | null) => {
-    if (e) throw new Error(e.message)
+  const fail = (e: { message: string; code?: string } | null) => {
+    if (e) throw new DbError(e.message, e.code ?? '')
   }
+  const all = async <T,>(table: string, cols: string): Promise<T[]> => {
+    const out: T[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await c.from(table).select(cols).order('id').range(from, from + PAGE - 1)
+      fail(error)
+      const rows = (data ?? []) as unknown as T[]
+      out.push(...rows)
+      if (rows.length < PAGE) return out
+    }
+  }
+  const chunks = <T,>(rows: T[]) => Array.from({ length: Math.ceil(rows.length / CHUNK) }, (_, i) => rows.slice(i * CHUNK, (i + 1) * CHUNK))
+  // members are keyed by group and person, personal notes by owner and id, everything else by id
+  const key = (t: WriteTable) => (t === 'members' ? 'group_id,person_id' : t === 'notes' ? 'user_id,id' : 'id')
+  const own = (t: WriteTable, rows: Record<string, unknown>[]) => (t === 'notes' ? rows.map((r) => ({ user_id: userId, ...r })) : rows)
+
   return {
-    async selectAll(table) {
-      const out: DbRow[] = []
-      for (let from = 0; ; from += PAGE) {
-        const cols = table === 'ledgers' ? 'id, kind, data' : table === 'bills' || table === 'payments' ? 'id, ledger_id, data' : 'id, data'
-        const { data, error } = await c.from(table).select(cols).order('id').range(from, from + PAGE - 1)
-        fail(error)
-        const rows = (data ?? []) as unknown as DbRow[]
-        out.push(...rows)
-        if (rows.length < PAGE) return out
+    userId,
+    async loadAll() {
+      const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
+        c.from('profiles').select('name, email, tag').eq('id', userId).single(),
+        c.from('prefs').select('note_order, hidden').eq('user_id', userId).maybeSingle(),
+        all<Loaded['groups'][number]>('groups', 'id, kind, name, color, simplify, owner_id, invite_code, created_at'),
+        all<Loaded['members'][number]>('members', 'group_id, person_id, user_id, display_name, role, status, created_at, joined_at'),
+        all<Loaded['profiles'][number]>('profiles', 'id, name, tag'),
+        c.from('join_requests').select('group_id, user_id, created_at').eq('status', 'pending'),
+        all<Loaded['bills'][number]>('bills', 'id, group_id, created_by, bill_date, token, data, created_at'),
+        all<Loaded['comments'][number]>('comments', 'id, group_id, bill_id, author_id, text, sys, created_at'),
+        all<Loaded['payments'][number]>('payments', 'id, group_id, created_by, pay_date, data, created_at'),
+        all<Loaded['lists'][number]>('lists', 'id, group_id, title, memo, created_at, updated_at'),
+        all<Loaded['listItems'][number]>('list_items', 'id, group_id, list_id, text, done, done_by, position, created_at'),
+        all<Loaded['notes']>('notes', 'id, data'),
+        all<Loaded['notifs']>('notifs', 'id, data, created_at'),
+        all<Loaded['sent']>('sent_reminders', 'id, data'),
+      ])
+      fail(profile.error)
+      fail(prefs.error)
+      fail(requests.error)
+      return {
+        userId,
+        profile: profile.data as Profile,
+        prefs: (prefs.data as Prefs | null) ?? null,
+        groups, members, profiles, requests: (requests.data ?? []) as Loaded['requests'], bills, comments, payments, lists, listItems,
+        notes: notes as unknown as Loaded['notes'], notifs: notifs as unknown as Loaded['notifs'], sent: sent as unknown as Loaded['sent'],
       }
     },
-    async profile() {
-      const { data, error } = await c.from('profiles').select('name, email, tag').eq('id', userId).single()
-      fail(error)
-      return data as Profile
-    },
-    async prefs() {
-      const { data, error } = await c.from('prefs').select('note_order, hidden').eq('user_id', userId).maybeSingle()
-      fail(error)
-      return (data as Prefs | null) ?? null
+    async insert(table, rows) {
+      for (const part of chunks(own(table, rows))) fail((await c.from(table).upsert(part, { onConflict: key(table), ignoreDuplicates: true })).error)
     },
     async upsert(table, rows) {
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await c.from(table).upsert(rows.slice(i, i + CHUNK).map((r) => ({ user_id: userId, ...r })), { onConflict: 'user_id,id' })
-        fail(error)
-      }
+      for (const part of chunks(own(table, rows))) fail((await c.from(table).upsert(part, { onConflict: key(table) })).error)
+    },
+    async update(table, id, cols) {
+      let q = c.from(table).update(cols)
+      if (table === 'members') {
+        const [g, p] = id.split(':')
+        q = q.eq('group_id', g).eq('person_id', p)
+      } else q = q.eq('id', id)
+      fail((await q).error)
     },
     async remove(table, ids) {
-      for (let i = 0; i < ids.length; i += CHUNK) {
-        const { error } = await c.from(table).delete().eq('user_id', userId).in('id', ids.slice(i, i + CHUNK))
-        fail(error)
-      }
+      for (const part of chunks(ids)) fail((await c.from(table).delete().in('id', part)).error)
+    },
+    async removeMember(groupId, personId) {
+      fail((await c.rpc('remove_member', { gid: groupId, pid: personId })).error)
     },
     async savePrefs(p) {
-      const { error } = await c.from('prefs').upsert({ user_id: userId, ...p }, { onConflict: 'user_id' })
-      fail(error)
+      fail((await c.from('prefs').upsert({ user_id: userId, ...p }, { onConflict: 'user_id' })).error)
     },
     async saveProfile(p) {
       // the email lives with the sign-in account, so only name and tag are written here
-      const { error } = await c.from('profiles').update({ name: p.name, tag: p.tag }).eq('id', userId)
-      fail(error)
+      fail((await c.from('profiles').update({ name: p.name, tag: p.tag }).eq('id', userId)).error)
     },
   }
 }
@@ -79,8 +125,12 @@ export interface CloudRepository extends Repository {
   pending(): boolean
 }
 
-/** Stores one person's data in the database. Only what changed is sent, and a failed save is retried on the next one. */
-export function createCloudRepository(db: Db): CloudRepository {
+/**
+ * Stores one person's data in the database. Only what changed is sent. A network failure is retried by the next save.
+ * A refusal (for example an edit the person is not allowed to make) is dropped, and `onRejected` is called so the
+ * screen can be refreshed back to what the database really holds.
+ */
+export function createCloudRepository(db: Db, onRejected?: () => void): CloudRepository {
   const pos = new Positions()
   let synced: Synced = emptySynced()
   let queued: AppState | null = null
@@ -88,22 +138,43 @@ export function createCloudRepository(db: Db): CloudRepository {
   let failed = false
 
   async function apply(s: AppState) {
-    const snap = toSnapshot(s, pos)
+    const snap = toSnapshot(s, db.userId, pos)
     const c = diff(synced, snap)
-    const byTable = (rows: Row[], t: Table) => rows.filter((r) => r.table === t).map((r) => ({ id: r.id, ...r.cols }))
-    for (const t of UPSERT_ORDER) {
-      const rows = byTable(c.upserts, t)
-      if (rows.length) await db.upsert(t, rows)
+    let rejected = 0
+    /** Run one write. Refusals are counted and skipped; network problems stop the save so it can be retried. */
+    const run = async (fn: () => Promise<void>) => {
+      try {
+        await fn()
+      } catch (e) {
+        if (e instanceof DbError && e.permanent) {
+          rejected++
+          console.warn('The database refused a change:', e.message)
+        } else throw e
+      }
+    }
+    const rowsOf = (list: Row[], t: WriteTable) => list.filter((r) => r.table === t)
+    const withId = (r: Row) => ({ ...(r.table === 'members' ? {} : { id: r.id }), ...r.cols })
+
+    for (const t of WRITE_ORDER) {
+      const ins = rowsOf(c.inserts, t)
+      if (ins.length) await run(() => db.insert(t, ins.map(withId)))
+      const ups = rowsOf(c.upserts, t)
+      if (ups.length) await run(() => db.upsert(t, ups.map(withId)))
+      for (const r of rowsOf(c.updates, t)) {
+        const allowed = UPDATE_COLS[t] ?? []
+        await run(() => db.update(t, r.id, Object.fromEntries(Object.entries(r.cols).filter(([k]) => allowed.includes(k)))))
+      }
     }
     for (const t of DELETE_ORDER) {
       const ids = c.deletes.filter((d) => d.table === t).map((d) => d.id)
-      if (ids.length) await db.remove(t, ids)
+      if (ids.length) await run(() => db.remove(t, ids))
     }
-    if (c.prefs) await db.savePrefs(c.prefs)
-    if (c.profile) await db.saveProfile(c.profile)
-    // only now is it safe to treat this snapshot as stored
+    for (const m of c.removedContacts) await run(() => db.removeMember(m.groupId, m.personId))
+    if (c.prefs) await run(() => db.savePrefs(c.prefs as Prefs))
+    if (c.profile) await run(() => db.saveProfile(c.profile as Profile))
+    // every write either worked or was refused for good, so this snapshot is now settled
     synced = markSynced(snap)
-    for (const d of c.deletes) pos.forget(d.table, d.id)
+    if (rejected) onRejected?.()
   }
 
   async function drain() {
@@ -124,13 +195,8 @@ export function createCloudRepository(db: Db): CloudRepository {
 
   return {
     async load() {
-      const [profile, prefs, people, ledgers, bills, payments, notes, notifs, sent] = await Promise.all([
-        db.profile(), db.prefs(), db.selectAll('people'), db.selectAll('ledgers'), db.selectAll('bills'),
-        db.selectAll('payments'), db.selectAll('notes'), db.selectAll('notifs'), db.selectAll('sent_reminders'),
-      ])
-      const loaded: Loaded = { profile, prefs, people, ledgers, bills, payments, notes, notifs, sent_reminders: sent }
-      const state = fromLoaded(loaded, pos)
-      synced = markSynced(toSnapshot(state, pos))
+      const state = fromLoaded(await db.loadAll(), pos)
+      synced = markSynced(toSnapshot(state, db.userId, pos))
       return state
     },
     async save(s) {

@@ -9,12 +9,18 @@ export interface Repository {
   save(s: AppState): Promise<void>
 }
 
+/** Older saved data numbered checklist items 1, 2, 3. Items now have unique string ids. */
+export function withStringItemIds(s: AppState): AppState {
+  const fix = <T extends { items: { id: string | number }[] }>(n: T): T => ({ ...n, items: n.items.map((x) => (typeof x.id === 'string' ? x : { ...x, id: String(x.id) })) })
+  return { ...s, notes: s.notes.map(fix), ledgers: s.ledgers.map((l) => ({ ...l, lists: l.lists.map(fix) })) } as AppState
+}
+
 /** A repository that keeps one copy of the state in this browser under the given key. */
 export const localKeyRepository = (key: string): Repository => ({
   async load() {
     try {
       const s = (await get(key)) as AppState | undefined
-      return s && s.v === 1 ? s : null
+      return s && s.v === 1 ? withStringItemIds(s) : null
     } catch {
       return null
     }

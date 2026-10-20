@@ -53,8 +53,14 @@ export function ago(ts: number, now = Date.now()): string {
   return `${Math.round(h / 24)}d ago`
 }
 
-export const uid = (prefix: string) => prefix + Math.random().toString(36).slice(2, 9)
-export const token = () => Math.random().toString(36).slice(2, 10)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+export const isUuid = (s: string) => UUID_RE.test(s)
+/** A new id. Real UUIDs, because the database needs ids that are unique across everyone's data. The argument is kept so call sites read as before. */
+export const uid = (_kind = '') => crypto.randomUUID()
+/** Several ids that belong together, made from one base id: the same input always gives the same ids. */
+export const derivedId = (base: string, i: number) => (isUuid(base) ? base.slice(0, 24) + i.toString(16).padStart(12, '0') : `${base}_${i}`)
+/** The secret in a share link: long enough that it cannot be guessed. */
+export const token = () => crypto.randomUUID().replace(/-/g, '').slice(0, 20)
 export const clone = <T>(o: T): T => structuredClone(o)
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/

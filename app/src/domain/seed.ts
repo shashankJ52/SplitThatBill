@@ -70,7 +70,7 @@ export function seedState(now = Date.now()): AppState {
     sam: { id: 'sam', name: 'Sam', user: false },
   }
   const list = (id: string, title: string, memo: string, items: [string, boolean, string?][], ago: number): NoteList => ({
-    id, title, memo, ts: now - ago, items: items.map(([t, done, by], i) => ({ id: i + 1, t, done, doneBy: by ?? null })),
+    id, title, memo, ts: now - ago, items: items.map(([t, done, by], i) => ({ id: String(i + 1), t, done, doneBy: by ?? null })),
   })
 
   return {

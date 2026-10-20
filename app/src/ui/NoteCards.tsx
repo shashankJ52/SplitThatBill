@@ -141,7 +141,7 @@ export function NoteCards({ ctx, gid, q, filter = 'all' }: { ctx: 'n' | 'g'; gid
     return () => document.removeEventListener('touchmove', block)
   }, [])
 
-  const tick = (e: NoteEntry, itemId: number) => store.update((st) => A.toggleNoteItem(st, { ctx: e.ctx, gid: e.gid }, e.n.id, itemId, ME))
+  const tick = (e: NoteEntry, itemId: string) => store.update((st) => A.toggleNoteItem(st, { ctx: e.ctx, gid: e.gid }, e.n.id, itemId, ME))
 
   const card = (e: NoteEntry) => {
     const n = e.n

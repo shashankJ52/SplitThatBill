@@ -1,108 +1,111 @@
-import { describe, expect, it } from 'vitest'
-import { seedState } from '../../domain/seed'
-import type { Profile } from '../../domain/types'
-import { createCloudRepository, type Db } from './cloudRepository'
-import type { DbRow, Prefs, Table } from './rows'
+import { describe, expect, it, vi } from 'vitest'
+import { emptyState } from '../../domain/seed'
+import { ME } from '../../domain/types'
+import { uid } from '../../domain/util'
+import { createCloudRepository, DbError, type Db } from './cloudRepository'
+import type { Loaded } from './rows'
 
-/** A pretend database that remembers what was written, so tests can read it back. */
-function fakeDb(profile: Profile) {
-  const tables = new Map<Table, Map<string, Record<string, unknown>>>()
-  const calls: string[] = []
-  let prefs: Prefs | null = null
-  let prof = profile
-  let failNext = 0
-  const t = (n: Table) => tables.get(n) ?? tables.set(n, new Map()).get(n)!
-  const db: Db = {
-    async selectAll(table) {
-      return [...t(table).values()].map((r) => ({ id: r.id as string, kind: r.kind as string | undefined, ledger_id: r.ledger_id as string | undefined, data: JSON.parse(JSON.stringify(r.data)) })) as DbRow[]
-    },
-    async profile() { return prof },
-    async prefs() { return prefs },
-    async upsert(table, rows) {
-      if (failNext > 0) { failNext--; throw new Error('network down') }
-      calls.push(`upsert ${table} ${rows.length}`)
-      rows.forEach((r) => t(table).set(r.id as string, JSON.parse(JSON.stringify(r))))
-    },
-    async remove(table, ids) {
-      calls.push(`remove ${table} ${ids.length}`)
-      ids.forEach((id) => t(table).delete(id))
-    },
-    async savePrefs(p) { prefs = p; calls.push('prefs') },
-    async saveProfile(p) { prof = p; calls.push('profile') },
-  }
-  return { db, calls, tables, fail: (n = 1) => (failNext = n) }
+const USER = '11111111-1111-4111-8111-111111111111'
+const empty: Loaded = {
+  userId: USER, profile: { name: 'Ann', email: 'a@b.co', tag: 'ann' }, prefs: null, groups: [], members: [], profiles: [], requests: [],
+  bills: [], comments: [], payments: [], lists: [], listItems: [], notes: [], notifs: [], sent: [],
 }
 
-const now = Date.UTC(2026, 9, 19, 12)
+/** A pretend database that records what it was asked and can be told to fail. */
+function fake(failWith?: () => Error | null) {
+  const calls: string[] = []
+  const hit = (name: string) => {
+    const e = failWith?.()
+    if (e) throw e
+    calls.push(name)
+  }
+  const db: Db = {
+    userId: USER,
+    loadAll: async () => empty,
+    insert: async (t, rows) => hit(`insert ${t} ${rows.length}`),
+    upsert: async (t, rows) => hit(`upsert ${t} ${rows.length}`),
+    update: async (t) => hit(`update ${t}`),
+    remove: async (t, ids) => hit(`remove ${t} ${ids.length}`),
+    removeMember: async () => hit('removeMember'),
+    savePrefs: async () => hit('prefs'),
+    saveProfile: async () => hit('profile'),
+  }
+  return { db, calls }
+}
+const withGroup = () => {
+  const s = emptyState(empty.profile, '')
+  return { ...s, signedIn: true, ledgers: [{ id: uid(), kind: 'group' as const, name: 'Flat', color: '#0039A6', simplify: true, members: [ME], bills: [], payments: [], lists: [] }] }
+}
 
 describe('cloud repository', () => {
   it('a new account loads empty and sends nothing until something changes', async () => {
-    const f = fakeDb({ name: 'Alex', email: 'a@b.co', tag: 'alex' })
+    const f = fake()
     const repo = createCloudRepository(f.db)
     const s = await repo.load()
     expect(s.ledgers).toEqual([])
-    expect(s.profile.tag).toBe('alex')
     await repo.save(s)
     expect(f.calls).toEqual([])
   })
 
-  it('saves the sample story and loads it back identically (what a second device would see)', async () => {
-    const f = fakeDb({ name: 'Shashank J.', email: 'you@example.com', tag: 'shashank' })
-    const a = createCloudRepository(f.db)
-    await a.load()
-    const story = seedState(now)
-    await a.save(story)
-    const b = createCloudRepository(f.db)
-    const loaded = await b.load()
-    expect({ ...loaded, password: story.password }).toEqual({ ...story, profile: loaded.profile })
-  })
-
-  it('sends only what changed afterwards', async () => {
-    const f = fakeDb({ name: 'Shashank J.', email: 'you@example.com', tag: 'shashank' })
+  it('writes parents before children and sends only what changed afterwards', async () => {
+    const f = fake()
     const repo = createCloudRepository(f.db)
     await repo.load()
-    const story = seedState(now)
-    await repo.save(story)
+    const s = withGroup()
+    await repo.save(s)
+    expect(f.calls).toEqual(['insert groups 1', 'insert members 1'])
     f.calls.length = 0
-    const l = story.ledgers[0]
-    await repo.save({ ...story, ledgers: [{ ...l, bills: l.bills.map((b, i) => (i === 0 ? { ...b, notes: 'x' } : b)) }, ...story.ledgers.slice(1)] })
-    expect(f.calls).toEqual(['upsert bills 1'])
+    await repo.save({ ...s, ledgers: [{ ...s.ledgers[0], name: 'Renamed' }] })
+    expect(f.calls).toEqual(['update groups'])
   })
 
-  it('deletes bills before their ledger', async () => {
-    const f = fakeDb({ name: 'S', email: 'e@x.co', tag: 'shashank' })
+  it('a network failure keeps the change and the next save retries it', async () => {
+    let down = true
+    const f = fake(() => (down ? new Error('Failed to fetch') : null))
     const repo = createCloudRepository(f.db)
     await repo.load()
-    const story = seedState(now)
-    await repo.save(story)
-    f.calls.length = 0
-    await repo.save({ ...story, ledgers: story.ledgers.slice(1) })
-    const order = f.calls.map((c) => c.split(' ')[1])
-    expect(order.indexOf('bills')).toBeLessThan(order.indexOf('ledgers'))
-  })
-
-  it('retries after a failed save without losing the change', async () => {
-    const f = fakeDb({ name: 'S', email: 'e@x.co', tag: 'shashank' })
-    const repo = createCloudRepository(f.db)
-    await repo.load()
-    const story = seedState(now)
-    f.fail(1)
-    await repo.save(story)
+    const s = withGroup()
+    const err = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await repo.save(s)
     expect(repo.pending()).toBe(true)
-    expect(f.tables.get('ledgers')?.size ?? 0).toBe(0)
-    await repo.save(story) // the next save sends everything that is still missing
+    expect(f.calls).toEqual([])
+    down = false
+    await repo.save(s)
     expect(repo.pending()).toBe(false)
-    expect(f.tables.get('ledgers')?.size).toBe(story.ledgers.length)
+    expect(f.calls).toEqual(['insert groups 1', 'insert members 1'])
+    err.mockRestore()
   })
 
-  it('later saves during a running one are not lost', async () => {
-    const f = fakeDb({ name: 'S', email: 'e@x.co', tag: 'shashank' })
+  it('a refusal is dropped for good (no retry loop) and the screen is told to refresh', async () => {
+    const refused = new DbError('new row violates row-level security policy', '42501')
+    const f = fake(() => refused)
+    const onRejected = vi.fn()
+    const repo = createCloudRepository(f.db, onRejected)
+    await repo.load()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await repo.save(withGroup())
+    expect(repo.pending()).toBe(false)
+    expect(onRejected).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  it('a save requested while another is running is not lost', async () => {
+    const f = fake()
     const repo = createCloudRepository(f.db)
     await repo.load()
-    const story = seedState(now)
-    const p1 = repo.save({ ...story, notes: [] })
-    const p2 = repo.save(story)
-    await Promise.all([p1, p2])
-    expect(f.tables.get('notes')?.size).toBe(story.notes.length)
+    const s = withGroup()
+    const first = repo.save({ ...s, ledgers: [] })
+    const second = repo.save(s)
+    await Promise.all([first, second])
+    expect(f.calls).toContain('insert groups 1')
+  })
+
+  it('classifies database errors', () => {
+    expect(new DbError('x', '42501').permanent).toBe(true)
+    expect(new DbError('x', '23505').permanent).toBe(true)
+    expect(new DbError('x', 'P0001').permanent).toBe(true)
+    expect(new DbError('x', 'PGRST301').permanent).toBe(true)
+    expect(new DbError('x', '').permanent).toBe(false)
+    expect(new DbError('x', '08006').permanent).toBe(false)
   })
 })

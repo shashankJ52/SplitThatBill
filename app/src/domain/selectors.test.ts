@@ -72,7 +72,7 @@ describe('notes view', () => {
     expect(S.noteEntries(s0, 'g', 'g1', '', 'all').map((e) => e.n.id).sort()).toEqual(['gl1', 'gl2'])
   })
   it('knows when a note is done', () => {
-    expect(S.isDone({ id: 'x', title: '', memo: '', ts: 0, items: [{ id: 1, t: 'a', done: true }] })).toBe(true)
+    expect(S.isDone({ id: 'x', title: '', memo: '', ts: 0, items: [{ id: '1', t: 'a', done: true }] })).toBe(true)
     expect(S.isDone({ id: 'x', title: '', memo: '', ts: 0, items: [] })).toBe(false)
   })
 })
