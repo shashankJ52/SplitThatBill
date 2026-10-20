@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import * as A from '../data/actions'
+import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
-import { ledgerById, ledgerName, pairBalance, pairInGroup } from '../domain/selectors'
+import { isShared } from '../domain/membership'
+import { ledgerById, ledgerName, pairBalance, pairInGroup, realGroups } from '../domain/selectors'
 import { ago, fmt, uid } from '../domain/util'
 import { Avatar } from '../ui/bits'
 import { useToast } from '../ui/Toast'
@@ -13,6 +15,8 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
   const s = useAppState()
   const store = useStore()
   const toast = useToast()
+  const account = useAccount()
+  const live = useAccountMode() === 'cloud'
   const g = gid ? ledgerById(s, gid) : undefined
   const person = s.people[pid]
   const pr = pairBalance(s, pid)
@@ -28,7 +32,16 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
   const last = s.sent.filter((x) => x.to === pid && (x.gid ?? null) === (gid ?? null)).sort((x, y) => y.ts - x.ts)[0]
   const nm = person.name
 
-  const send = () => {
+  const send = async () => {
+    if (live && account) {
+      // with a real account the reminder goes through the server, in the group where you share the most
+      const via = g ?? realGroups(s).filter((x) => isShared(x) && x.members.includes(pid)).sort((x, y) => Math.abs(pairInGroup(y, pid)) - Math.abs(pairInGroup(x, pid)))[0]
+      if (!via) return toast(`You and ${nm} do not share a group that can carry a reminder yet.`)
+      const r = await account.sendReminder(via.id, pid, Math.abs(g ? a : pairInGroup(via, pid)) || Math.abs(a), text.trim())
+      if (r.err) return toast(r.err)
+      close()
+      return toast(`Reminder sent to ${nm}. Only they will see it.`)
+    }
     store.update((st) => A.sendReminder(st, { id: uid('s'), to: pid, gid, amt: a, text: text.trim(), ts: Date.now() }))
     close()
     toast(`Reminder sent to ${nm}. Only they will see it.`)
@@ -78,7 +91,7 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
           {last && <div className="bar info" style={{ marginTop: 10 }}>You reminded {nm} {ago(last.ts)}.</div>}
           <div style={{ height: 12 }} />
           {person.user ? (
-            <button className="primary" onClick={send}>Send reminder</button>
+            <button className="primary" onClick={() => void send()}>Send reminder</button>
           ) : (
             <>
               <button className="primary" onClick={wa}>Send on WhatsApp</button>

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
-import * as A from '../../data/actions'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
 import { letterOf, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
-import { uid } from '../../domain/util'
+import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
 import { GroupSheet } from '../../sheets/GroupSheet'
 import { PickSheet } from '../../sheets/PickSheet'
@@ -24,6 +23,7 @@ export function Capture() {
   const store = useStore()
   const sheet = useSheet()
   const toast = useToast()
+  const addByInput = useAddPerson()
   const [newName, setNewName] = useState('')
   const [bad, setBad] = useState(false)
   const want = (loc.state as { target?: string | null } | null)?.target
@@ -46,27 +46,26 @@ export function Capture() {
   const selGroup = sel.startsWith('g:') ? ledgerById(s, sel.slice(2)) : null
 
   /** Turn "Someone new" into a real person before moving on. Returns the draft to continue with. */
-  const settle = (): D.Draft | null => {
+  const settle = async (): Promise<D.Draft | null> => {
     if (d.target !== 'new') return d
-    const r = A.addPersonFromInput(store.get(), newName, [ME], uid('p'))
+    const r = await addByInput(newName, [ME])
     if (r.err || !r.id) {
       toast(r.err ?? 'Enter a name or @usertag')
       setBad(true)
       return null
     }
-    store.update(() => r.state)
-    return D.setTarget(r.state, d, `p:${r.id}`)
+    return D.setTarget(store.get(), d, `p:${r.id}`)
   }
-  const proceed = () => {
-    let cur = settle()
+  const proceed = async () => {
+    let cur = await settle()
     if (!cur) return
     if (cur.manual) cur = D.loadSample(cur)
     const next = cur
     set(() => next)
     nav('/scan/privacy')
   }
-  const manual = () => {
-    const cur = settle()
+  const manual = async () => {
+    const cur = await settle()
     if (!cur) return
     const next = D.startManual(cur)
     set(() => next)
@@ -78,7 +77,7 @@ export function Capture() {
     if (!f) return
     if (!/^(image\/|application\/pdf)/.test(f.type)) return toast('Choose a photo or a PDF')
     if (f.size > MAX_UPLOAD) return toast('That file is over 15 MB. Try a smaller photo.')
-    proceed()
+    void proceed()
   }
 
   return (
@@ -137,14 +136,14 @@ export function Capture() {
         <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
           <b>Camera preview</b>Real scanning is not connected yet. Any photo loads a sample receipt.
         </div>
-        <button className="primary" onClick={proceed}>Take photo (sample receipt)</button>
+        <button className="primary" onClick={() => void proceed()}>Take photo (sample receipt)</button>
         <div style={{ height: 10 }} />
         <label className="secondary" style={{ display: 'block', textAlign: 'center', padding: 15, border: '2px solid var(--fg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer' }}>
           Upload a bill
           <input type="file" accept="image/*,application/pdf" hidden onChange={upload} />
         </label>
         <div style={{ height: 10 }} />
-        <button className="secondary" onClick={manual}>No receipt? Enter items yourself</button>
+        <button className="secondary" onClick={() => void manual()}>No receipt? Enter items yourself</button>
         <p className="mute">Receipt reading (OCR) comes once the backend is connected. Your photo is never stored.</p>
       </div>
     </Screen>

@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createContext, useContext, useSyncExternalStore, type ReactNode } from 'react'
+import { pendingInvites } from '../domain/membership'
 import { loggedOutState, seedState } from '../domain/seed'
-import type { AppState } from '../domain/types'
+import { ME, type AppState, type Role } from '../domain/types'
 import { resetUiState } from '../ui/uiState'
 import { createCloudRepository, supabaseDb, type CloudRepository } from './cloud/cloudRepository'
 import { setProfile } from './actions'
@@ -29,6 +30,25 @@ export interface Account {
   verifySignup(email: string, code: string): Promise<Result>
   resendSignup(email: string): Promise<Result>
   requestReset(email: string): Promise<Result>
+  // ----- people and groups (each call checks who is asking on the server, then reloads what you see) -----
+  /** Find one person by exact tag. */
+  findUser(tag: string): Promise<{ id: string; name: string; tag: string } | null>
+  invite(groupId: string, userId: string): Promise<Result>
+  acceptInvite(groupId: string): Promise<Result>
+  declineInvite(groupId: string): Promise<Result>
+  /** Turn the group link on (a new code each time) or off. */
+  setLink(groupId: string, enabled: boolean): Promise<Result & { code?: string | null }>
+  /** What someone sees when they open a group link. */
+  preview(code: string): Promise<{ groupName: string; ownerName: string } | null>
+  requestJoin(code: string): Promise<Result & { status?: 'member' | 'requested' }>
+  decideJoin(groupId: string, userId: string, approve: boolean): Promise<Result>
+  setRole(groupId: string, person: string, role: 'admin' | 'member'): Promise<Result>
+  removeMember(groupId: string, person: string): Promise<Result>
+  leaveGroup(groupId: string): Promise<Result>
+  transferOwnership(groupId: string, person: string): Promise<Result>
+  sendReminder(groupId: string, person: string, amount: number, text: string): Promise<Result>
+  /** Save anything waiting, then show what the database really holds. */
+  reload(): Promise<void>
   setNewPassword(password: string): Promise<Result>
   /** Pull the latest from the database (another device may have changed things). */
   refresh(): Promise<void>
@@ -38,6 +58,8 @@ export interface Account {
 }
 
 const demoRepo = localKeyRepository('stb-demo-v1')
+/** Database refusals are written for people already; only network problems need a nicer line. */
+const friendly = (m: string) => (/fetch|network|failed to/i.test(m) ? 'Could not reach the server. Check your connection and try again.' : m)
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 export function createAccount(store: Store, client: SupabaseClient): Account {
@@ -45,6 +67,9 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
   let recovering = false
   let repo: CloudRepository | null = null
   let userEmail = ''
+  let userId = ''
+  /** invites already attempted this session, so a refusal is not retried forever */
+  const invitesTried = new Set<string>()
   const listeners = new Set<() => void>()
   const setMode = (m: AccountMode) => {
     mode = m
@@ -57,19 +82,23 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
     resetUiState()
     repo = null
     userEmail = ''
+    userId = ''
+    invitesTried.clear()
     setMode('out')
   }
 
-  async function enterCloud(userId: string, email: string): Promise<Result> {
+  async function enterCloud(uid: string, email: string): Promise<Result> {
     try {
       // a change the database refused (for example one you are not allowed to make) is dropped; show what is really stored
-      const r = createCloudRepository(supabaseDb(client, userId), () => setTimeout(() => void api.refresh(), 0))
+      const r = createCloudRepository(supabaseDb(client, uid), () => setTimeout(() => void api.refresh(), 0))
       const state = await r.load()
       repo = r
       userEmail = email
+      userId = uid
       store.setRepository(r)
       store.replace(state)
       setMode('cloud')
+      void inviteWhoWasAdded()
       return {}
     } catch (e) {
       console.error('Could not load the account:', msg(e))
@@ -86,6 +115,36 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
     if (event === 'SIGNED_OUT' && mode === 'cloud') leave()
   })
 
+  /** People added to a group on this device are invited once the group is saved on the server. */
+  let inviting = false
+  async function inviteWhoWasAdded() {
+    if (inviting || mode !== 'cloud') return
+    inviting = true
+    try {
+      await store.flush()
+      if (store.dirty()) return
+      const todo = pendingInvites(store.get()).filter((x) => !invitesTried.has(`${x.gid}:${x.pid}`))
+      for (const x of todo) {
+        invitesTried.add(`${x.gid}:${x.pid}`)
+        await client.rpc('invite_user', { gid: x.gid, uid: x.pid })
+      }
+      if (todo.length) await api.reload()
+    } finally {
+      inviting = false
+    }
+  }
+  // after each finished save, look for new people to invite
+  store.subscribe(() => store.status() === 'saved' && mode === 'cloud' && void inviteWhoWasAdded())
+
+  const toDb = (p: string) => (p === ME ? userId : p)
+  /** Call a database function after saving anything waiting, then reload so the screen shows the result. */
+  async function rpc(name: string, args: Record<string, unknown>, keepData = false): Promise<Result & { data?: unknown }> {
+    await store.flush()
+    const { data, error } = await client.rpc(name, args)
+    if (error) return { err: friendly(error.message) }
+    await api.reload()
+    return keepData ? { data } : {}
+  }
   let ready: Promise<void> = Promise.resolve()
   const api: Account = {
     get ready() {
@@ -173,6 +232,43 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
       const { error } = await client.auth.resend({ type: 'signup', email })
       if (error && /rate limit|seconds/i.test(error.message)) return { err: 'Please wait a minute before asking for another code.' }
       return error ? { err: 'Could not send a new code. Try again.' } : {}
+    },
+
+    async findUser(tag) {
+      const { data, error } = await client.rpc('find_user_by_tag', { t: tag })
+      const row = (data as { id: string; name: string; tag: string }[] | null)?.[0]
+      return error || !row ? null : row
+    },
+    invite: (gid, uid) => rpc('invite_user', { gid, uid }),
+    acceptInvite: (gid) => rpc('accept_invite', { gid }),
+    declineInvite: (gid) => rpc('decline_invite', { gid }),
+    async setLink(gid, enabled) {
+      const r = await rpc('set_invite_link', { gid, enabled }, true)
+      return { err: r.err, code: (r.data as string | null | undefined) ?? null }
+    },
+    async preview(code) {
+      const { data, error } = await client.rpc('group_preview', { code })
+      const row = (data as { group_name: string; owner_name: string }[] | null)?.[0]
+      return error || !row ? null : { groupName: row.group_name, ownerName: row.owner_name }
+    },
+    async requestJoin(code) {
+      const r = await rpc('request_join', { code }, true)
+      return { err: r.err, status: r.data as 'member' | 'requested' | undefined }
+    },
+    decideJoin: (gid, uid, approve) => rpc('decide_join', { gid, uid, approve }),
+    setRole: (gid, person, role: Role & ('admin' | 'member')) => rpc('set_role', { gid, pid: toDb(person), new_role: role }),
+    removeMember: (gid, person) => rpc('remove_member', { gid, pid: toDb(person) }),
+    leaveGroup: (gid) => rpc('leave_group', { gid }),
+    transferOwnership: (gid, person) => rpc('transfer_ownership', { gid, pid: toDb(person) }),
+    sendReminder: (gid, person, amt, msg) => rpc('send_reminder', { gid, to_person: toDb(person), amt, msg }),
+    async reload() {
+      await store.flush()
+      if (mode !== 'cloud' || !repo || store.dirty()) return
+      try {
+        store.replace(await repo.load())
+      } catch {
+        /* offline: keep what is on screen */
+      }
     },
 
     async requestReset(email) {

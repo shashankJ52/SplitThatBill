@@ -4,6 +4,7 @@ import { useAppState } from '../data/store'
 import { unreadCount } from '../domain/selectors'
 import { useFlow } from '../flow/FlowProvider'
 import { useSheet } from '../ui/Sheet'
+import { pendingJoin, rememberJoin } from './pendingJoin'
 import { useTheme } from '../ui/useTheme'
 
 const TAB_ROOTS = ['/groups', '/alerts', '/account']
@@ -33,7 +34,13 @@ export function Shell() {
 
   const isAuth = AUTH_ROUTES.includes(path)
   const isPublic = path.startsWith('/preview')
-  if (!s.signedIn && !isAuth) return <Navigate to="/welcome" replace />
+  if (!s.signedIn && !isAuth) {
+    if (path.startsWith('/join/')) rememberJoin(path.slice('/join/'.length))
+    return <Navigate to="/welcome" replace />
+  }
+  // a group link opened before logging in is followed once there is an account to use it with
+  const waiting = pendingJoin()
+  if (s.signedIn && waiting && !path.startsWith('/join/') && !isAuth) return <Navigate to={`/join/${waiting}`} replace />
   if (s.signedIn && path === '/') return <Navigate to="/groups" replace />
 
   const isFlow = FLOW_STEPS.includes(path)

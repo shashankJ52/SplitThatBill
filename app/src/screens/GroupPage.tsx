@@ -6,7 +6,10 @@ import { feed, groupTotals, ledgerById, letterOf, monthStats, monthsAsc, openCou
 import { ME } from '../domain/types'
 import { fmt, mAdd, mLabel, nowKey } from '../domain/util'
 import { nets, transfers } from '../money'
+import { GroupManageSheet } from '../sheets/GroupManageSheet'
 import { GroupSheet } from '../sheets/GroupSheet'
+import { isShared } from '../domain/membership'
+import { useAccount } from '../data/account'
 import { NoteSheet } from '../sheets/NoteSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { RemindSheet } from '../sheets/RemindSheet'
@@ -26,6 +29,7 @@ export function GroupPage() {
   const s = useAppState()
   const nav = useNavigate()
   const sheet = useSheet()
+  const account = useAccount()
   const [sp, setSp] = useSearchParams()
   const g = ledgerById(s, gid)
   if (!g || g.kind !== 'group') return <Navigate to="/groups" replace />
@@ -44,7 +48,7 @@ export function GroupPage() {
             <div className="gname" style={{ fontSize: 26, lineHeight: 1.05 }}>{g.name}</div>
             <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.members.map((m) => personName(s, m)).join(', ')}</div>
           </div>
-          <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => <GroupSheet gid={g.id} close={close} />)}>⚙</button>
+          <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}>⚙</button>
         </div>
         <div className="sign" style={{ marginBottom: 8 }}>
           <div className="cols" style={{ gridTemplateColumns: '1fr 1fr' }}>

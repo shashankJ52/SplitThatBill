@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import * as A from '../data/actions'
-import { useAppState, useStore } from '../data/store'
+import { useAppState } from '../data/store'
 import { others, realGroups, letterOf } from '../domain/selectors'
-import { uid } from '../domain/util'
 import { Avatar, Bullet, Empty } from '../ui/bits'
+import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
 import { ME } from '../domain/types'
 
@@ -12,8 +11,8 @@ export type PickMode = 'g' | 'p' | 'f'
 /** Search all groups or people. Mode "f" (find) opens a person; "g" and "p" choose who to split with. */
 export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (value: string) => void; close: () => void }) {
   const s = useAppState()
-  const store = useStore()
   const toast = useToast()
+  const addByInput = useAddPerson()
   const [q, setQ] = useState('')
   const [add, setAdd] = useState('')
   const t = q.trim().toLowerCase()
@@ -27,10 +26,9 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
           .filter((p) => s.people[p].name.toLowerCase().includes(t) || (t.startsWith('@') && t.length > 1 && (s.people[p].tag ?? '').toLowerCase().includes(t.slice(1))))
           .map((p) => ({ key: `p:${p}`, icon: <Avatar pid={p} size={38} />, label: s.people[p].name, sub: s.people[p].user ? `@${s.people[p].tag ?? ''}` : 'Not on the app' }))
 
-  const addPerson = () => {
-    const r = A.addPersonFromInput(store.get(), add, [ME], uid('p'))
+  const addPerson = async () => {
+    const r = await addByInput(add, [ME])
     if (r.err || !r.id) return toast(r.err ?? 'Could not add')
-    store.update(() => r.state)
     close()
     onPick(`p:${r.id}`)
   }
@@ -57,8 +55,8 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
         <>
           <label className="f">Not listed?</label>
           <div className="row">
-            <input placeholder="Name or @usertag" maxLength={30} value={add} onChange={(e) => setAdd(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPerson()} aria-label="Add by name or usertag" />
-            <button className="secondary" onClick={addPerson} style={{ width: 92, padding: 11 }}>Add</button>
+            <input placeholder="Name or @usertag" maxLength={30} value={add} onChange={(e) => setAdd(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void addPerson()} aria-label="Add by name or usertag" />
+            <button className="secondary" onClick={() => void addPerson()} style={{ width: 92, padding: 11 }}>Add</button>
           </div>
         </>
       )}

@@ -4,6 +4,7 @@ import { BillPage } from '../screens/BillPage'
 import { GroupPage } from '../screens/GroupPage'
 import { GroupsTab } from '../screens/GroupsTab'
 import { PersonPage } from '../screens/PersonPage'
+import { JoinPage } from '../screens/JoinPage'
 import { PublicBill } from '../screens/PublicBill'
 import { SheetProvider } from '../ui/Sheet'
 import { ToastProvider } from '../ui/Toast'
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { path: '/groups/:gid', element: <GroupPage /> },
       { path: '/bill/:id', element: <BillPage /> },
       { path: '/person/:pid', element: <PersonPage /> },
+      { path: '/join/:code', element: <JoinPage /> },
       { path: '/preview/draft', element: <DraftPreview /> },
       { path: '/preview/:id', element: <PublicBill /> },
       { path: '/alerts', element: <AlertsTab /> },

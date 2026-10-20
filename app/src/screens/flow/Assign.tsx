@@ -5,7 +5,7 @@ import * as A from '../../data/actions'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
 import { ledgerById, personName } from '../../domain/selectors'
-import { fmt, uid } from '../../domain/util'
+import { fmt } from '../../domain/util'
 import { assignText, ItemPanel } from '../../flow/ItemPanel'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
@@ -13,6 +13,7 @@ import { WholeSheet } from '../../sheets/WholeSheet'
 import { Empty, Seg } from '../../ui/bits'
 import { FlowFooter } from '../../ui/FlowFooter'
 import { useSheet } from '../../ui/Sheet'
+import { useAddPerson } from '../../ui/useAddPerson'
 import { useToast } from '../../ui/Toast'
 
 export const Assign = withDraft(function Assign({ d }: { d: D.Draft }) {
@@ -22,6 +23,7 @@ export const Assign = withDraft(function Assign({ d }: { d: D.Draft }) {
   const store = useStore()
   const sheet = useSheet()
   const toast = useToast()
+  const addByInput = useAddPerson()
   const [mode, setMode] = useState<'item' | 'person'>('item')
   const [sel, setSel] = useState<number | null>(null)
   const [selP, setSelP] = useState(d.people[0])
@@ -35,15 +37,14 @@ export const Assign = withDraft(function Assign({ d }: { d: D.Draft }) {
     if (it.a.mode === 'por') return toast('That item uses portions. Edit it in By item.')
     set((x) => D.toggleEven(x, it.id, person))
   }
-  const addPerson = () => {
-    const r = A.addPersonFromInput(store.get(), newp, d.people, uid('p'))
+  const addPerson = async () => {
+    // people with an account are invited from group settings; here only contacts can be added on the spot
+    const r = await addByInput(newp, d.people, { contactsOnly: true })
     if (r.err || !r.id) return toast(r.err ?? 'Could not add')
     const id = r.id
-    store.update(() => {
-      let st = r.state
+    store.update((st) => {
       const g = d.gid ? ledgerById(st, d.gid) : undefined
-      if (g && !g.members.includes(id)) st = A.updateGroup(st, g.id, { members: [...g.members, id] })
-      return st
+      return g && !g.members.includes(id) ? A.updateGroup(st, g.id, { members: [...g.members, id] }) : st
     })
     set((x) => ({ ...x, people: [...x.people, id] }))
     setNewp('')
@@ -81,8 +82,8 @@ export const Assign = withDraft(function Assign({ d }: { d: D.Draft }) {
         )}
         {d.kind === 'group' && !d.fixed && (
           <div className="row" style={{ marginBottom: 8 }}>
-            <input placeholder="Add person or @usertag" maxLength={30} aria-label="Add person or @usertag" value={newp} onChange={(e) => setNewp(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addPerson())} />
-            <button className="secondary" style={{ width: 92, padding: 11 }} onClick={addPerson}>Add</button>
+            <input placeholder="Add person or @usertag" maxLength={30} aria-label="Add person or @usertag" value={newp} onChange={(e) => setNewp(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), void addPerson())} />
+            <button className="secondary" style={{ width: 92, padding: 11 }} onClick={() => void addPerson()}>Add</button>
           </div>
         )}
         <div id="alist">

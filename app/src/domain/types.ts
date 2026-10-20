@@ -100,7 +100,8 @@ export interface AppLedger extends Omit<Ledger, 'bills' | 'payments'> {
 
 export interface Notif {
   id: string
-  kind?: 'remind'
+  /** remind: a friend's reminder. invite: you were invited to a group. join_request: someone asked to join a group you run. */
+  kind?: 'remind' | 'invite' | 'join_request'
   text: string
   sub: string
   ts: number

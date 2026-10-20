@@ -1,7 +1,8 @@
-import { useRef, type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
+import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { findBill, ledgerById, letterOf, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
 import type { Notif } from '../domain/types'
@@ -125,6 +126,68 @@ function NotifRow({ n, onOpen, onToggle, onDismiss }: { n: Notif; onOpen: () => 
   )
 }
 
+/** An invitation to a group: accept to join, decline to turn it down. */
+function InviteSheet({ n, close }: { n: Notif; close: () => void }) {
+  const account = useAccount()
+  const store = useStore()
+  const nav = useNavigate()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const done = (msg: string) => {
+    store.update((st) => A.dismissNotif(st, n.id).state)
+    close()
+    toast(msg)
+  }
+  const answer = async (accept: boolean) => {
+    if (!account || !n.gid) return
+    setBusy(true)
+    const r = accept ? await account.acceptInvite(n.gid) : await account.declineInvite(n.gid)
+    setBusy(false)
+    if (r.err) return toast(r.err)
+    done(accept ? 'You joined the group' : 'Invitation declined')
+    if (accept) nav(`/groups/${n.gid}`)
+  }
+  return (
+    <>
+      <div className="card"><b>{n.text}</b><div className="mute">You can only see the group after you accept.</div></div>
+      <button className="primary" disabled={busy} onClick={() => void answer(true)}>Accept and join</button>
+      <div style={{ height: 10 }} />
+      <button className="secondary" disabled={busy} onClick={() => void answer(false)}>Decline</button>
+    </>
+  )
+}
+
+/** Someone opened the group link and asked to join a group you run. */
+function JoinRequestSheet({ n, close }: { n: Notif; close: () => void }) {
+  const s = useAppState()
+  const account = useAccount()
+  const store = useStore()
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const who = n.pid ? s.people[n.pid] : undefined
+  const decide = async (approve: boolean) => {
+    if (!account || !n.gid || !n.pid) return
+    setBusy(true)
+    const r = await account.decideJoin(n.gid, n.pid, approve)
+    setBusy(false)
+    if (r.err) return toast(r.err)
+    store.update((st) => A.dismissNotif(st, n.id).state)
+    close()
+    toast(approve ? `${who?.name ?? 'They'} joined` : 'Request declined')
+  }
+  return (
+    <>
+      <div className="card">
+        <b>{who?.name ?? n.text}</b> {who?.tag && <span className="pill">@{who.tag}</span>}
+        <div className="mute">Opened the group link and asked to join. Approving gives them access to every bill in the group.</div>
+      </div>
+      <button className="primary" disabled={busy} onClick={() => void decide(true)}>Approve</button>
+      <div style={{ height: 10 }} />
+      <button className="secondary" disabled={busy} onClick={() => void decide(false)}>Deny</button>
+    </>
+  )
+}
+
 function ReminderSheet({ n, close }: { n: Notif; close: () => void }) {
   const s = useAppState()
   const nav = useNavigate()
@@ -166,6 +229,7 @@ export function AlertsTab() {
   const nav = useNavigate()
   const sheet = useSheet()
   const toast = useToast()
+  const account = useAccount()
   const [tab, setTab] = useUiState<'splits' | 'notes'>('al.tab', 'splits')
   const [q, setQ] = useUiState('al.q', '')
   const [filter, setFilter] = useUiState<NoteFilter>('al.filter', 'all')
@@ -176,6 +240,8 @@ export function AlertsTab() {
 
   const open = (n: Notif) => {
     store.update((st) => A.markRead(st, n.id))
+    if (n.kind === 'invite' && n.gid && account) return sheet.open('Group invitation', (close) => <InviteSheet n={n} close={close} />)
+    if (n.kind === 'join_request' && n.gid && account) return sheet.open('Request to join', (close) => <JoinRequestSheet n={n} close={close} />)
     if (n.kind === 'remind') return sheet.open(`Reminder from ${personName(s, n.from ?? '')}`, (close) => <ReminderSheet n={n} close={close} />)
     if (n.billId && findBill(s, n.billId)) return nav(`/bill/${n.billId}`)
     if (n.gid && ledgerById(s, n.gid)?.kind === 'group') return nav(`/groups/${n.gid}`)
