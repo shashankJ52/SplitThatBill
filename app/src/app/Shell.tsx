@@ -33,14 +33,15 @@ export function Shell() {
   }, [inFlow, clearDraft])
 
   const isAuth = AUTH_ROUTES.includes(path)
-  const isPublic = path.startsWith('/preview')
-  if (!s.signedIn && !isAuth) {
+  const isPublicLink = path.startsWith('/b/')
+  const isPublic = path.startsWith('/preview') || isPublicLink
+  if (!s.signedIn && !isAuth && !isPublicLink) {
     if (path.startsWith('/join/')) rememberJoin(path.slice('/join/'.length))
     return <Navigate to="/welcome" replace />
   }
   // a group link opened before logging in is followed once there is an account to use it with
   const waiting = pendingJoin()
-  if (s.signedIn && waiting && !path.startsWith('/join/') && !isAuth) return <Navigate to={`/join/${waiting}`} replace />
+  if (s.signedIn && waiting && !path.startsWith('/join/') && !isAuth && !isPublicLink) return <Navigate to={`/join/${waiting}`} replace />
   if (s.signedIn && path === '/') return <Navigate to="/groups" replace />
 
   const isFlow = FLOW_STEPS.includes(path)

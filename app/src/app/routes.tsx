@@ -6,6 +6,7 @@ import { GroupsTab } from '../screens/GroupsTab'
 import { PersonPage } from '../screens/PersonPage'
 import { JoinPage } from '../screens/JoinPage'
 import { PublicBill } from '../screens/PublicBill'
+import { PublicBillLink } from '../screens/PublicBillLink'
 import { SheetProvider } from '../ui/Sheet'
 import { ToastProvider } from '../ui/Toast'
 import { Assign } from '../screens/flow/Assign'
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
       { path: '/bill/:id', element: <BillPage /> },
       { path: '/person/:pid', element: <PersonPage /> },
       { path: '/join/:code', element: <JoinPage /> },
+      { path: '/b/:token', element: <PublicBillLink /> },
       { path: '/preview/draft', element: <DraftPreview /> },
       { path: '/preview/:id', element: <PublicBill /> },
       { path: '/alerts', element: <AlertsTab /> },

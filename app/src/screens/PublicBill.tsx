@@ -11,7 +11,7 @@ import type { AppBill } from '../domain/types'
 import { useToast } from '../ui/Toast'
 
 /** What a friend sees from the share link: this bill only, with no balances, groups, tags or comments. */
-export function PublicBill({ bill: given }: { bill?: AppBill }) {
+export function PublicBill({ bill: given, onGet }: { bill?: AppBill; onGet?: () => void }) {
   const { id = '' } = useParams()
   const s = useAppState()
   const toast = useToast()
@@ -42,7 +42,7 @@ export function PublicBill({ bill: given }: { bill?: AppBill }) {
         {b.notes && <div className="card" style={{ display: 'block' }}><div className="mute">Notes</div>{b.notes}</div>}
         <BillBreakdown bill={b} forOthers />
         <div className="bar info" style={{ marginTop: 16 }}>This page shows only this bill and how it was split. Get the app to track what you owe.</div>
-        <button className="primary" onClick={() => toast('The app is not on a store yet. Open the website to use it.')}>Get SplitThatBill</button>
+        <button className="primary" onClick={() => (onGet ? onGet() : toast('The app is not on a store yet. Open the website to use it.'))}>Get SplitThatBill</button>
       </div>
     </Screen>
   )
