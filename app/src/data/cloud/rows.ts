@@ -125,6 +125,7 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
       ...(t(b.data) as unknown as AppBill),
       id: b.id,
       by: t(b.created_by),
+      ts: ts(b.created_at),
       token: b.token,
       comments: l.comments.filter((c) => c.bill_id === b.id).sort(byCreated).map((c) => ({ id: c.id, by: t(c.author_id), text: c.text, ts: ts(c.created_at), ...(c.sys ? { sys: true } : {}) })),
     }))
@@ -133,6 +134,7 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
       id: p.id,
       date: p.pay_date,
       by: t(p.created_by),
+      ts: ts(p.created_at),
     }))
     const lists: NoteList[] = l.lists.filter((x) => x.group_id === g.id).sort(byCreated).map((x) => ({
       id: x.id,
@@ -225,13 +227,13 @@ export function toSnapshot(s: AppState, userId: string, pos: Positions): Snapsho
       }
     }
     for (const b of l.bills) {
-      if (b.by === ME) add('bills', b.id, { group_id: l.id, bill_date: b.date, token: b.token, data: un(omit(b, ['id', 'by', 'comments'])) })
+      if (b.by === ME) add('bills', b.id, { group_id: l.id, bill_date: b.date, token: b.token, data: un(omit(b, ['id', 'by', 'comments', 'ts'])) })
       for (const c of b.comments) {
         if (c.by === ME) add('comments', c.id, { group_id: l.id, bill_id: b.id, text: c.text, sys: !!c.sys, created_at: iso(c.ts) })
       }
     }
     for (const p of l.payments) {
-      if ((p.by ?? ME) === ME) add('payments', p.id, { group_id: l.id, pay_date: p.date, data: un(omit(p, ['id', 'by'])) })
+      if ((p.by ?? ME) === ME) add('payments', p.id, { group_id: l.id, pay_date: p.date, data: un(omit(p, ['id', 'by', 'ts'])) })
     }
     for (const x of l.lists) {
       add('lists', x.id, { group_id: l.id, title: x.title, memo: x.memo })

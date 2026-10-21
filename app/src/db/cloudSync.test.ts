@@ -86,8 +86,10 @@ describe('one person, two devices', () => {
     const b = await device(ann) // a second device
     const l = ledgerOf(b, gid)
     expect(l).toMatchObject({ kind: 'group', name: 'Flat', color: '#0039A6', simplify: true, members: [ME, sam], owner: ME, roles: { [ME]: 'owner' } })
-    expect(l.bills).toEqual([bill])
-    expect(l.payments).toEqual([{ ...pay, by: ME }])
+    // the database adds when each was recorded; everything else comes back exactly as saved
+    const noTime = <T extends { ts?: number }>(x: T[]) => x.map(({ ts, ...rest }) => (expect(typeof ts).toBe('number'), rest))
+    expect(noTime(l.bills)).toEqual([bill])
+    expect(noTime(l.payments)).toEqual([{ ...pay, by: ME }])
     expect(l.lists).toMatchObject([{ id: list.id, title: 'Costco', memo: 'Bring bags', items: list.items }])
     expect(b.state.people[sam]).toMatchObject({ name: 'Sam', user: false })
     expect(b.state.notes).toEqual([note])

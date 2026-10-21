@@ -110,6 +110,8 @@ export interface PersonPaymentInput {
   date: string
   note?: string
   img?: string | null
+  /** when it was recorded (milliseconds) */
+  ts?: number
 }
 /** Record a payment with one person, spread over the ledgers where it clears debt (1-1 first). */
 export function applyPersonPayment(s: S, p: PersonPaymentInput): { state: S; steps: { ledgerId: string; amt: Cents }[] } {
@@ -123,7 +125,7 @@ export function applyPersonPayment(s: S, p: PersonPaymentInput): { state: S; ste
       state = r.state
       id = r.id
     }
-    state = addPayment(state, id, { id: derivedId(p.id, i), linkId: p.id, from: plan.from, to: plan.to, amt: step.amt, date: p.date, note: p.note, img: p.img ?? null })
+    state = addPayment(state, id, { id: derivedId(p.id, i), linkId: p.id, from: plan.from, to: plan.to, amt: step.amt, date: p.date, note: p.note, img: p.img ?? null, ...(p.ts !== undefined ? { ts: p.ts } : {}) })
     steps.push({ ledgerId: id, amt: step.amt })
   })
   return { state, steps }

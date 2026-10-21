@@ -345,6 +345,45 @@ describe('reminders', () => {
   })
 })
 
+describe('one alert per payment', () => {
+  it('a payment split across two groups alerts the other person once, with the whole amount', async () => {
+    const g1 = randomUUID()
+    const g2 = randomUUID()
+    for (const g of [g1, g2]) {
+      await t.as(ann, async () => {
+        await t.sql(`insert into groups (id, kind, name, owner_id) values ($1, 'group', 'G', $2)`, [g, ann])
+        await t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, $2, 'Ann', 'owner', 'active')`, [g, ann])
+        await t.sql('select invite_user($1, $2)', [g, ben])
+      })
+      await t.as(ben, () => t.sql('select accept_invite($1)', [g]))
+    }
+    const link = randomUUID()
+    const row = (g: string, amt: number, i: number) => [randomUUID(), g, JSON.stringify({ from: ben, to: ann, amt, linkId: link, i })]
+    const [a1, a2] = [row(g1, 15604, 0), row(g2, 10000, 1)]
+    // both pieces arrive in one statement, as the app sends them
+    await t.as(ben, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-21', $3), ($4, $5, '2026-10-21', $6)`, [...a1, ...a2]))
+    const alerts = (await t.as(ann, () => t.sql(`select data from notifs`))).map((r) => r.data as { text: string; pid?: string; linkId?: string }).filter((d) => /payment/.test(d.text))
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].text).toBe('Ben Ray recorded a payment of $256.04')
+    expect(alerts[0].pid).toBe(ben)
+    expect(alerts[0].linkId).toBe(link)
+  })
+  it('two separate payments still give two alerts', async () => {
+    const g = randomUUID()
+    await t.as(ann, async () => {
+      await t.sql(`insert into groups (id, kind, name, owner_id) values ($1, 'group', 'G', $2)`, [g, ann])
+      await t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, $2, 'Ann', 'owner', 'active')`, [g, ann])
+      await t.sql('select invite_user($1, $2)', [g, ben])
+    })
+    await t.as(ben, () => t.sql('select accept_invite($1)', [g]))
+    for (const amt of [500, 700]) {
+      await t.as(ben, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-21', $3)`, [randomUUID(), g, JSON.stringify({ from: ben, to: ann, amt, linkId: randomUUID() })]))
+    }
+    const texts = (await t.as(ann, () => t.sql(`select data from notifs`))).map((r) => (r.data as { text: string }).text).filter((x) => /payment/.test(x))
+    expect(texts.sort()).toEqual(['Ben Ray recorded a payment of $5.00', 'Ben Ray recorded a payment of $7.00'])
+  })
+})
+
 describe('reminders in a 1-1 split', () => {
   it('reach the other person when you have no group together', async () => {
     const one = randomUUID()

@@ -29,6 +29,8 @@ export interface Draft {
   token: string
   by: PersonId
   comments: Comment[]
+  /** when a saved bill was first added, kept while editing */
+  ts?: number
   items: Item[]
   nextId: number
   extras: Extra[]
@@ -152,6 +154,7 @@ export function draftFromBill(b: AppBill, ledger: AppLedger): Draft {
     target: ledger.kind === 'group' ? `g:${ledger.id}` : `p:${ledger.with}`,
     people: b.people.slice(), title: b.title, loc: b.loc, cat: b.cat, date: b.date, notes: b.notes, token: b.token, by: b.by,
     comments: b.comments.slice(),
+    ts: b.ts,
     items: structuredClone(b.items),
     nextId: b.items.reduce((m, i) => Math.max(m, i.id), 0) + 1,
     extras: structuredClone(b.extras),
@@ -382,7 +385,7 @@ export function toBill(d: Draft): AppBill {
   }
   return makeBill({
     id: d.id, title: d.title.trim() || 'Untitled bill', loc: d.loc.trim(), cat: d.cat, date: d.date, by: d.by, notes: d.notes.trim(),
-    token: d.token, comments: d.comments, people: d.people, items: d.items, tax: d.tax, tip: d.tip, disc: d.disc, rt: d.rt,
+    token: d.token, comments: d.comments, ts: d.ts ?? Date.now(), people: d.people, items: d.items, tax: d.tax, tip: d.tip, disc: d.disc, rt: d.rt,
     extras: d.extras, guests: d.guests, payer, paid, fixed: d.fixed,
   })
 }

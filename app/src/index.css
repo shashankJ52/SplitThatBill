@@ -218,3 +218,13 @@ button.secondary.pillb{width:auto;flex:none;padding:6px 14px;font-size:14px;bord
 @media (prefers-reduced-motion:reduce){*,*:before{animation:none!important;transition:none!important}}
 
 a{color:inherit;text-decoration:none}
+/* activity filter: a small funnel button with a menu that opens under it, right-aligned */
+.afilter{width:auto;flex:none}
+.afilter .ddm{left:auto;right:0;min-width:190px}
+.iconbtn{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:none;color:var(--fg);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;position:relative}
+.iconbtn.on{border-color:var(--fg)}
+.iconbtn.on:after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--yellow,#FCCC0A);border:2px solid var(--bg)}
+.iconbtn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+
+/* a single line of text that ends in an ellipsis instead of wrapping */
+.oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

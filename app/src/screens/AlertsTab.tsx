@@ -4,7 +4,7 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
-import { findBill, ledgerById, letterOf, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
+import { alertTarget, findBill, ledgerById, letterOf, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
 import type { Notif } from '../domain/types'
 import { ago, fmt } from '../domain/util'
 import { NoteSheet } from '../sheets/NoteSheet'
@@ -19,7 +19,7 @@ function metaOf(s: ReturnType<typeof useAppState>, n: Notif): { c: string; lette
   if (n.kind === 'remind') return { c: '#EE352E', letter: '!' }
   const f = n.billId ? findBill(s, n.billId) : null
   const g = f?.ledger ?? (n.gid ? ledgerById(s, n.gid) : undefined)
-  if (/ paid /.test(n.text)) return { c: '#00933C', letter: '$' }
+  if (/ paid |payment/.test(n.text)) return { c: '#00933C', letter: '$' }
   if (g?.kind === 'group') return { c: g.color ?? '#A7A9AC', letter: letterOf(g.name ?? '?') }
   return { c: '#A7A9AC', letter: '•' }
 }
@@ -243,9 +243,8 @@ export function AlertsTab() {
     if (n.kind === 'invite' && n.gid && account) return sheet.open('Group invitation', (close) => <InviteSheet n={n} close={close} />)
     if (n.kind === 'join_request' && n.gid && account) return sheet.open('Request to join', (close) => <JoinRequestSheet n={n} close={close} />)
     if (n.kind === 'remind') return sheet.open(`Reminder from ${personName(s, n.from ?? '')}`, (close) => <ReminderSheet n={n} close={close} />)
-    if (n.billId && findBill(s, n.billId)) return nav(`/bill/${n.billId}`)
-    if (n.gid && ledgerById(s, n.gid)?.kind === 'group') return nav(`/groups/${n.gid}`)
-    if (n.pid) return nav(`/person/${n.pid}`)
+    const where = alertTarget(s, n)
+    if (where) return nav(where)
     toast('That item no longer exists')
   }
   const toggle = (n: Notif) => {

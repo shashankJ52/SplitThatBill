@@ -126,3 +126,35 @@ describe('variants of the same payment', () => {
     expect(after.ben.pair).toBe(0)
   })
 })
+
+describe('paying more than is owed', () => {
+  it('shows as one payment of the full amount, and the balance flips by the difference', async () => {
+    const { personActivity, pairBalance } = await import('../domain/selectors.ts')
+    // Ann and Ben share a 1-1 split; Ben owes Ann 156.04
+    const a = await load(ann)
+    const oid = uid()
+    let s: AppState = { ...a.state, people: { ...a.state.people, [ben]: { id: ben, name: 'Ben Ray', user: true, tag: 'ben' } } }
+    s = A.ensureOneLedger(s, ben, oid).state
+    await a.repo.save(s)
+    await t.as(ann, () => t.sql('select invite_user($1, $2)', [oid, ben]))
+    await t.as(ben, () => t.sql('select accept_invite($1)', [oid]))
+    s = (await load(ann)).state
+    s = A.addBill(s, oid, bill('Coffee', ME, [ME, ben], 31208)) // 156.04 each
+    await a.repo.save(s)
+
+    // Ben pays 256.04 from his side
+    const b = await load(ben)
+    expect(pairBalance(b.state, ann).tot).toBe(-15604)
+    const r = A.applyPersonPayment(b.state, { id: uid(), newLedgerId: uid(), pid: ann, direction: 'out', amt: 25604, date: '2026-10-21', note: 'Zelle ref 4821', img: 'data:image/png;base64,AAAA' })
+    await b.repo.save(r.state)
+
+    for (const [who, other] of [[ann, ben], [ben, ann]] as const) {
+      const v = (await load(who)).state
+      const pays = personActivity(v, other).filter((x) => x.k === 'p')
+      expect(pays).toHaveLength(1)
+      expect(pays[0].o).toMatchObject({ amt: 25604, note: 'Zelle ref 4821', img: 'data:image/png;base64,AAAA' })
+      // the balance is the difference: Ann now owes Ben 100.00
+      expect(pairBalance(v, other).tot).toBe(who === ann ? -10000 : 10000)
+    }
+  })
+})

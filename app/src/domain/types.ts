@@ -26,6 +26,8 @@ export interface Comment {
 }
 
 export interface AppBill extends Bill {
+  /** when it was added (milliseconds); missing on older data */
+  ts?: number
   title: string
   loc: string
   cat: string
@@ -48,6 +50,8 @@ export interface AppPayment extends Payment {
   linkId?: string
   /** who recorded it; missing means you */
   by?: PersonId
+  /** when it was recorded (milliseconds); missing on older data */
+  ts?: number
 }
 
 export interface ListItem {

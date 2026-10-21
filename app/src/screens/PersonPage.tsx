@@ -1,14 +1,15 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { ledgerName, letterOf, oneLedger, pairBalance } from '../domain/selectors'
-import type { AppPayment } from '../domain/types'
+import { filterActivity, ledgerName, letterOf, pairBalance, personActivity, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { fmt } from '../domain/util'
 import { RemindSheet } from '../sheets/RemindSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { Avatar, BellIcon, Bullet, Empty } from '../ui/bits'
+import { ActivityFilter } from '../ui/ActivityFilter'
 import { BillCard, PayCard } from '../ui/BillCards'
+import { useUiState } from '../ui/uiState'
 import { useSheet } from '../ui/Sheet'
 
 export function PersonPage() {
@@ -16,26 +17,15 @@ export function PersonPage() {
   const s = useAppState()
   const nav = useNavigate()
   const sheet = useSheet()
+  const [kind, setKind] = useUiState<ActivityKind>(`person.${pid}.filter`, 'all')
   const p = s.people[pid]
   if (!p || pid === ME) return <Navigate to="/groups" replace />
   const pr = pairBalance(s, pid)
   const t = pr.tot
-  const L1 = oneLedger(s, pid)
 
-  // 1-1 bills plus every payment between the two of you, with split payments merged into one line
-  const merged = new Map<string, AppPayment>()
-  for (const L of s.ledgers) {
-    for (const x of L.payments) {
-      if (!((x.from === pid && x.to === ME) || (x.from === ME && x.to === pid))) continue
-      const key = x.linkId ?? x.id
-      const m = merged.get(key)
-      merged.set(key, m ? { ...m, amt: m.amt + x.amt } : { ...x })
-    }
-  }
-  const activity = [
-    ...(L1?.bills ?? []).map((o) => ({ k: 'b' as const, d: o.date, o })),
-    ...[...merged.values()].map((o) => ({ k: 'p' as const, d: o.date, o })),
-  ].sort((a, b) => (b.d < a.d ? -1 : b.d > a.d ? 1 : 0))
+  // 1-1 bills plus every payment between the two of you, with the pieces of one payment shown as one
+  const all = personActivity(s, pid)
+  const activity = filterActivity(all, kind)
 
   return (
     <Screen id="v-person">
@@ -79,8 +69,15 @@ export function PersonPage() {
           )
           return l.kind === 'group' ? <Link className="card row tap rise" to={`/groups/${l.id}`} key={l.id}>{inner}</Link> : <div className="card row rise" key={l.id}>{inner}</div>
         }) : <Empty small title="Nothing outstanding">You two are even.</Empty>}
-        <h2>Activity</h2>
-        {activity.length ? activity.map((x, i) => (x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />)) : <Empty small title="No activity" />}
+        <div className="row" style={{ margin: '14px 0 8px' }}>
+          <h2 style={{ margin: 0, flex: 1 }}>Activity</h2>
+          <ActivityFilter value={kind} onChange={setKind} />
+        </div>
+        {activity.length ? (
+          activity.map((x, i) => (x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />))
+        ) : (
+          <Empty small title={all.length ? (kind === 'bills' ? 'No bills' : 'No settle-ups') : 'No activity'}>{all.length ? 'Change the filter to see everything.' : undefined}</Empty>
+        )}
       </div>
     </Screen>
   )

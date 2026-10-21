@@ -6,7 +6,7 @@ import { useAppState, useStore } from '../data/store'
 import { billLink, whatsappText } from '../domain/share'
 import { findBill, ledgerName, personName } from '../domain/selectors'
 import { ME } from '../domain/types'
-import { ago, fmt, uid } from '../domain/util'
+import { ago, fmt, uid, whenLabel } from '../domain/util'
 import { BillBreakdown, receiptNote } from '../ui/BillBreakdown'
 import { paidText } from '../ui/BillCards'
 import { useFlow } from '../flow/FlowProvider'
@@ -55,7 +55,7 @@ export function BillPage() {
       <div className="vhead">
         <div className="gname" style={{ fontSize: 30, lineHeight: 1.05, marginTop: 4 }}>{b.title}</div>
         <div className="mute">{b.date}{b.loc ? ` · 📍 ${b.loc}` : ''}</div>
-        <div className="mute">{paidText(s, b)} · added by {personName(s, b.by)}</div>
+        <div className="mute">{paidText(s, b)} · added by {personName(s, b.by)}{b.ts ? ` · ${whenLabel(b.ts, b.date, { exact: true })}` : ''}</div>
         <div className="row" style={{ margin: '8px 0', flexWrap: 'wrap', gap: 8 }}>
           <Link className="pill tap" to={L.kind === 'group' ? `/groups/${L.id}` : `/person/${L.with}`}>{ledgerName(s, L)} ›</Link>
           <span className="pill">{b.cat || 'Other'}</span>

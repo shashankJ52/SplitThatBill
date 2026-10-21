@@ -51,12 +51,12 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
     const id = uid('p')
     if (g) {
       if (from === to) return setErr('Pick two different people')
-      store.update((st) => A.addPayment(st, g.id, { id, linkId: id, from, to, amt: cents, date: today(), note: note.trim(), img }))
+      store.update((st) => A.addPayment(st, g.id, { id, linkId: id, from, to, amt: cents, date: today(), note: note.trim(), img, ts: Date.now() }))
       toast('Payment recorded')
     } else if (pid) {
       let text = ''
       store.update((st) => {
-        const r = A.applyPersonPayment(st, { id, newLedgerId: uid('o'), pid, direction: dir, amt: cents, date: today(), note: note.trim(), img })
+        const r = A.applyPersonPayment(st, { id, newLedgerId: uid('o'), pid, direction: dir, amt: cents, date: today(), note: note.trim(), img, ts: Date.now() })
         text = r.steps.map((x) => `${ledgerName(r.state, ledgerById(r.state, x.ledgerId) as never)} ${fmt(x.amt)}`).join(', ')
         return r.state
       })

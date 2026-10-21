@@ -65,3 +65,42 @@ export const clone = <T>(o: T): T => structuredClone(o)
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 export const TAG_RE = /^[a-z0-9_]{3,20}$/
+
+export interface MomentOptions {
+  now?: number
+  locale?: string
+  /** an IANA zone such as "Asia/Kolkata"; the device's own zone when left out, which is what people should see */
+  timeZone?: string
+  /** older than yesterday: show the exact day and time ("Oct 14, 12:32 PM") instead of the bare expense date */
+  exact?: boolean
+}
+
+/** The calendar day of a moment in a zone, as YYYY-MM-DD. */
+const dayIn = (ts: number, timeZone?: string) => new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ts)
+const dayNumber = (ymd: string) => Date.UTC(+ymd.slice(0, 4), +ymd.slice(5, 7) - 1, +ymd.slice(8, 10)) / 86_400_000
+
+/** The time of day, in the viewer's zone and their usual 12 or 24 hour style. */
+export const clockIn = (ts: number, locale?: string, timeZone?: string) => new Date(ts).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', timeZone })
+
+/**
+ * When something happened, for activity lists. The moment is stored as an exact instant, so it is shown in the time zone
+ * of whoever is looking: the same payment reads 9:05 PM in California and 9:35 AM the next day in India.
+ * Recent things say how long ago ("11 min ago") or the time of day ("Today, 12:20 AM", "Yesterday, 9:05 PM").
+ * Older things show the date, or with `exact` the date and time. Without a recorded time it is just the date.
+ */
+export function whenLabel(ts: number | undefined, date: string, opt: MomentOptions | number = {}, legacyLocale?: string): string {
+  const o: MomentOptions = typeof opt === 'number' ? { now: opt, locale: legacyLocale } : opt
+  const now = o.now ?? Date.now()
+  if (ts === undefined || !Number.isFinite(ts) || ts > now + 60_000) return date
+  const mins = Math.floor((now - ts) / 60_000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins} min ago`
+  const clock = clockIn(ts, o.locale, o.timeZone)
+  const days = dayNumber(dayIn(now, o.timeZone)) - dayNumber(dayIn(ts, o.timeZone))
+  if (days === 0) return `Today, ${clock}`
+  if (days === 1) return `Yesterday, ${clock}`
+  if (!o.exact) return date
+  const sameYear = dayIn(ts, o.timeZone).slice(0, 4) === dayIn(now, o.timeZone).slice(0, 4)
+  const day = new Date(ts).toLocaleDateString(o.locale, { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }), timeZone: o.timeZone })
+  return `${day}, ${clock}`
+}

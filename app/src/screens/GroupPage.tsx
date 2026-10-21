@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { feed, groupTotals, ledgerById, letterOf, monthStats, monthsAsc, openCount, pairInGroup, personName } from '../domain/selectors'
+import { filterActivity, groupTotals, ledgerActivity, ledgerById, letterOf, monthStats, monthsAsc, openCount, pairInGroup, personName, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { fmt, mAdd, mLabel, nowKey } from '../domain/util'
 import { nets, transfers } from '../money'
@@ -14,6 +14,7 @@ import { NoteSheet } from '../sheets/NoteSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { RemindSheet } from '../sheets/RemindSheet'
 import { Avatar, Bullet, Empty, Seg } from '../ui/bits'
+import { ActivityFilter } from '../ui/ActivityFilter'
 import { BillCard, PayCard } from '../ui/BillCards'
 import { CategoryChart, PeopleChart, TrendChart, type TrendState } from '../ui/charts'
 import { MonthBar } from '../ui/MonthBar'
@@ -74,27 +75,29 @@ export function GroupPage() {
 
 function BillsTab({ gid }: { gid: string }) {
   const s = useAppState()
-  const sheet = useSheet()
   const g = ledgerById(s, gid)!
   const [month, setMonth] = useUiState<string | null>(`grp.${gid}.month`, null)
   const [all, setAll] = useUiState<boolean>(`grp.${gid}.all`, false)
   const cur = month ?? nowKey()
   const ms = monthsAsc(g)
-  const items = feed(g)
-  const one = (x: ReturnType<typeof feed>[number], i: number) =>
-    x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} onImage={(p) => sheet.open('Payment proof', (close) => <><img src={p.img ?? ''} style={{ width: '100%', borderRadius: 10 }} alt="Payment proof" /><div style={{ height: 12 }} /><button className="secondary" onClick={close}>Close</button></>)} /> : <BillCard key={x.o.id} bill={x.o} index={i} />
+  const [kind, setKind] = useUiState<ActivityKind>(`grp.${gid}.filter`, 'all')
+  const items = filterActivity(ledgerActivity(g), kind)
+  const one = (x: ReturnType<typeof ledgerActivity>[number], i: number) =>
+    x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />
+  const filter = <ActivityFilter value={kind} onChange={setKind} />
+  const none = kind === 'bills' ? 'No bills here' : kind === 'payments' ? 'No settle-ups here' : ''
 
   if (all) {
     const keys = [...new Set(items.map((x) => x.d.slice(0, 7)))]
     return (
       <>
-        <div className="row mbar"><div className="grow mute">All months</div><button className="fchip plain" style={{ margin: 0 }} onClick={() => setAll(false)}>Month-wise</button></div>
+        <div className="row mbar"><div className="grow mute">All months</div>{filter}<button className="fchip plain" style={{ margin: 0 }} onClick={() => setAll(false)}>Month-wise</button></div>
         {keys.length ? keys.map((k) => (
           <div key={k}>
             <div className="msep">{mLabel(k)} · {fmt(monthStats(g, k).tot)}</div>
             {items.filter((x) => x.d.slice(0, 7) === k).map(one)}
           </div>
-        )) : <Empty title="No bills yet">Snap a receipt to split your first one.</Empty>}
+        )) : <Empty title={none || 'No bills yet'}>{none ? 'Change the filter to see everything.' : 'Snap a receipt to split your first one.'}</Empty>}
       </>
     )
   }
@@ -103,8 +106,8 @@ function BillsTab({ gid }: { gid: string }) {
   return (
     <>
       <MonthBar label={mLabel(cur)} sub={`${fmt(st.tot)} · ${st.n} bill${st.n === 1 ? '' : 's'}`} canPrev={cur > ms[0]} canNext={cur < nowKey()} onPrev={() => setMonth(mAdd(cur, -1))} onNext={() => setMonth(mAdd(cur, 1))}
-        right={<button className="fchip plain" style={{ margin: '0 0 0 4px' }} onClick={() => setAll(true)}>All months</button>} />
-      {inMonth.length ? inMonth.map(one) : <Empty title={`No bills in ${mLabel(cur)}`}>Use the arrows or All months to look elsewhere.</Empty>}
+        right={<>{filter}<button className="fchip plain" style={{ margin: '0 0 0 4px' }} onClick={() => setAll(true)}>All months</button></>} />
+      {inMonth.length ? inMonth.map(one) : <Empty title={none || `No bills in ${mLabel(cur)}`}>{none ? 'Change the filter to see everything.' : 'Use the arrows or All months to look elsewhere.'}</Empty>}
     </>
   )
 }

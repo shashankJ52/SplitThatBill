@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useAppState } from '../data/store'
-import { personName } from '../domain/selectors'
-import type { AppBill, AppPayment } from '../domain/types'
+import { ledgerById, ledgerName, personName, type MergedPayment } from '../domain/selectors'
+import type { AppBill } from '../domain/types'
 import { ME } from '../domain/types'
-import { fmt } from '../domain/util'
+import { fmt, whenLabel } from '../domain/util'
 import { paidMap } from '../money'
+import { PaymentSheet } from '../sheets/PaymentSheet'
 import { Bullet } from './bits'
+import { useSheet } from './Sheet'
 
 export function paidText(s: Parameters<typeof personName>[0], b: AppBill, forOthers = false) {
   const k = Object.keys(paidMap(b, b.total))
@@ -21,7 +23,7 @@ export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number
       <div className="row">
         <div className="grow">
           <b>{b.title}</b>
-          <div className="mute">{b.date} · {paidText(s, b)}</div>
+          <div className="mute">{whenLabel(b.ts, b.date)} · {paidText(s, b)}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <b>{fmt(b.total)}</b>
@@ -33,19 +35,24 @@ export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number
   )
 }
 
-export function PayCard({ payment: p, index = 0, onImage }: { payment: AppPayment; index?: number; onImage?: (p: AppPayment) => void }) {
+export function PayCard({ payment: p, index = 0 }: { payment: MergedPayment; index?: number }) {
   const s = useAppState()
+  const sheet = useSheet()
+  const open = () => sheet.open('Payment', (close) => <PaymentSheet p={p} close={close} />)
+  const places = p.parts.length > 1 ? p.parts.map((x) => `${fmt(x.amt)} ${ledgerName(s, ledgerById(s, x.ledgerId) ?? ({ kind: 'group', name: 'a split' } as never))}`).join(' · ') : ''
   return (
-    <div className="card row rise" style={{ ['--i' as string]: index }}>
+    <div className="card row tap rise" style={{ ['--i' as string]: index }} role="button" tabIndex={0} onClick={open} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}>
       <Bullet letter="$" color="#00933C" size={36} />
       <div className="grow">
         <b>{personName(s, p.from)} paid {personName(s, p.to)}</b>
-        <div className="mute">Payment · {p.date}</div>
-        {p.note && <div style={{ marginTop: 4 }}>“{p.note}”</div>}
+        <div className="mute">
+          Payment · {whenLabel(p.ts, p.date, { exact: true })}
+          {p.img && <span role="img" aria-label="Screenshot attached"> · 📎</span>}
+        </div>
+        {places && <div className="mute" style={{ fontSize: 12 }}>Applied: {places}</div>}
+        {/* one line only; the whole note is in the sheet that opens when you tap the payment */}
+        {p.note && <div className="oneline" style={{ marginTop: 4 }}>“{p.note}”</div>}
       </div>
-      {p.img && (
-        <img className="thumb" src={p.img} alt="Payment proof" role="button" tabIndex={0} onClick={() => onImage?.(p)} onKeyDown={(e) => e.key === 'Enter' && onImage?.(p)} />
-      )}
       <b>{fmt(p.amt)}</b>
     </div>
   )

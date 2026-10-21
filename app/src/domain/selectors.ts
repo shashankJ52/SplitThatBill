@@ -1,5 +1,5 @@
 import { myNet, overall, pairNet, paidMap, transfers, type Cents, type PersonId } from '../money'
-import type { AppBill, AppLedger, AppState, NoteList } from './types'
+import type { AppBill, AppLedger, AppState, Notif, NoteList } from './types'
 import { ME } from './types'
 import { mAdd, nowKey } from './util'
 
@@ -230,3 +230,94 @@ export function noteEntries(s: AppState, ctx: 'n' | 'g', gid: string | null, q: 
 }
 
 export const unreadCount = (s: AppState) => s.notifs.filter((n) => !n.read).length
+
+// ---------- activity with one person ----------
+/** One payment as people think of it: all the pieces recorded together added up. */
+export interface MergedPayment {
+  id: string
+  from: PersonId
+  to: PersonId
+  amt: Cents
+  date: string
+  ts?: number
+  note?: string
+  img?: string | null
+  /** where the pieces went, so "paid you $256.04" can say "$156.04 to the 1-1, $100.00 to Flat" */
+  parts: { ledgerId: string; amt: Cents }[]
+}
+
+/**
+ * A payment can be recorded across several places (the 1-1 and shared groups, plus any overpayment), but it is one
+ * payment: group the pieces by the link they share and add them up.
+ */
+export function mergePayments(ledgers: AppLedger[], match: (p: AppLedger['payments'][number]) => boolean): MergedPayment[] {
+  const out = new Map<string, MergedPayment>()
+  for (const L of ledgers) {
+    for (const x of L.payments) {
+      if (!match(x)) continue
+      const key = x.linkId ?? x.id
+      const part = { ledgerId: L.id, amt: x.amt }
+      const m = out.get(key)
+      if (m) {
+        m.amt += x.amt
+        // pieces that went to the same place (a debt plus an overpayment credit) are one line
+        const same = m.parts.find((q) => q.ledgerId === part.ledgerId)
+        if (same) same.amt += part.amt
+        else m.parts.push(part)
+        m.note = m.note || x.note
+        m.img = m.img || x.img
+        m.ts = Math.min(m.ts ?? x.ts ?? Infinity, x.ts ?? Infinity)
+        if (!Number.isFinite(m.ts)) m.ts = undefined
+      } else out.set(key, { id: key, from: x.from, to: x.to, amt: x.amt, date: x.date, ts: x.ts, note: x.note, img: x.img, parts: [part] })
+    }
+  }
+  return [...out.values()]
+}
+
+export type ActivityItem = { k: 'b'; d: string; ts: number; o: AppBill } | { k: 'p'; d: string; ts: number; o: MergedPayment }
+
+/** Newest first: by the moment it happened when known, otherwise by its day. */
+function newestFirst(a: { d: string; ts: number }, b: { d: string; ts: number }) {
+  return b.ts - a.ts || (b.d < a.d ? -1 : b.d > a.d ? 1 : 0)
+}
+/** A day with no time of its own counts as the end of that day, so it sorts after anything dated earlier. */
+const stamp = (d: string, ts?: number) => ts ?? Date.parse(`${d}T12:00:00`)
+
+/** Everything between you and one person: the bills of your 1-1 split and every payment either way. */
+export function personActivity(s: AppState, pid: PersonId): ActivityItem[] {
+  const L1 = oneLedger(s, pid)
+  const pays = mergePayments(s.ledgers, (x) => (x.from === pid && x.to === ME) || (x.from === ME && x.to === pid))
+  return [
+    ...(L1?.bills ?? []).map((o) => ({ k: 'b' as const, d: o.date, ts: stamp(o.date, o.ts), o })),
+    ...pays.map((o) => ({ k: 'p' as const, d: o.date, ts: stamp(o.date, o.ts), o })),
+  ].sort(newestFirst)
+}
+
+/** Everything in one ledger, newest first, with the pieces of a split payment shown as one payment. */
+export function ledgerActivity(l: AppLedger): ActivityItem[] {
+  return [
+    ...l.bills.map((o) => ({ k: 'b' as const, d: o.date, ts: stamp(o.date, o.ts), o })),
+    ...mergePayments([l], () => true).map((o) => ({ k: 'p' as const, d: o.date, ts: stamp(o.date, o.ts), o })),
+  ].sort(newestFirst)
+}
+
+export type ActivityKind = 'all' | 'bills' | 'payments'
+export const ACTIVITY_KINDS: { value: ActivityKind; label: string }[] = [
+  { value: 'all', label: 'Everything' },
+  { value: 'bills', label: 'Bills only' },
+  { value: 'payments', label: 'Settle-ups only' },
+]
+export const filterActivity = <T extends { k: 'b' | 'p' }>(items: T[], f: ActivityKind): T[] =>
+  f === 'all' ? items : items.filter((x) => (f === 'bills' ? x.k === 'b' : x.k === 'p'))
+
+/** Where an alert leads: a bill, a person (payments, 1-1 splits), or a group. Null when what it points at is gone. */
+export function alertTarget(s: AppState, n: Notif): string | null {
+  if (n.billId && findBill(s, n.billId)) return `/bill/${n.billId}`
+  const l = n.gid ? ledgerById(s, n.gid) : undefined
+  // a payment: open the person it is with, since that is where the whole payment and its note are shown
+  if (n.pid && s.people[n.pid] && l) return `/person/${n.pid}`
+  if (l?.kind === 'group') return `/groups/${l.id}`
+  if (l?.kind === 'one' && l.with) return `/person/${l.with}`
+  if (n.pid && s.people[n.pid]) return `/person/${n.pid}`
+  return null
+}
