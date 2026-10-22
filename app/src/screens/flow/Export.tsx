@@ -52,13 +52,11 @@ export const Export = withDraft(function Export({ d }: { d: D.Draft }) {
           className="secondary"
           onClick={() => {
             const m = buildExportModel(s, { ...d, paid: d.multi ? d.paid : null }, { groupName: g?.name ?? null, currency: D.draftCurrency(s, d), link })
-            sheet.open('Share as a picture', (close) => <ShareImageSheet model={m} linkWorks={false} close={close} />)
+            sheet.open('Share this bill', (close) => <ShareImageSheet model={m} linkWorks={false} close={close} />)
           }}
         >
-          Share as a picture
+          Share as a picture or PDF
         </button>
-        <div style={{ height: 10 }} />
-        <button className="secondary" onClick={() => toast('PDF export comes in a later phase')}>Export as PDF (with redacted receipt)</button>
       </div>
       <FlowFooter label="Save bill" onClick={() => save(d)} />
     </Screen>

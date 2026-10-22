@@ -254,6 +254,8 @@ export const setDefaultCurrency = (s: S, code: string): S => {
   return { ...s, ledgers: s.ledgers.map((l) => (l.currency ? l : { ...l, currency: old })), layout: { ...s.layout, currency: code } }
 }
 /** The currency of one group or 1-1 split. Amounts are not converted, only written differently. */
+/** Your paper size for PDFs. */
+export const setPaperSize = (s: S, paper: 'Letter' | 'A4'): S => ({ ...s, layout: { ...s.layout, paper } })
 export const setLedgerCurrency = (s: S, id: string, code: string): S => mapLedger(s, id, (l) => ({ ...l, currency: code }))
 export const setGroupOrder = (s: S, ids: string[]): S => ({ ...s, layout: { ...s.layout, groups: ids } })
 export const setPeopleOrder = (s: S, ids: PersonId[]): S => ({ ...s, layout: { ...s.layout, people: ids } })

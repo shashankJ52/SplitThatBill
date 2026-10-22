@@ -82,10 +82,10 @@ export function BillPage() {
           className="secondary"
           onClick={() => {
             const m = buildExportModel(s, b, { groupName: L.kind === 'group' ? (L.name ?? null) : null, currency: currencyOf(s, L), link: b.token ? billLink(window.location.origin, b.token) : null })
-            sheet.open('Share as a picture', (close) => <ShareImageSheet model={m} linkWorks close={close} />)
+            sheet.open('Share this bill', (close) => <ShareImageSheet model={m} linkWorks close={close} />)
           }}
         >
-          Share as a picture
+          Share as a picture or PDF
         </button>
         <h2>Manage</h2>
         {mine ? (

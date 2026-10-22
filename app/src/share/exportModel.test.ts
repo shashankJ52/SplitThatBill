@@ -33,6 +33,9 @@ describe('buildExportModel', () => {
   it('gives each person a colour that stays with their place in the bill', () => {
     expect(new Set(m.people.map((p) => p.color)).size).toBe(3)
   })
+  it('says who paid and how much', () => {
+    expect(m.payers.map((x) => [x.person.name, x.paid])).toEqual([['Alex', 6000]])
+  })
   it('lists each item with who shares it', () => {
     expect(m.lines).toEqual([
       { name: 'Ribeye', qty: 1, price: 3000, who: [1] },

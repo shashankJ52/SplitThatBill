@@ -2,11 +2,11 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useSaveStatus, useStore } from '../data/store'
-import { defaultCurrency } from '../domain/selectors'
+import { defaultCurrency, paperSize } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/ProfileSheet'
-import { Bullet } from '../ui/bits'
+import { Bullet, Seg } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
 import { resetUiState } from '../ui/uiState'
@@ -118,6 +118,9 @@ export function AccountTab() {
         <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>
         <h2>Appearance</h2>
         <button className="secondary" onClick={toggle}>Switch light / dark</button>
+        <label className="f">Paper size for PDFs</label>
+        <Seg<'Letter' | 'A4'> label="Paper size for PDFs" value={paperSize(s)} onChange={(p) => store.update((x) => A.setPaperSize(x, p))} options={[{ value: 'Letter', label: 'Letter' }, { value: 'A4', label: 'A4' }]} />
+        <p className="mute">Used when you save a bill as a PDF.</p>
         {!live && <h2>Demo tools</h2>}
         {!live && (
           <>

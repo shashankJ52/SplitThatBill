@@ -34,6 +34,13 @@ export function findPayment(s: AppState, id: string) {
 }
 
 // ---------- currencies ----------
+/** Paper size for PDFs: the account's choice, else Letter in the USA, Canada and Mexico and A4 elsewhere. */
+export function paperSize(s: AppState): 'Letter' | 'A4' {
+  if (s.layout?.paper === 'Letter' || s.layout?.paper === 'A4') return s.layout.paper
+  const lang = typeof navigator !== 'undefined' ? navigator.language : ''
+  return /-(US|CA|MX)$/i.test(lang) ? 'Letter' : 'A4'
+}
+
 /** The currency of everything that has not chosen its own: the account's setting, dollars until it is changed. */
 export const defaultCurrency = (s: AppState): string => currencyOr(s.layout?.currency)
 /** The currency one group or 1-1 split is written in. */

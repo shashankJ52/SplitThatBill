@@ -11,6 +11,8 @@ export const LOOKS: { value: Look; label: string; hint: string }[] = [
 ]
 
 const W = 1080
+/** How many device pixels per drawing unit; 1 for the picture, more for a sharper PDF. */
+let K = 1
 const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif'
 const MONO = 'ui-monospace, Menlo, Consolas, "Courier New", monospace'
 const ORANGE = '#FF6319'
@@ -30,13 +32,19 @@ const INK: Record<Theme, Ink> = {
 }
 
 type Ctx = CanvasRenderingContext2D
+/** A drawn picture, with the heights (in drawing units) where a page of the PDF may end without cutting through a row. */
+interface Drawn {
+  canvas: HTMLCanvasElement
+  breaks: number[]
+}
 
 /** Make a canvas of the given size at its real pixel size (the picture is always 1080 wide, however big the screen). */
 function make(h: number): { c: HTMLCanvasElement; x: Ctx } {
   const c = document.createElement('canvas')
-  c.width = W
-  c.height = h
+  c.width = W * K
+  c.height = h * K
   const x = c.getContext('2d') as Ctx
+  x.scale(K, K)
   x.textBaseline = 'alphabetic'
   return { c, x }
 }
@@ -96,85 +104,104 @@ function footer(x: Ctx, m: ExportModel, ink: Ink, y: number, showLink: boolean) 
 // ---------------------------------------------------------------------------------------------------------------
 // A: the station sign
 // ---------------------------------------------------------------------------------------------------------------
-function drawSign(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasElement {
+function drawSign(m: ExportModel, ink: Ink, showLink: boolean, doc = false): Drawn {
   const rows = m.settle.slice(0, MAX_ROWS)
   const more = m.settle.length - rows.length
-  const h = 64 + 96 + 60 + 40 + 30 + 190 + 30 + rows.length * 104 + (more > 0 ? 70 : 0) + (rows.length ? 20 : 0) + 120
+  // inside the PDF the sign is tighter, so the whole bill fits a page more often, and the receipt below carries the footer
+  const g = doc
+    ? { title: 52, titleBase: 48, head: 72, gap: 14, meta: 26, metaH: 46, plate: 84, plateH: 112, plateGap: 20, row: 66, bul: 26, name: 36, owes: 32, sub: 20, rowGap: 18 }
+    : { title: 66, titleBase: 62, head: 96, gap: 28, meta: 30, metaH: 60, plate: 120, plateH: 146, plateGap: 30, row: 104, bul: 36, name: 46, owes: 42, sub: 26, rowGap: 40 }
+  const top = doc ? 28 : 64
+  const h = top + g.head + g.gap + g.metaH + g.plateGap + g.plateH + 16 + g.rowGap + rows.length * g.row + (more > 0 ? 70 : 0) + (doc ? 24 : 140)
   const { c, x } = make(h)
   x.fillStyle = ink.bg
   x.fillRect(0, 0, W, h)
 
-  let y = 64
-  bullet(x, 64 + 44, y + 44, 44, YELLOW, 'S')
-  font(x, 66, 700)
-  text(x, fit(x, m.title, W - 64 * 2 - 120), 64 + 120, y + 62, ink.fg)
-  y += 96 + 28
-  font(x, 30, 400)
+  let y = top
+  const br = doc ? 36 : 44
+  bullet(x, 64 + br, y + br, br, YELLOW, 'S')
+  font(x, g.title, 700)
+  text(x, fit(x, m.title, W - 64 * 2 - br * 2 - 32), 64 + br * 2 + 28, y + g.titleBase * 0.95, ink.fg)
+  y += g.head + g.gap
+  font(x, g.meta, 400)
   const sub = [meta(m), m.paidBy ? `Paid by ${m.paidBy}` : ''].filter(Boolean).join(' · ')
   text(x, fit(x, sub, W - 128), 64, y + 24, ink.mute)
-  y += 60
+  y += g.metaH
 
   // the plate: the total between two heavy rules
   x.fillStyle = ink.fg
   x.fillRect(64, y, W - 128, 8)
-  y += 30
-  font(x, 120, 700)
-  text(x, fmt(m.total, m.currency), 64, y + 112, ink.fg)
+  y += g.plateGap
+  font(x, g.plate, 700)
+  text(x, fmt(m.total, m.currency), 64, y + g.plate * 0.93, ink.fg)
   font(x, 32, 400)
-  text(x, m.people.length > 1 ? `split ${m.people.length} ways` : '', W - 64, y + 108, ink.mute, 'right')
-  y += 146
+  text(x, m.people.length > 1 ? `split ${m.people.length} ways` : '', W - 64, y + g.plate * 0.9, ink.mute, 'right')
+  y += g.plateH
   x.fillStyle = ink.fg
   x.fillRect(64, y, W - 128, 8)
-  y += 40
+  y += g.rowGap
 
   rows.forEach((r, i) => {
-    bullet(x, 64 + 36, y + 40, 36, r.person.color, r.person.letter)
-    font(x, 46, 700)
-    text(x, fit(x, r.person.name, 420), 64 + 100, y + 56, ink.fg)
-    font(x, 42, 700)
-    text(x, owesText(m, r.net), W - 64, y + 54, r.net > 0 ? ink.owe : ink.get, 'right')
+    bullet(x, 64 + g.bul, y + g.row * 0.38, g.bul, r.person.color, r.person.letter)
+    const paid = m.payers.find((p) => p.person === r.person)
+    font(x, g.name, 700)
+    text(x, fit(x, r.person.name, 420), 64 + g.bul * 2 + 28, y + (paid ? g.row * 0.44 : g.row * 0.54), ink.fg)
+    if (paid) {
+      // the person who paid says so, under their name
+      font(x, g.sub, 400)
+      text(x, `paid ${fmt(paid.paid, m.currency)}`, 64 + g.bul * 2 + 28, y + g.row * 0.77, ink.mute)
+    }
+    font(x, g.owes, 700)
+    text(x, owesText(m, r.net), W - 64, y + g.row * 0.52, r.net > 0 ? ink.owe : ink.get, 'right')
     if (i < rows.length - 1) {
       x.fillStyle = ink.line
-      x.fillRect(64, y + 92, W - 128, 2)
+      x.fillRect(64, y + g.row - 12, W - 128, 2)
     }
-    y += 104
+    y += g.row
   })
   if (more > 0) {
     font(x, 32, 400)
     text(x, `+ ${more} more`, 64, y + 40, ink.mute)
     y += 70
   }
-  footer(x, m, ink, h - 56, showLink)
-  return c
+  if (!doc) footer(x, m, ink, h - 56, showLink)
+  return { canvas: c, breaks: [] }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // B: the receipt
 // ---------------------------------------------------------------------------------------------------------------
-function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasElement {
+function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean, doc = false): Drawn {
   const PAPER = '#fffef2'
   const TEXT = '#1c1c1c'
   const FAINT = '#7a766a'
   const RED = '#b3261e'
   const margin = 56
+  // in the PDF the paper sits on plain white and the sign above it supplies the top
+  const top = doc ? 12 : margin
+  const bot = doc ? 24 : margin
+  const breaks: number[] = []
   const px = margin
   const pw = W - margin * 2
   const lines = m.lines
-  const settle = m.settle.slice(0, MAX_ROWS)
-  const more = m.settle.length - settle.length
-  const rowH = 54
+  // the PDF already says who owes what in the sign above, so its receipt leaves that out and sets its rows tighter
+  const settle = doc ? [] : m.settle.slice(0, MAX_ROWS)
+  const more = doc ? 0 : m.settle.length - settle.length
+  const rowH = doc ? 40 : 54
+  const extraH = doc ? 34 : 48
+  const hd = doc ? 56 : 70
   const h =
-    margin + 70 + 50 + (m.loc || m.date ? 40 : 0) + 36 + (lines.length ? lines.length * rowH : 60) + (m.extras.length ? 24 + m.extras.length * 48 : 0) + 36 + 80 + 40 + settle.length * 52 + (more > 0 ? 48 : 0) + (m.paidBy ? 56 : 0) + 120 + margin
+    top + hd + 50 + (m.loc || m.date ? 40 : 0) + 36 + (lines.length ? lines.length * rowH : 60) + (m.extras.length ? 24 + m.extras.length * extraH : 0) + 36 + 80 + (doc ? 0 : 40) + settle.length * 52 + (more > 0 ? 48 : 0) + (m.paidBy && !doc ? 56 : 0) + (doc ? 104 : 120) + bot
   const { c, x } = make(h)
-  x.fillStyle = ink.bg === '#000000' ? '#111111' : '#f0efe9'
+  x.fillStyle = doc ? '#ffffff' : ink.bg === '#000000' ? '#111111' : '#f0efe9'
   x.fillRect(0, 0, W, h)
 
   // the paper, with a torn bottom edge
-  const bottom = h - margin
+  const bottom = h - bot
   x.fillStyle = PAPER
   x.beginPath()
-  x.moveTo(px, margin)
-  x.lineTo(px + pw, margin)
+  x.moveTo(px, top)
+  x.lineTo(px + pw, top)
   x.lineTo(px + pw, bottom - 20)
   const teeth = 36
   for (let i = 0; i < teeth; i++) {
@@ -182,9 +209,15 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
     x.lineTo(tx, bottom)
     x.lineTo(px + pw - (i + 1) * (pw / teeth), bottom - 20)
   }
-  x.lineTo(px, margin)
+  x.lineTo(px, top)
   x.closePath()
   x.fill()
+  if (doc) {
+    // a hairline so the paper reads against the white page
+    x.strokeStyle = '#e2dfcb'
+    x.lineWidth = 3
+    x.stroke()
+  }
 
   const inner = px + 48
   const innerR = px + pw - 48
@@ -199,7 +232,7 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
     x.setLineDash([])
   }
 
-  let y = margin + 70
+  let y = top + hd
   font(x, 44, 700, MONO)
   const title = m.title.toUpperCase()
   text(x, fit(x, title, pw - 96), px + pw / 2, y, TEXT, 'center')
@@ -212,6 +245,7 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
   y += 10
   dash(y)
   y += 26
+  breaks.push(y)
 
   if (lines.length) {
     lines.forEach((l) => {
@@ -227,11 +261,13 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
       font(x, 28, 400, MONO) // the bullets changed the font
       text(x, price, innerR, y + 30, TEXT, 'right')
       y += rowH
+      breaks.push(y)
     })
   } else {
     font(x, 26, 400, MONO)
     text(x, 'Split by custom amounts', inner, y + 30, FAINT)
     y += 60
+    breaks.push(y)
   }
   if (m.extras.length) {
     y += 6
@@ -239,10 +275,12 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
       font(x, 28, 400, MONO)
       text(x, e.label, inner, y + 30, FAINT)
       text(x, `${e.minus ? '-' : ''}${fmt(e.amt, m.currency)}`, innerR, y + 30, FAINT, 'right')
-      y += 48
+      y += extraH
+      breaks.push(y)
     })
   }
   y += 14
+  // keep the total together with who owes what: a page may end above it
   dash(y)
   y += 20
   font(x, 40, 700, MONO)
@@ -260,13 +298,14 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
     font(x, 30, 700, MONO)
     text(x, fmt(Math.abs(r.net), m.currency), innerR, y + 34, r.net > 0 ? RED : '#1b7f3b', 'right')
     y += 52
+    breaks.push(y)
   })
   if (more > 0) {
     font(x, 26, 400, MONO)
     text(x, `+ ${more} more`, inner, y + 30, FAINT)
     y += 48
   }
-  if (m.paidBy) {
+  if (m.paidBy && !doc) {
     font(x, 26, 400, MONO)
     text(x, `Paid by ${m.paidBy}`, px + pw / 2, y + 40, FAINT, 'center')
     y += 56
@@ -276,19 +315,20 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasEle
   const tagLine = 'The Right Way'
   const tw = x.measureText(`${tag}  ${tagLine}`).width
   const sx = px + pw / 2 - tw / 2
-  text(x, tag, sx, y + 56, FAINT)
-  text(x, tagLine, sx + x.measureText(`${tag}  `).width, y + 56, ORANGE)
+  const fy = doc ? 40 : 56
+  text(x, tag, sx, y + fy, FAINT)
+  text(x, tagLine, sx + x.measureText(`${tag}  `).width, y + fy, ORANGE)
   if (showLink && m.link) {
     font(x, 22, 400, MONO)
-    text(x, fit(x, m.link.replace(/^https?:\/\//, ''), pw - 96), px + pw / 2, y + 96, FAINT, 'center')
+    text(x, fit(x, m.link.replace(/^https?:\/\//, ''), pw - 96), px + pw / 2, y + (doc ? 76 : 96), FAINT, 'center')
   }
-  return c
+  return { canvas: c, breaks }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
 // C: the square summary
 // ---------------------------------------------------------------------------------------------------------------
-function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasElement {
+function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): Drawn {
   const { c, x } = make(W)
   x.fillStyle = ink.bg
   x.fillRect(0, 0, W, W)
@@ -306,23 +346,28 @@ function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasElem
   const sub = [m.paidBy ? `Paid by ${m.paidBy}` : '', m.people.length > 1 ? `split ${m.people.length} ways` : '', m.groupName].filter(Boolean).join(' · ')
   text(x, fit(x, sub, W - pad * 2), pad, pad + 360, ink.mute)
 
+  // whoever paid comes first, marked as having paid, then everyone who owes
+  type Row = { person: ExportPerson; label: string; amt: number }
+  const payerRows: Row[] = m.payers.slice(0, 2).map((p) => ({ person: p.person, label: `${p.person.name} · paid`, amt: p.paid }))
   const owing = m.settle.filter((r) => r.net > 0)
-  const rows = (owing.length ? owing : m.settle).slice(0, 5)
-  const more = (owing.length ? owing : m.settle).length - rows.length
-  const maxAmt = Math.max(1, ...rows.map((r) => Math.abs(r.net)))
+  const room = 5 - payerRows.length
+  const owingRows: Row[] = owing.slice(0, room).map((r) => ({ person: r.person, label: r.person.name, amt: r.net }))
+  const rows = [...payerRows, ...owingRows]
+  const more = owing.length - owingRows.length
+  const maxAmt = Math.max(1, ...rows.map((r) => r.amt))
   let y = pad + 410
   const barX = pad + 90
   const barMax = W - pad - barX
-  rows.forEach((r: { person: ExportPerson; net: number }) => {
+  rows.forEach((r) => {
     bullet(x, pad + 36, y + 36, 36, r.person.color, r.person.letter)
-    const bw = Math.max(260, (Math.abs(r.net) / maxAmt) * barMax)
+    const bw = Math.max(480, (r.amt / maxAmt) * barMax)
     x.fillStyle = r.person.color
     roundRect(x, barX, y, bw, 72, 36)
     x.fill()
     const dark = r.person.color === YELLOW || r.person.color === '#6CBE45' || r.person.color === '#A7A9AC'
     font(x, 36, 700)
-    text(x, fit(x, r.person.name, bw - 230), barX + 30, y + 48, dark ? '#000' : '#fff')
-    text(x, fmt(Math.abs(r.net), m.currency), barX + bw - 30, y + 48, dark ? '#000' : '#fff', 'right')
+    text(x, fit(x, r.label, bw - 230), barX + 30, y + 48, dark ? '#000' : '#fff')
+    text(x, fmt(r.amt, m.currency), barX + bw - 30, y + 48, dark ? '#000' : '#fff', 'right')
     y += 92
   })
   if (more > 0) {
@@ -330,13 +375,42 @@ function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): HTMLCanvasElem
     text(x, `+ ${more} more`, pad, y + 30, ink.mute)
   }
   footer(x, m, ink, W - 48, showLink)
-  return c
+  return { canvas: c, breaks: [] }
 }
 
 /** Draw the bill as a picture in the chosen look. Everything is drawn here on the device; nothing is uploaded. */
-export function drawExport(m: ExportModel, look: Look, theme: Theme, showLink: boolean): HTMLCanvasElement {
+export function drawExport(m: ExportModel, look: Look, theme: Theme, showLink: boolean, scale = 1): HTMLCanvasElement {
   const ink = INK[theme]
-  return look === 'sign' ? drawSign(m, ink, showLink) : look === 'receipt' ? drawReceipt(m, ink, showLink) : drawSquare(m, ink, showLink)
+  K = scale
+  try {
+    return (look === 'sign' ? drawSign(m, ink, showLink) : look === 'receipt' ? drawReceipt(m, ink, showLink) : drawSquare(m, ink, showLink)).canvas
+  } finally {
+    K = 1
+  }
+}
+
+/**
+ * The full bill for the PDF: the station sign first (the high-level picture), then the itemized receipt below it. Always
+ * this layout, whichever look is chosen for the picture, and always on light colors for printing. `breaks` are the heights,
+ * in pixels of the returned canvas, where a page may end without cutting through a row.
+ */
+export function drawDocument(m: ExportModel, showLink: boolean, scale = 2): { canvas: HTMLCanvasElement; breaks: number[] } {
+  K = scale
+  try {
+    const sign = drawSign(m, INK.light, showLink, true)
+    const receipt = drawReceipt(m, INK.light, showLink, true)
+    const c = document.createElement('canvas')
+    c.width = sign.canvas.width
+    c.height = sign.canvas.height + receipt.canvas.height
+    const x = c.getContext('2d') as Ctx
+    x.fillStyle = '#ffffff'
+    x.fillRect(0, 0, c.width, c.height)
+    x.drawImage(sign.canvas, 0, 0)
+    x.drawImage(receipt.canvas, 0, sign.canvas.height)
+    return { canvas: c, breaks: [sign.canvas.height, ...receipt.breaks.map((b) => sign.canvas.height + b * scale)] }
+  } finally {
+    K = 1
+  }
 }
 
 /** The file name for a picture: "trattoria-roma-bill.png". */

@@ -36,6 +36,8 @@ export interface ExportModel {
   currency: string
   total: Cents
   paidBy: string
+  /** who paid and how much, biggest first (one person, or several when the bill was paid together) */
+  payers: { person: ExportPerson; paid: Cents }[]
   people: ExportPerson[]
   /** empty when the whole bill was split by custom amounts instead of item by item */
   lines: ExportLine[]
@@ -72,7 +74,11 @@ export function buildExportModel(s: AppState, b: ShareBill, opts: { groupName: s
     .map((r) => ({ person: people[at.get(r.p) as number], net: r.total - (pm[r.p] ?? 0) }))
     .filter((x) => x.person && x.net !== 0)
     .sort((a, z) => z.net - a.net)
-  const payers = Object.keys(pm).map((p) => personName(s, p, true))
+  const payerNames = Object.keys(pm).map((p) => personName(s, p, true))
+  const payers = Object.keys(pm)
+    .filter((p) => at.has(p))
+    .map((p) => ({ person: people[at.get(p) as number], paid: pm[p] }))
+    .sort((a, z) => z.paid - a.paid)
   return {
     title: b.title.trim() || 'Bill',
     loc: b.loc.trim(),
@@ -80,7 +86,8 @@ export function buildExportModel(s: AppState, b: ShareBill, opts: { groupName: s
     groupName: opts.groupName,
     currency: opts.currency,
     total: c.total,
-    paidBy: payers.join(' & '),
+    paidBy: payerNames.join(' & '),
+    payers,
     people,
     lines,
     extras,

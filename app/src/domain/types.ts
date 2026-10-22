@@ -130,6 +130,8 @@ export interface SentReminder {
 
 /** How you like your Groups tab arranged. Personal, so it is not shared with the people in your groups. */
 export interface Layout {
+  /** paper size for PDFs; missing means Letter in the USA, Canada and Mexico and A4 elsewhere */
+  paper?: 'Letter' | 'A4'
   /** your default currency, used by every group and split that has not chosen its own */
   currency?: string
   /** group ids in the order you dragged them */

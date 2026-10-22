@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import { drawExport, exportFileName, LOOKS, type Look, type Theme } from '../share/drawExport'
+import { PAPERS } from '../share/pdf'
+import { exportPdf } from '../share/pdfExport'
 import type { ExportModel } from '../share/exportModel'
+import { useAppState } from '../data/store'
+import { paperSize } from '../domain/selectors'
 import { Seg } from '../ui/bits'
 import { useTheme } from '../ui/useTheme'
 import { useToast } from '../ui/Toast'
@@ -8,8 +12,8 @@ import { useToast } from '../ui/Toast'
 const toBlob = (c: HTMLCanvasElement) => new Promise<Blob | null>((r) => c.toBlob(r, 'image/png'))
 
 /**
- * Turn a bill into a picture to send out: pick a look (station sign, receipt or square), light or dark, and whether the
- * bill link goes on it. The picture is drawn here on the device, so nothing about it is uploaded.
+ * Turn a bill into a picture or a PDF to send out: pick a look (station sign, receipt or square), light or dark, and
+ * whether the bill link goes on it. It is drawn here on the device, so nothing about it is uploaded.
  */
 export function ShareImageSheet({ model, linkWorks, close }: { model: ExportModel; linkWorks: boolean; close: () => void }) {
   const toast = useToast()
@@ -18,6 +22,7 @@ export function ShareImageSheet({ model, linkWorks, close }: { model: ExportMode
   const [theme, setTheme] = useState<Theme>(appTheme)
   const [withLink, setWithLink] = useState(linkWorks && !!model.link)
   const [busy, setBusy] = useState(false)
+  const paper = paperSize(useAppState())
 
   const { canvas, url } = useMemo(() => {
     const c = drawExport(model, look, theme, withLink)
@@ -51,6 +56,28 @@ export function ShareImageSheet({ model, linkWorks, close }: { model: ExportMode
     } catch (e) {
       // closing the share sheet is not an error
       if (!(e instanceof DOMException && e.name === 'AbortError')) toast('Could not share the picture. Try Save instead.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  /** Send the PDF through the share sheet where the device has one, otherwise download it. */
+  const pdf = async () => {
+    setBusy(true)
+    try {
+      const blob = exportPdf(model, withLink, PAPERS[paper])
+      const f = new File([blob], exportFileName(model.title).replace(/\.png$/, '.pdf'), { type: 'application/pdf' })
+      if (canShareFiles && navigator.canShare({ files: [f] })) {
+        await navigator.share({ files: [f], title: model.title })
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(f)
+        a.download = f.name
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000)
+        toast('PDF saved')
+      }
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) toast('Could not make the PDF. Try again.')
     } finally {
       setBusy(false)
     }
@@ -89,6 +116,9 @@ export function ShareImageSheet({ model, linkWorks, close }: { model: ExportMode
       )}
       <div style={{ height: 10 }} />
       <button className="primary" disabled={busy} onClick={() => void share()}>{canShareFiles ? 'Share picture' : 'Save picture'}</button>
+      <div style={{ height: 10 }} />
+      <button className="secondary" disabled={busy} onClick={() => void pdf()}>Save the full bill as a PDF</button>
+      <div className="mute" style={{ marginTop: 4, fontSize: 12 }}>A summary first, then every item. It looks the same whichever picture you chose, and the paper size is in Account.</div>
       <div style={{ height: 10 }} />
       <div className="btnrow">
         {canShareFiles && <button className="secondary" onClick={() => void save()}>Save</button>}
