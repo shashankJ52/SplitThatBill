@@ -1,4 +1,4 @@
-import { parseScan, type ScanResult } from '../src/scan/receipt'
+import { parseScan, type ScanResult } from '../src/scan/receipt.js'
 
 /** Photo types the reader accepts (a PDF is read as a document). */
 const MEDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { handleScan, type ScanDeps, type ScanReply } from './_handler'
+import { handleScan, type ScanDeps, type ScanReply } from './_handler.js'
 
 const data = 'A'.repeat(400)
 const answer = {

@@ -1,8 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { RECEIPT_SCHEMA, SCAN_PROMPT } from '../src/scan/receipt'
-import { handleScan } from './_handler'
+import { RECEIPT_SCHEMA, SCAN_PROMPT } from '../src/scan/receipt.js'
+import { handleScan } from './_handler.js'
 
 const MODEL = 'claude-haiku-5-5'
+
+/** Health check: says whether scanning is set up, without revealing anything. */
+export function GET(): Response {
+  const ready = Boolean(process.env.ANTHROPIC_API_KEY && (process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL) && (process.env.VITE_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY))
+  return Response.json({ ready }, { headers: { 'cache-control': 'no-store' } })
+}
 
 /** Vercel function: POST /api/scan with {mime, data (base64)} and a signed-in person's token. */
 export async function POST(request: Request): Promise<Response> {
