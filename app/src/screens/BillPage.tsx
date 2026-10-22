@@ -4,7 +4,9 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
 import { billLink, whatsappText } from '../domain/share'
-import { findBill, ledgerName, personName } from '../domain/selectors'
+import { currencyOf, findBill, ledgerName, personName } from '../domain/selectors'
+import { buildExportModel } from '../share/exportModel'
+import { ShareImageSheet } from '../sheets/ShareImageSheet'
 import { ME } from '../domain/types'
 import { ago, uid, whenLabel } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
@@ -75,6 +77,16 @@ export function BillPage() {
         <BillBreakdown bill={b} ledger={L} />
         <h2>Share</h2>
         <button className="secondary" onClick={share}>Share link to this bill</button>
+        <div style={{ height: 10 }} />
+        <button
+          className="secondary"
+          onClick={() => {
+            const m = buildExportModel(s, b, { groupName: L.kind === 'group' ? (L.name ?? null) : null, currency: currencyOf(s, L), link: b.token ? billLink(window.location.origin, b.token) : null })
+            sheet.open('Share as a picture', (close) => <ShareImageSheet model={m} linkWorks close={close} />)
+          }}
+        >
+          Share as a picture
+        </button>
         <h2>Manage</h2>
         {mine ? (
           <div className="btnrow">
