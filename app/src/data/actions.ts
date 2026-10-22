@@ -101,6 +101,9 @@ export const addComment = (s: S, billId: string, c: Comment): S => mapBill(s, bi
 export const deleteComment = (s: S, billId: string, cid: string): S => mapBill(s, billId, (b) => ({ ...b, comments: b.comments.filter((c) => c.id !== cid) }))
 
 // ---------- payments ----------
+/** Remove payments by id (every piece of a payment that was spread over several groups). */
+export const deletePayments = (s: S, ids: string[]): S => ({ ...s, ledgers: s.ledgers.map((l) => ({ ...l, payments: l.payments.filter((p) => !ids.includes(p.id)) })) })
+
 export const addPayment = (s: S, ledgerId: string, p: AppPayment): S => mapLedger(s, ledgerId, (l) => ({ ...l, payments: [...l.payments, p] }))
 
 export interface PersonPaymentInput {

@@ -274,3 +274,23 @@ describe('ids', () => {
     expect(token()).toHaveLength(20)
   })
 })
+
+describe('deleting a payment', () => {
+  it('removes every piece of it, from every group, and puts the balance back', () => {
+    const s0 = seedState(1_800_000_000_000)
+    const before = pairBalance(s0, 'james').tot
+    const r = A.applyPersonPayment(s0, { id: 'pay1', newLedgerId: 'n', pid: 'james', direction: 'in', amt: before, date: '2026-10-21' })
+    expect(r.steps.length).toBeGreaterThan(1)
+    expect(pairBalance(r.state, 'james').tot).toBe(0)
+    const ids = r.state.ledgers.flatMap((l) => l.payments.filter((p) => p.linkId === 'pay1').map((p) => p.id))
+    expect(ids).toHaveLength(r.steps.length)
+    const back = A.deletePayments(r.state, ids)
+    expect(back.ledgers.flatMap((l) => l.payments.filter((p) => p.linkId === 'pay1'))).toEqual([])
+    expect(pairBalance(back, 'james').tot).toBe(before)
+  })
+  it('leaves other payments alone', () => {
+    const s0 = seedState(1_800_000_000_000)
+    const all = s0.ledgers.flatMap((l) => l.payments.map((p) => p.id))
+    expect(A.deletePayments(s0, ['nothing-like-this']).ledgers.flatMap((l) => l.payments.map((p) => p.id))).toEqual(all)
+  })
+})

@@ -89,3 +89,22 @@ describe('the group feed is ordered by the date on the bill', () => {
     expect(feed).toEqual(['recent', 'early', 'old'])
   })
 })
+
+describe('merged payments know who made them and what they are made of', () => {
+  const pieces = [
+    { id: 'p0', linkId: 'L', from: AMY, to: ME, amt: 100, date: '2026-10-21', by: AMY },
+    { id: 'p1', linkId: 'L', from: AMY, to: ME, amt: 200, date: '2026-10-21', by: AMY },
+  ]
+  it('carries the person who recorded it and every stored row', () => {
+    const g: AppLedger = { ...oneToOne({ id: 'g', kind: 'group', with: undefined }), payments: [pieces[1]] }
+    const o = oneToOne({ payments: [pieces[0]] })
+    const m = S.mergePayments([o, g], () => true)
+    expect(m).toHaveLength(1)
+    expect(m[0].by).toBe(AMY)
+    expect(m[0].pieces).toEqual([{ ledgerId: 'o', id: 'p0' }, { ledgerId: 'g', id: 'p1' }])
+  })
+  it('counts a payment with no recorded author as yours', () => {
+    const m = S.mergePayments([oneToOne({ payments: [{ id: 'x', from: ME, to: AMY, amt: 5, date: '2026-10-21' }] })], () => true)
+    expect(m[0].by).toBe(ME)
+  })
+})

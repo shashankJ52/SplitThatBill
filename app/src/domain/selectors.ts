@@ -298,6 +298,10 @@ export interface MergedPayment {
   img?: string | null
   /** where the pieces went, so "paid you $256.04" can say "$156.04 to the 1-1, $100.00 to Flat" */
   parts: { ledgerId: string; amt: Cents }[]
+  /** who recorded it (only they can delete it) */
+  by: PersonId
+  /** the stored rows it is made of, so deleting it removes every piece */
+  pieces: { ledgerId: string; id: string }[]
 }
 
 /**
@@ -318,11 +322,12 @@ export function mergePayments(ledgers: AppLedger[], match: (p: AppLedger['paymen
         const same = m.parts.find((q) => q.ledgerId === part.ledgerId)
         if (same) same.amt += part.amt
         else m.parts.push(part)
+        m.pieces.push({ ledgerId: L.id, id: x.id })
         m.note = m.note || x.note
         m.img = m.img || x.img
         m.ts = Math.min(m.ts ?? x.ts ?? Infinity, x.ts ?? Infinity)
         if (!Number.isFinite(m.ts)) m.ts = undefined
-      } else out.set(key, { id: key, from: x.from, to: x.to, amt: x.amt, date: x.date, ts: x.ts, note: x.note, img: x.img, parts: [part] })
+      } else out.set(key, { id: key, from: x.from, to: x.to, amt: x.amt, date: x.date, ts: x.ts, note: x.note, img: x.img, parts: [part], by: x.by ?? ME, pieces: [{ ledgerId: L.id, id: x.id }] })
     }
   }
   return [...out.values()]

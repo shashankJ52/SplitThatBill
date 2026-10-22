@@ -191,3 +191,50 @@ describe('the note and proof of a payment', () => {
     }
   })
 })
+
+describe('deleting a payment you recorded', () => {
+  /** Ann and Ben share a 1-1 split and a group; Ben owes 80.00 across them and pays it from his side. */
+  async function benPays() {
+    const a = await load(ann)
+    const gid = uid()
+    const oid = uid()
+    let s: AppState = A.createGroup(a.state, { id: gid, name: 'Flat', color: '#0039A6', simplify: true, members: [ME] })
+    s = { ...s, people: { ...s.people, [ben]: { id: ben, name: 'Ben Ray', user: true, tag: 'ben' } } }
+    s = A.ensureOneLedger(s, ben, oid).state
+    await a.repo.save(s)
+    for (const g of [gid, oid]) {
+      await t.as(ann, () => t.sql('select invite_user($1, $2)', [g, ben]))
+      await t.as(ben, () => t.sql('select accept_invite($1)', [g]))
+    }
+    s = (await load(ann)).state
+    s = A.addBill(s, gid, bill('Group dinner', ME, [ME, ben], 10000))
+    s = A.addBill(s, oid, bill('Coffee', ME, [ME, ben], 6000))
+    await a.repo.save(s)
+    const b = await load(ben)
+    const r = A.applyPersonPayment(b.state, { id: uid(), newLedgerId: uid(), pid: ann, direction: 'out', amt: 8000, date: '2026-10-21', note: 'oops' })
+    await b.repo.save(r.state)
+    return { b, linkId: r.state.ledgers.flatMap((l) => l.payments)[0].linkId as string }
+  }
+  const pieces = async (who: string, linkId: string) => (await load(who)).state.ledgers.flatMap((l) => l.payments.filter((p) => p.linkId === linkId))
+
+  it('the person who recorded it can delete it, and the balance goes back for both people', async () => {
+    const { b, linkId } = await benPays()
+    expect(await pieces(ann, linkId)).toHaveLength(2)
+    const mine = (await load(ben)).state
+    await b.repo.save(A.deletePayments(mine, mine.ledgers.flatMap((l) => l.payments.filter((p) => p.linkId === linkId).map((p) => p.id))))
+    for (const who of [ann, ben]) {
+      expect(await pieces(who, linkId)).toHaveLength(0)
+      const v = (await load(who)).state
+      expect(pairNet(v.ledgers as never, ME, who === ann ? ben : ann).tot).toBe(who === ann ? 8000 : -8000)
+    }
+  })
+
+  it('the other person cannot delete it', async () => {
+    const { linkId } = await benPays()
+    const a = await load(ann)
+    await a.repo.save(A.deletePayments(a.state, a.state.ledgers.flatMap((l) => l.payments.filter((p) => p.linkId === linkId).map((p) => p.id))))
+    // the database refused, so it is still there for both
+    expect(await pieces(ben, linkId)).toHaveLength(2)
+    expect(await pieces(ann, linkId)).toHaveLength(2)
+  })
+})
