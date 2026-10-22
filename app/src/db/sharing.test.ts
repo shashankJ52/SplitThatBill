@@ -153,7 +153,7 @@ describe('members at work', () => {
     await addBill(ann, 'Dinner', shares(ben, 2500))
     const alerts = await t.as(ben, () => t.sql(`select data from notifs`))
     const texts = alerts.map((r) => r.data as { text: string; sub: string })
-    expect(texts.some((d) => d.text === 'Ann Lee added Dinner to Flat' && d.sub === 'Your share $25.00')).toBe(true)
+    expect(texts.some((d) => d.text === 'Ann Lee added Dinner to Flat' && d.sub === 'Your share $\u00a025.00')).toBe(true)
     expect(await count(ann, 'notifs')).toBeGreaterThanOrEqual(1) // her invite-accepted alert only, none for her own bill
     const mine = await t.as(ann, () => t.sql(`select data from notifs`))
     expect(mine.some((r) => /added Dinner/.test((r.data as { text: string }).text))).toBe(false)
@@ -161,7 +161,7 @@ describe('members at work', () => {
   it('payments alert only the other side', async () => {
     await t.as(ben, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-20', $3)`, [randomUUID(), g, JSON.stringify({ from: ben, to: ann, amt: 1250 })]))
     const annAlerts = await t.as(ann, () => t.sql(`select data from notifs`))
-    expect(annAlerts.some((r) => /recorded a payment of \$12\.50/.test((r.data as { text: string }).text))).toBe(true)
+    expect(annAlerts.some((r) => /recorded a payment of \$\u00a012\.50/.test((r.data as { text: string }).text))).toBe(true)
   })
   it('alerts cannot be forged, but a person can read and delete their own', async () => {
     await fails(t.as(ben, () => t.sql(`insert into notifs (user_id, data) values ($1, '{"text":"fake"}')`, [ann])), /permission denied/)
@@ -332,7 +332,7 @@ describe('reminders', () => {
     const got = await t.as(ben, () => t.sql(`select data from notifs`))
     const r = got.map((x) => x.data as { kind?: string; msg?: string; sub?: string }).find((d) => d.kind === 'remind')
     expect(r?.msg).toBe('Hey Ben, you owe me')
-    expect(r?.sub).toBe('Flat · $12.50')
+    expect(r?.sub).toBe('Flat · $\u00a012.50')
     expect((await t.as(ann, () => t.sql(`select data from notifs`))).some((x) => (x.data as { kind?: string }).kind === 'remind')).toBe(false)
     await fails(t.as(ann, () => t.sql(`select send_reminder($1, $2, 1250, 'again')`, [g, ben])), /already sent/)
   })
@@ -364,7 +364,7 @@ describe('one alert per payment', () => {
     await t.as(ben, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-21', $3), ($4, $5, '2026-10-21', $6)`, [...a1, ...a2]))
     const alerts = (await t.as(ann, () => t.sql(`select data from notifs`))).map((r) => r.data as { text: string; pid?: string; linkId?: string }).filter((d) => /payment/.test(d.text))
     expect(alerts).toHaveLength(1)
-    expect(alerts[0].text).toBe('Ben Ray recorded a payment of $256.04')
+    expect(alerts[0].text).toBe('Ben Ray recorded a payment of $\u00a0256.04')
     expect(alerts[0].pid).toBe(ben)
     expect(alerts[0].linkId).toBe(link)
   })
@@ -380,7 +380,7 @@ describe('one alert per payment', () => {
       await t.as(ben, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-21', $3)`, [randomUUID(), g, JSON.stringify({ from: ben, to: ann, amt, linkId: randomUUID() })]))
     }
     const texts = (await t.as(ann, () => t.sql(`select data from notifs`))).map((r) => (r.data as { text: string }).text).filter((x) => /payment/.test(x))
-    expect(texts.sort()).toEqual(['Ben Ray recorded a payment of $5.00', 'Ben Ray recorded a payment of $7.00'])
+    expect(texts.sort()).toEqual(['Ben Ray recorded a payment of $\u00a05.00', 'Ben Ray recorded a payment of $\u00a07.00'])
   })
 })
 
@@ -397,7 +397,7 @@ describe('reminders in a 1-1 split', () => {
     const got = await t.as(ben, () => t.sql(`select data from notifs`))
     const r = got.map((x) => x.data as { kind?: string; msg?: string; sub?: string }).find((d) => d.kind === 'remind')
     expect(r?.msg).toBe('Hey Ben, you owe me')
-    expect(r?.sub).toBe('a 1-1 split · $25.00')
+    expect(r?.sub).toBe('a 1-1 split · $\u00a025.00')
   })
   it('cannot go to someone who has been invited but has not accepted', async () => {
     const one = randomUUID()

@@ -121,7 +121,7 @@ describe('a bill in progress', () => {
     expect(draftCurrency(s, newDraft(s, { id: 'd', token: 't', date: '2026-10-21' }, `p:${AMY}`))).toBe('GBP')
   })
   it('writes amounts with the right symbol', () => {
-    expect(fmt(1250, 'EUR')).toBe('€12.50')
+    expect(fmt(1250, 'EUR')).toBe('€\u00a012.50')
   })
 })
 

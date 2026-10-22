@@ -82,12 +82,12 @@ describe('a group in its own currency', () => {
     const first = await load(ann)
     await first.repo.save(A.addBill(first.state, gid, bill(9000, ME, [ME, ben])))
     const notifs = (await t.as(ben, () => t.sql(`select data from public.notifs order by created_at`))).map((r) => r.data as { sub?: string })
-    expect(notifs.map((n) => n.sub)).toContain('Your share €45.00')
+    expect(notifs.map((n) => n.sub)).toContain('Your share €\u00a045.00')
     // and a payment alert
     const a = await load(ann)
     await a.repo.save(A.addPayment(a.state, gid, { id: uid(), linkId: uid(), from: ben, to: ME, amt: 4500, date: '2026-10-21', ts: Date.now() }))
     const all = (await t.as(ben, () => t.sql(`select data from public.notifs`))).map((r) => (r.data as { text: string }).text)
-    expect(all.some((x) => x.includes('recorded a payment of €45.00'))).toBe(true)
+    expect(all.some((x) => x.includes('recorded a payment of €\u00a045.00'))).toBe(true)
   })
 
   it('a group that never chose a currency is written in each person\'s own default', async () => {
@@ -99,8 +99,8 @@ describe('a group in its own currency', () => {
     await t.sql(`update public.groups set currency = '' where id = $1`, [gid])
     await t.sql(`insert into public.prefs (user_id, layout) values ($1, '{"currency":"GBP"}')`, [ann])
     const text = await t.sql(`select public.money_in(1250, $1, $2) as m`, [gid, ann])
-    expect(text[0].m).toBe('£12.50')
-    expect((await t.sql(`select public.money_in(1250, $1, $2) as m`, [gid, ben]))[0].m).toBe('$12.50')
+    expect(text[0].m).toBe('£\u00a012.50')
+    expect((await t.sql(`select public.money_in(1250, $1, $2) as m`, [gid, ben]))[0].m).toBe('$\u00a012.50')
   })
 
   it('the public bill link shows the group currency', async () => {

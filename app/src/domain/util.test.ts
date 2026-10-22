@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { ago, dateIn, fmt, mAdd, mLabel, parseMoney, pf, nowKey, whenLabel, clockIn } from './util'
 
+const GAP = '\u00a0'
+
 describe('fmt', () => {
   it('formats cents as dollars', () => {
-    expect(fmt(0)).toBe('$0.00')
-    expect(fmt(5)).toBe('$0.05')
-    expect(fmt(123456)).toBe('$1,234.56')
-    expect(fmt(-250)).toBe('-$2.50')
+    expect(fmt(0)).toBe(`$${GAP}0.00`)
+    expect(fmt(5)).toBe(`$${GAP}0.05`)
+    expect(fmt(123456)).toBe(`$${GAP}1,234.56`)
+    expect(fmt(-250)).toBe(`-$${GAP}2.50`)
   })
 })
 describe('parseMoney', () => {
@@ -110,13 +112,13 @@ describe('the same moment in different time zones', () => {
 
 describe('fmt in other currencies', () => {
   it('writes the symbol of the currency', () => {
-    expect(fmt(123456, 'EUR')).toBe('€1,234.56')
-    expect(fmt(-250, 'GBP')).toBe('-£2.50')
-    expect(fmt(1000, 'CHF')).toBe('CHF 10.00')
-    expect(fmt(5, 'INR')).toBe('₹0.05')
+    expect(fmt(123456, 'EUR')).toBe(`€${GAP}1,234.56`)
+    expect(fmt(-250, 'GBP')).toBe(`-£${GAP}2.50`)
+    expect(fmt(1000, 'CHF')).toBe(`CHF${GAP}10.00`)
+    expect(fmt(5, 'INR')).toBe(`₹${GAP}0.05`)
   })
   it('falls back to dollars for an unknown code', () => {
-    expect(fmt(100, 'XXX')).toBe('$1.00')
+    expect(fmt(100, 'XXX')).toBe(`$${GAP}1.00`)
   })
   it('accepts typed amounts with other symbols', () => {
     expect(parseMoney('€12.50')).toBe(1250)

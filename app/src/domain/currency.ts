@@ -1,7 +1,7 @@
 /**
  * Currencies a group or an account can use. Amounts are whole hundredths of the currency (cents, pence, paise) and are
  * never converted: the currency only decides the symbol. Currencies without hundredths (yen, won) are left out for now.
- * The symbols match `currency_symbol()` in supabase/migrations/0009_group_currency.sql, which words the server's alerts.
+ * The symbols match `currency_symbol()` in supabase/migrations/0010_money_gap.sql, which words the server's alerts.
  */
 export const CURRENCIES = [
   { code: 'USD', name: 'US dollar', symbol: '$' },
@@ -11,10 +11,10 @@ export const CURRENCIES = [
   { code: 'CAD', name: 'Canadian dollar', symbol: 'CA$' },
   { code: 'AUD', name: 'Australian dollar', symbol: 'A$' },
   { code: 'NZD', name: 'New Zealand dollar', symbol: 'NZ$' },
-  { code: 'CHF', name: 'Swiss franc', symbol: 'CHF ' },
+  { code: 'CHF', name: 'Swiss franc', symbol: 'CHF' },
   { code: 'SGD', name: 'Singapore dollar', symbol: 'S$' },
   { code: 'HKD', name: 'Hong Kong dollar', symbol: 'HK$' },
-  { code: 'AED', name: 'UAE dirham', symbol: 'AED ' },
+  { code: 'AED', name: 'UAE dirham', symbol: 'AED' },
   { code: 'MXN', name: 'Mexican peso', symbol: 'MX$' },
   { code: 'BRL', name: 'Brazilian real', symbol: 'R$' },
   { code: 'ZAR', name: 'South African rand', symbol: 'R' },
@@ -33,9 +33,12 @@ export const currencyLabel = (code: string): string => {
   return c ? `${c.code} · ${c.name} (${c.symbol.trim()})` : code
 }
 
-/** Cents written in a currency: "$1,234.56", "-€2.50", "CHF 10.00". */
+/** A small gap that never breaks across lines, so the symbol and the amount keep a little air and stay together. */
+export const SYMBOL_GAP = '\u00a0'
+
+/** Cents written in a currency: "$ 1,234.56", "-€ 2.50", "CHF 10.00" (with a small gap after the symbol). */
 export function formatMoney(c: number, code: string = DEFAULT_CURRENCY): string {
   const s = c < 0 ? '-' : ''
   const a = Math.abs(c)
-  return `${s}${symbolOf(code)}${Math.floor(a / 100).toLocaleString('en-US')}.${String(a % 100).padStart(2, '0')}`
+  return `${s}${symbolOf(code)}${SYMBOL_GAP}${Math.floor(a / 100).toLocaleString('en-US')}.${String(a % 100).padStart(2, '0')}`
 }
