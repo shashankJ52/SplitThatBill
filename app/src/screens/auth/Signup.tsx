@@ -8,7 +8,6 @@ import { ME } from '../../domain/types'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { readPending, writePending } from './pendingSignup'
-import { StepsCarousel } from '../../ui/StepsCarousel'
 import { ErrBar, Meter, PwField } from './parts'
 
 export interface PendingSignup {
@@ -78,8 +77,7 @@ export function Signup() {
     <Screen id="v-signup">
       <div className="vhead"><h1 className="display">Create account</h1></div>
       <div className="vbody">
-        <StepsCarousel />
-        <label className="f" htmlFor="su-name">Your name</label>
+        <label className="f" htmlFor="su-name" style={{ marginTop: 0 }}>Your name</label>
         <input id="su-name" maxLength={40} autoComplete="name" value={name} placeholder="e.g. Alex Rivera" onChange={(e) => clear(setName)(e.target.value)} />
         <label className="f" htmlFor="su-email">Email</label>
         <input id="su-email" type="email" maxLength={80} autoComplete="email" value={email} placeholder="you@example.com" onChange={(e) => clear(setEmail)(e.target.value)} />
