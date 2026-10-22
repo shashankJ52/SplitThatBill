@@ -17,7 +17,7 @@ export function FeedbackButton({ className = 'linkbtn', children = 'Send feedbac
   )
 }
 
-/** "Tell us what you think": three answers (−$ don't like it, +$ like it, $$ love it) and a few words. */
+/** "Tell us what you think": three answers (− $ don't like it, $ like it, $ $ $ love it) and a few words. */
 function FeedbackDialog({ onClose }: { onClose: () => void }) {
   const signedIn = useAppState().signedIn
   const ref = useRef<HTMLDialogElement>(null)
@@ -60,7 +60,7 @@ function FeedbackDialog({ onClose }: { onClose: () => void }) {
             <div className="fb-rate" role="radiogroup" aria-label="How do you feel about SplitThatBill?">
               {RATINGS.map((r) => (
                 <button key={r.value} type="button" role="radio" aria-checked={rating === r.value} className={`fb-r${rating === r.value ? ' on' : ''}${rating && rating !== r.value ? ' dim' : ''}`} onClick={() => { setRating(r.value); setErr('') }}>
-                  <span className="bullet fb-b" style={{ ['--c' as string]: r.color, ['--t' as string]: r.ink, ['--s' as string]: '56px' }}>{r.symbol}</span>
+                  <span className="bullet fb-b" style={{ ['--c' as string]: r.color, ['--t' as string]: r.ink, ['--s' as string]: '56px', fontSize: r.size }}>{r.symbol}</span>
                   <span>{r.label}</span>
                 </button>
               ))}

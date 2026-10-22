@@ -36,6 +36,6 @@ describe('sendFeedback', () => {
     expect((await sendFeedback(null, { rating: 'up', message: '', contact: '' }, ctx)).err).toMatch(/connection to the server/)
   })
   it('has the three answers in order, from not liking it to loving it', () => {
-    expect(RATINGS.map((r) => [r.value, r.symbol])).toEqual([['down', '−\u00a0$'], ['up', '+\u00a0$'], ['love', '$$']])
+    expect(RATINGS.map((r) => [r.value, r.symbol])).toEqual([['down', '−\u00a0$'], ['up', '$'], ['love', '$\u00a0$\u00a0$']])
   })
 })

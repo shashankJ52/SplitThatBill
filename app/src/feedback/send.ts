@@ -3,11 +3,11 @@ import { EMAIL_RE } from '../domain/util'
 export type Rating = 'down' | 'up' | 'love'
 
 /** The three answers: how someone feels about the app, in the app's own language of money. */
-export const RATINGS: { value: Rating; symbol: string; label: string; color: string; ink: string }[] = [
-  // a no-break space after the sign, so "−" and "$" do not touch
-  { value: 'down', symbol: '−\u00a0$', label: 'Don’t like it', color: '#EE352E', ink: '#fff' },
-  { value: 'up', symbol: '+\u00a0$', label: 'I like it', color: '#FCCC0A', ink: '#000' },
-  { value: 'love', symbol: '$$', label: 'I love it', color: '#00933C', ink: '#fff' },
+export const RATINGS: { value: Rating; symbol: string; label: string; color: string; ink: string; size: number }[] = [
+  // one, two... the more dollars, the more they like it; a no-break space keeps the signs from touching
+  { value: 'down', symbol: '−\u00a0$', label: 'Don’t like it', color: '#EE352E', ink: '#fff', size: 22 },
+  { value: 'up', symbol: '$', label: 'I like it', color: '#FCCC0A', ink: '#000', size: 24 },
+  { value: 'love', symbol: '$\u00a0$\u00a0$', label: 'I love it', color: '#00933C', ink: '#fff', size: 17 },
 ]
 
 export interface FeedbackInput {
