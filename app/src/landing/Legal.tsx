@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bullet } from '../ui/bits'
+import { FeedbackButton } from '../feedback/FeedbackDialog'
 import { AccountLink } from './AccountLink'
 import { useTheme } from '../ui/useTheme'
 import './landing.css'
@@ -41,6 +42,7 @@ function Page({ title, children }: { title: string; children: ReactNode }) {
             <Link to="/">Home</Link>
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
+            <FeedbackButton className="lp-foot-btn">Feedback</FeedbackButton>
           </nav>
         </div>
       </footer>
@@ -87,6 +89,9 @@ export function Privacy() {
 
       <h2>Cookies and storage</h2>
       <p>We use your browser's storage to keep you signed in, remember your light or dark choice, and let the app open quickly offline. We do not use advertising or tracking cookies.</p>
+
+      <h2>Feedback</h2>
+      <p>If you send feedback, we keep the rating, your message, the email address if you left one, the page you were on and the kind of device and browser, so a problem can be found again. If you were signed in, your account is attached so we can follow up. It is used to improve the app and is not shared. If you later delete your account, the feedback stays but is no longer tied to you.</p>
 
       <h2>Changes</h2>
       <p>If this changes in a way that matters, we will update the date above and tell you in the app.</p>

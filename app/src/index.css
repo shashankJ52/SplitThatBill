@@ -285,3 +285,15 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 
 .chipm a{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:15px;color:inherit;text-decoration:none}
 .chipm a:hover{background:var(--card)}
+
+/* the feedback dialog */
+.fbd{border:2px solid var(--fg);border-radius:20px;padding:0;width:min(440px,92vw);max-height:90vh;overflow:auto;background:var(--bg);color:var(--fg)}
+.fbd::backdrop{background:rgba(0,0,0,.6)}
+.fbd-in{padding:18px}
+.fbd-t{font-size:26px;font-weight:700;letter-spacing:-.04em;margin:0 0 6px;text-transform:none;color:var(--fg)}
+.fb-rate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px}
+.fb-r{display:grid;justify-items:center;gap:8px;background:none;border:2px solid var(--line);border-radius:16px;padding:12px 6px;cursor:pointer;font-size:13px;font-weight:700;text-align:center;transition:border-color .15s,opacity .15s,transform .15s var(--ease)}
+.fb-r:active{transform:scale(.97)}
+.fb-r.on{border-color:var(--fg)}
+.fb-r.dim{opacity:.45}
+.fb-b{font-size:22px;letter-spacing:-.04em}

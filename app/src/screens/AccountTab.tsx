@@ -6,6 +6,7 @@ import { useAppState, useSaveStatus, useStore } from '../data/store'
 import { defaultCurrency, paperSize } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { FeedbackButton } from '../feedback/FeedbackDialog'
 import { DeleteAccountSheet } from '../sheets/DeleteAccountSheet'
 import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/ProfileSheet'
 import { Bullet, Seg } from '../ui/bits'
@@ -145,6 +146,9 @@ export function AccountTab() {
         <button className="secondary danger" onClick={logout}>Log out</button>
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <button className="linkbtn" onClick={() => nav('/home')}>About SplitThatBill</button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <FeedbackButton>Send feedback</FeedbackButton>
         </div>
         {live && (
           <div style={{ textAlign: 'center', marginTop: 12 }}>

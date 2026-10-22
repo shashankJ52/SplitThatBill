@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import * as A from '../data/actions'
 import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
+import { FeedbackButton } from '../feedback/FeedbackDialog'
 import { AccountLink } from './AccountLink'
 import { useInstall } from '../app/install'
 import { Bullet } from '../ui/bits'
@@ -220,6 +221,7 @@ export default function Landing() {
           <nav aria-label="Legal">
             <Link to="/privacy">Privacy</Link>
             <Link to="/terms">Terms</Link>
+            <FeedbackButton className="lp-foot-btn">Feedback</FeedbackButton>
           </nav>
         </div>
       </footer>
