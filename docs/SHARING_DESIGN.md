@@ -43,6 +43,7 @@ The app still calls the signed-in person "you". It swaps their account id for "y
 ## Known limits (to revisit before a public launch)
 
 - "Settle first" removal is checked in the app, not in the database. A modified client could remove someone with an open balance. History is never deleted, so the damage is limited to that person losing access.
-- Deleting an owner's account deletes the groups they own for everyone. A delete-account flow with ownership transfer is needed before real users.
+- Deleting an account (`delete_my_account`, migration `0011`): the person must first hand over every group that another active account is in (or delete it for everyone). The database refuses otherwise. Groups with nobody else active go with the account. Elsewhere the person leaves, keeping their name on the old bills (their member row stays as a former member with the name copied onto it). Bills, payments, comments and lists they made are kept, because their pointer to the account was made a plain number. Unsettled balances are written off in the app first, as a visible adjustment. The app asks for the password and the word DELETE.
+- That the database function can delete from `auth.users` is a Supabase permission that is only exercised against the real project, not in the local tests.
 - Names inside bills are ids, so a member could reference a person outside the group; they cannot see that person's data.
 - The built-in email sender is a personal Gmail account (500 emails a day).
