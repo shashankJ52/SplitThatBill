@@ -54,6 +54,8 @@ export interface Account {
   /** Pull the latest from the database (another device may have changed things). */
   refresh(): Promise<void>
   email(): string
+  /** The signed-in person's access token, for the scan function. Null when nobody is signed in to the cloud. */
+  accessToken(): Promise<string | null>
   /** resolves once any saved session has been resumed */
   ready: Promise<void>
 }
@@ -163,6 +165,7 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
     },
     recovering: () => recovering,
     email: () => userEmail,
+    accessToken: async () => (mode === 'cloud' ? ((await client.auth.getSession()).data.session?.access_token ?? null) : null),
 
     async signUp({ name, email, tag, password }) {
       const free = await api.tagAvailable(tag)

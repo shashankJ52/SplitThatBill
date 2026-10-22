@@ -1,6 +1,7 @@
 import { calc, discCents, extrasSum, itemsSum, itemWeights, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
 import { ledgerById, realGroups } from './selectors'
+import type { ScanResult } from '../scan/receipt'
 import { ME, type AppBill, type AppLedger, type AppState, type Comment } from './types'
 
 /**
@@ -49,6 +50,10 @@ export interface Draft {
   manual: boolean
   /** what the quick-add price means for quantities above one */
   qm: 'total' | 'each'
+  /** the items came from reading a receipt photo (not the sample) */
+  scanned?: boolean
+  /** private details the reader saw on the photo and left out */
+  hidden?: string[]
 }
 
 export type Result = { d: Draft; err?: undefined } | { d: Draft; err: string }
@@ -103,11 +108,34 @@ export function loadSample(d: Draft): Draft {
     loc: r.loc,
     cat: r.cat,
     manual: false,
+    scanned: false,
+    hidden: [],
+  }
+}
+
+/** Fill the draft from a receipt that was read. The date is kept only when it is a real past or present day. */
+export function loadScan(d: Draft, r: ScanResult): Draft {
+  return {
+    ...d,
+    items: r.items.map((x, i) => ({ id: i + 1, name: x.name, qty: x.qty, price: x.cents, a: ev([]) })),
+    nextId: r.items.length + 1,
+    rt: r.total,
+    tax: r.tax,
+    tip: r.tip,
+    disc: r.discount > 0 ? { m: 'amt', v: r.discount } : null,
+    fixed: null,
+    title: r.merchant || 'Receipt',
+    loc: r.location,
+    cat: r.category,
+    date: r.date && r.date <= d.date ? r.date : d.date,
+    manual: false,
+    scanned: true,
+    hidden: r.hidden,
   }
 }
 
 export function startManual(d: Draft): Draft {
-  return { ...d, manual: true, items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, fixed: null, title: 'New bill', loc: '', cat: 'Other' }
+  return { ...d, manual: true, scanned: false, hidden: [], items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, fixed: null, title: 'New bill', loc: '', cat: 'Other' }
 }
 
 export function newDraft(s: AppState, ids: NewDraftIds, want?: string | null): Draft {

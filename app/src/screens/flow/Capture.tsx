@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
+import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
 import { letterOf, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
@@ -12,6 +13,7 @@ import { PickSheet } from '../../sheets/PickSheet'
 import { Avatar, Bullet } from '../../ui/bits'
 import { useSheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
+import { limitMessage, prepareFile, scanReceipt, ScanError } from '../../scan/client'
 
 const MAX_UPLOAD = 15 * 1024 * 1024
 
@@ -26,6 +28,11 @@ export function Capture() {
   const addByInput = useAddPerson()
   const [newName, setNewName] = useState('')
   const [bad, setBad] = useState(false)
+  const [reading, setReading] = useState(false)
+  const busy = useRef(false)
+  const account = useAccount()
+  // only a signed-in account can read real receipts; the demo keeps the sample receipt
+  const real = useAccountMode() === 'cloud'
   const want = (loc.state as { target?: string | null } | null)?.target
 
   useEffect(() => {
@@ -71,13 +78,34 @@ export function Capture() {
     set(() => next)
     nav('/scan/review')
   }
-  const upload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    e.target.value = ''
-    if (!f) return
+  /** Read the chosen photo or PDF, then move on to the privacy screen with what was found. */
+  const read = async (f: File | undefined) => {
+    if (!f || busy.current) return
     if (!/^(image\/|application\/pdf)/.test(f.type)) return toast('Choose a photo or a PDF')
     if (f.size > MAX_UPLOAD) return toast('That file is over 15 MB. Try a smaller photo.')
-    void proceed()
+    if (!real) return void proceed()
+    busy.current = true
+    setReading(true)
+    try {
+      const cur = await settle()
+      if (!cur) return
+      const token = await account?.accessToken()
+      if (!token) return toast('Sign in again to scan receipts.')
+      const { scan } = await scanReceipt(await prepareFile(f), token)
+      const next = D.loadScan(cur, scan)
+      set(() => next)
+      nav('/scan/privacy')
+    } catch (e) {
+      toast(e instanceof ScanError ? (e.code === 'limit' ? limitMessage(e) : e.message) : 'Something went wrong reading that. You can enter the items yourself.')
+    } finally {
+      busy.current = false
+      setReading(false)
+    }
+  }
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    void read(f)
   }
 
   return (
@@ -134,17 +162,34 @@ export function Capture() {
           </div>
         )}
         <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
-          <b>Camera preview</b>Real scanning is not connected yet. Any photo loads a sample receipt.
+          {reading ? (
+            <><b>Reading your receipt…</b>This usually takes a few seconds.</>
+          ) : real ? (
+            <><b>Photograph the whole receipt</b>Lay it flat in good light so every line is readable.</>
+          ) : (
+            <><b>Camera preview</b>Sign in to scan real receipts. In the demo, any photo loads a sample receipt.</>
+          )}
         </div>
-        <button className="primary" onClick={() => void proceed()}>Take photo (sample receipt)</button>
+        {real ? (
+          <label aria-disabled={reading} style={{ display: 'block', textAlign: 'center', padding: 15, background: 'var(--btn-bg)', color: 'var(--btn-fg)', border: '2px solid var(--btn-bg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer', opacity: reading ? 0.5 : 1 }}>
+            Take photo
+            <input type="file" accept="image/*" capture="environment" hidden disabled={reading} onChange={pickFile} />
+          </label>
+        ) : (
+          <button className="primary" onClick={() => void proceed()}>Take photo (sample receipt)</button>
+        )}
         <div style={{ height: 10 }} />
-        <label className="secondary" style={{ display: 'block', textAlign: 'center', padding: 15, border: '2px solid var(--fg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer' }}>
+        <label className="secondary" aria-disabled={reading} style={{ display: 'block', textAlign: 'center', padding: 15, border: '2px solid var(--fg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer', opacity: reading ? 0.5 : 1 }}>
           Upload a bill
-          <input type="file" accept="image/*,application/pdf" hidden onChange={upload} />
+          <input type="file" accept="image/*,application/pdf" hidden disabled={reading} onChange={pickFile} />
         </label>
         <div style={{ height: 10 }} />
-        <button className="secondary" onClick={() => void manual()}>No receipt? Enter items yourself</button>
-        <p className="mute">Receipt reading (OCR) comes once the backend is connected. Your photo is never stored.</p>
+        <button className="secondary" disabled={reading} onClick={() => void manual()}>No receipt? Enter items yourself</button>
+        <p className="mute">
+          {real
+            ? 'We never store your photo. It is sent once to Claude, Anthropic’s AI, only to read the items, and card numbers and names are left out. 20 scans a day.'
+            : 'Your photo is never stored.'}
+        </p>
       </div>
     </Screen>
   )

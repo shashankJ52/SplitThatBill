@@ -29,5 +29,5 @@ export default defineConfig({
       workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'], navigateFallback: '/index.html' },
     }),
   ],
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'api/**/*.test.ts'] },
 })
