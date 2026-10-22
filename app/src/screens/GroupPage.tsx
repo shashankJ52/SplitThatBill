@@ -4,7 +4,8 @@ import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
 import { filterActivity, groupTotals, ledgerActivity, ledgerById, letterOf, monthStats, monthsAsc, openCount, pairInGroup, personName, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
-import { fmt, mAdd, mLabel, nowKey } from '../domain/util'
+import { mAdd, mLabel, nowKey } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { nets, transfers } from '../money'
 import { GroupManageSheet } from '../sheets/GroupManageSheet'
 import { GroupSheet } from '../sheets/GroupSheet'
@@ -33,6 +34,7 @@ export function GroupPage() {
   const account = useAccount()
   const [sp, setSp] = useSearchParams()
   const g = ledgerById(s, gid)
+  const fmt = useMoney(g)
   if (!g || g.kind !== 'group') return <Navigate to="/groups" replace />
 
   const tab: Tab = TABS.includes(sp.get('tab') as Tab) ? (sp.get('tab') as Tab) : 'bills'
@@ -76,6 +78,7 @@ export function GroupPage() {
 function BillsTab({ gid }: { gid: string }) {
   const s = useAppState()
   const g = ledgerById(s, gid)!
+  const fmt = useMoney(g)
   const [month, setMonth] = useUiState<string | null>(`grp.${gid}.month`, null)
   const [all, setAll] = useUiState<boolean>(`grp.${gid}.all`, false)
   const cur = month ?? nowKey()
@@ -115,6 +118,7 @@ function BillsTab({ gid }: { gid: string }) {
 function OverviewTab({ gid }: { gid: string }) {
   const s = useAppState()
   const g = ledgerById(s, gid)!
+  const fmt = useMoney(g)
   const [view, setView] = useUiState<0 | 1 | 2>(`grp.${gid}.ov`, 0)
   const [monthSel, setMonthSel] = useUiState<string | null>(`grp.${gid}.ovm`, null)
   const [pick, setPick] = useState<{ kind: string; k: string } | null>(null)
@@ -153,7 +157,7 @@ function OverviewTab({ gid }: { gid: string }) {
       <MonthBar label={mLabel(key)} sub={`${fmt(st.tot)} · ${st.n} bill${st.n === 1 ? '' : 's'}`} canPrev={i > 0} canNext={i < ms.length - 1} onPrev={() => go(-1)} onNext={() => go(1)} />
       <div onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => (down.current = null)} onClickCapture={(e) => { if (swallow.current) { e.stopPropagation(); e.preventDefault() } }} aria-live="polite">
         {view === 0 && <PeopleChart ledger={g} st={st} pick={pick?.kind === 'p' ? pick.k : null} onPick={pickFn('p')} />}
-        {view === 1 && <CategoryChart st={st} prev={prev} monthKey={key} pick={pick?.kind === 'c' ? pick.k : null} onPick={pickFn('c')} />}
+        {view === 1 && <CategoryChart ledger={g} st={st} prev={prev} monthKey={key} pick={pick?.kind === 'c' ? pick.k : null} onPick={pickFn('c')} />}
         {view === 2 && <TrendChart ledger={g} monthKey={key} state={trend} onChange={setTrend} />}
       </div>
       <p className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '8px 0 0' }}>Swipe the chart or use the arrows to change month.</p>
@@ -165,6 +169,7 @@ function BalancesTab({ gid }: { gid: string }) {
   const s = useAppState()
   const sheet = useSheet()
   const g = ledgerById(s, gid)!
+  const fmt = useMoney(g)
   const n = nets(g)
   const tr = transfers(g)
   return (

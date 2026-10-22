@@ -4,7 +4,8 @@ import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { balanceWith, reminderRoute } from '../domain/membership'
 import { ledgerById, ledgerName, pairBalance, pairInGroup } from '../domain/selectors'
-import { ago, fmt, uid } from '../domain/util'
+import { ago, uid } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { Avatar } from '../ui/bits'
 import { useToast } from '../ui/Toast'
 
@@ -18,6 +19,7 @@ export function RemindSheet({ pid, gid, close }: { pid: string; gid: string | nu
   const account = useAccount()
   const live = useAccountMode() === 'cloud'
   const g = gid ? ledgerById(s, gid) : undefined
+  const fmt = useMoney(g)
   const person = s.people[pid]
   const pr = pairBalance(s, pid)
   const a = g ? pairInGroup(g, pid) : pr.tot

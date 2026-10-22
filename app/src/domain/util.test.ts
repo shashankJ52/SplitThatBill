@@ -107,3 +107,19 @@ describe('the same moment in different time zones', () => {
     expect(clockIn(moment, 'en-US')).toBe(new Date(moment).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))
   })
 })
+
+describe('fmt in other currencies', () => {
+  it('writes the symbol of the currency', () => {
+    expect(fmt(123456, 'EUR')).toBe('€1,234.56')
+    expect(fmt(-250, 'GBP')).toBe('-£2.50')
+    expect(fmt(1000, 'CHF')).toBe('CHF 10.00')
+    expect(fmt(5, 'INR')).toBe('₹0.05')
+  })
+  it('falls back to dollars for an unknown code', () => {
+    expect(fmt(100, 'XXX')).toBe('$1.00')
+  })
+  it('accepts typed amounts with other symbols', () => {
+    expect(parseMoney('€12.50')).toBe(1250)
+    expect(parseMoney('£1,000')).toBe(100000)
+  })
+})

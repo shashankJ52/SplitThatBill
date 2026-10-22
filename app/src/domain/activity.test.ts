@@ -79,3 +79,13 @@ describe('where an alert leads', () => {
     expect(S.alertTarget(stateOf(), note({ billId: 'gone', gid: 'gone' }))).toBeNull()
   })
 })
+
+describe('the group feed is ordered by the date on the bill', () => {
+  it('puts a bill dated in an older month below newer months even if it was added just now', () => {
+    const old = bill('old', '2026-04-10', 9_000_000_000_000) // dated April, added most recently
+    const recent = bill('recent', '2026-10-20', 1_000)
+    const sameDayEarly = bill('early', '2026-10-20', 500)
+    const feed = S.ledgerActivity(oneToOne({ bills: [old, sameDayEarly, recent] })).map((x) => x.o.id)
+    expect(feed).toEqual(['recent', 'early', 'old'])
+  })
+})

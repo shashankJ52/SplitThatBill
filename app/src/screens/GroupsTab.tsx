@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { arrangedGroups, arrangedPeople, letterOf, overallTotals, personName, type BalanceFilter } from '../domain/selectors'
+import { arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, letterOf, otherTotals, overallTotals, personName, type BalanceFilter } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
-import { fmt, today } from '../domain/util'
+import { fmt as fmtIn, today } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { GroupSheet } from '../sheets/GroupSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { PickSheet } from '../sheets/PickSheet'
@@ -35,7 +36,9 @@ export function GroupsTab() {
   const drag = useRef<{ k: 'lines' | 'people'; y: number; x: number } | null>(null)
   const swallow = useRef(false)
 
+  const fmt = useMoney()
   const t = overallTotals(s)
+  const others = otherTotals(s)
   const groups = arrangedGroups(s, filter)
   const people = arrangedPeople(s, filter)
   const allGroups = s.ledgers.filter((l) => l.kind === 'group').length
@@ -106,9 +109,14 @@ export function GroupsTab() {
           <div className="cols">
             <Tile active={filter === 'owe'} onClick={() => pickTile('owe')} label="You owe" cls="r" value={fmt(t.owe)} icon={<Bullet letter="−" color="#EE352E" size={16} />} />
             <Tile active={filter === 'owed'} onClick={() => pickTile('owed')} label="Owed" cls="g" value={fmt(t.owed)} icon={<Bullet letter="+" color="#00933C" size={16} />} />
-            <Tile active={filter === 'net'} onClick={() => pickTile('net')} label="Net" cls="" value={fmt(t.owed - t.owe)} />
+            <Tile active={filter === 'net'} onClick={() => pickTile('net')} label="Net" cls="" center value={fmt(t.owed - t.owe)} />
           </div>
           {filter !== 'net' && <div className="mute" style={{ marginTop: 8, fontSize: 12 }}>{CAPTION[filter]}</div>}
+          {others.length > 0 && (
+            <div className="mute" style={{ marginTop: 8, fontSize: 12 }}>
+              Totals are in {defaultCurrency(s)}. Other currencies: {others.map((o) => `${fmtIn(o.owed - o.owe, o.code)} net`).join(' · ')}
+            </div>
+          )}
         </div>
         <button className="secondary" style={{ marginTop: 10 }} onClick={recordPayment}>Record payment</button>
       </div>
@@ -130,7 +138,7 @@ export function GroupsTab() {
                           <div className="gname">{g.name}</div>
                           <div className="mute">{g.members.length} {g.members.length === 1 ? 'person' : 'people'}</div>
                         </div>
-                        {n < 0 ? <span className="stat r">owe {fmt(-n)}</span> : n > 0 ? <span className="stat g">owed {fmt(n)}</span> : <span className="stat mute">settled up</span>}
+                        {n < 0 ? <span className="stat r">owe {fmtIn(-n, currencyOf(s, g))}</span> : n > 0 ? <span className="stat g">owed {fmtIn(n, currencyOf(s, g))}</span> : <span className="stat mute">settled up</span>}
                       </Link>
                     ),
                   }
@@ -156,6 +164,9 @@ export function GroupsTab() {
                 }}
                 items={people.map((x) => {
                   const parts = pairBalance(s, x.p).parts.length
+                  // the balance shown is in your own currency; with none there, the first other currency stands in for it
+                  const bal = x.t !== 0 ? { tot: x.t, code: defaultCurrency(s) } : (x.others?.[0] ?? null)
+                  const extra = x.t !== 0 ? (x.others ?? []) : (x.others ?? []).slice(1)
                   return {
                     key: x.p,
                     swipe: x.settled,
@@ -165,8 +176,9 @@ export function GroupsTab() {
                         <div className="grow">
                           <div className="gname">{personName(s, x.p)}</div>
                           <div className="mute">1-1{parts > 1 ? ` + ${parts - 1} group${parts > 2 ? 's' : ''}` : ''}</div>
+                          {extra.length > 0 && <div className="mute" style={{ fontSize: 12 }}>{extra.map((o) => `${o.tot > 0 ? 'also owes you' : 'you also owe'} ${fmtIn(Math.abs(o.tot), o.code)}`).join(' · ')}</div>}
                         </div>
-                        {x.settled ? <span className="stat mute">settled up</span> : <span className={`stat ${x.t > 0 ? 'g' : 'r'}`}>{x.t > 0 ? `owes you ${fmt(x.t)}` : `you owe ${fmt(-x.t)}`}</span>}
+                        {x.settled || !bal ? <span className="stat mute">settled up</span> : <span className={`stat ${bal.tot > 0 ? 'g' : 'r'}`}>{bal.tot > 0 ? `owes you ${fmtIn(bal.tot, bal.code)}` : `you owe ${fmtIn(-bal.tot, bal.code)}`}</span>}
                       </Link>
                     ),
                   }
@@ -184,11 +196,12 @@ export function GroupsTab() {
   )
 }
 
-function Tile({ active, onClick, label, cls, value, icon }: { active: boolean; onClick: () => void; label: string; cls: string; value: string; icon?: React.ReactNode }) {
+function Tile({ active, onClick, label, cls, value, icon, center }: { active: boolean; onClick: () => void; label: string; cls: string; value: string; icon?: React.ReactNode; center?: boolean }) {
   return (
-    <div className={`tile${active ? ' on' : ''}`} role="button" tabIndex={0} aria-pressed={active} onClick={onClick} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}>
+    <div className={`tile${active ? ' on' : ''}${center ? ' center' : ''}`} role="button" tabIndex={0} aria-pressed={active} onClick={onClick} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}>
       <div className="lbl">{icon}{label}</div>
-      <div className={`num ${cls}`}>{value}</div>
+      {/* long amounts shrink so they stay on one line inside the tile */}
+      <div className={`num ${cls}`} style={{ fontSize: value.length <= 8 ? undefined : value.length <= 10 ? 20 : value.length <= 12 ? 17 : 12 }}>{value}</div>
     </div>
   )
 }

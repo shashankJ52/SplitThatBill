@@ -1,4 +1,5 @@
 import type { AppBill, AppState } from './types'
+import { currencyOr } from './currency'
 import { emptyState } from './seed'
 
 /** What the database function public_bill() returns for a share link. */
@@ -7,6 +8,8 @@ export interface PublicBillData {
   by: string
   /** first names only, keyed by person id */
   names: Record<string, string>
+  /** the group's currency code; empty when it never chose one */
+  currency?: string
 }
 
 /**
@@ -16,6 +19,7 @@ export interface PublicBillData {
 export function toPublicView(d: PublicBillData | null): { bill: AppBill; state: AppState } | null {
   if (!d || !d.bill) return null
   const state = emptyState({ name: '', email: '', tag: '' }, '')
+  state.layout = { currency: currencyOr(d.currency) }
   state.people = Object.fromEntries(Object.entries(d.names ?? {}).map(([id, name]) => [id, { id, name, user: true }]))
   const bill = { ...d.bill, id: d.bill.id ?? 'shared', comments: [], token: '', by: d.by ?? '' } as AppBill
   return { bill, state }

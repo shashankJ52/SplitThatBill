@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
+import { useDraftMoney } from '../../flow/useDraftMoney'
 import { Screen } from '../../app/Screen'
 import type { Draft } from '../../domain/draft'
-import { fmt } from '../../domain/util'
 import { withDraft } from '../../flow/withDraft'
 import { FlowFooter } from '../../ui/FlowFooter'
 import { useToast } from '../../ui/Toast'
@@ -9,6 +9,7 @@ import { useToast } from '../../ui/Toast'
 const mask = (t: string) => <span className="redact">{t}</span>
 
 export const Privacy = withDraft(function Privacy({ d }: { d: Draft }) {
+  const fmt = useDraftMoney(d)
   const nav = useNavigate()
   const toast = useToast()
   if (d.scanned) return <ScannedPrivacy d={d} onContinue={() => nav('/scan/review')} />
@@ -47,6 +48,7 @@ export const Privacy = withDraft(function Privacy({ d }: { d: Draft }) {
 
 /** After a real scan: say what private details were seen and left out, and what was read instead. */
 function ScannedPrivacy({ d, onContinue }: { d: Draft; onContinue: () => void }) {
+  const fmt = useDraftMoney(d)
   const hidden = d.hidden ?? []
   return (
     <Screen id="v-privacy">

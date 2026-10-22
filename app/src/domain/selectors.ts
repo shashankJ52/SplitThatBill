@@ -1,4 +1,5 @@
-import { myNet, overall, pairNet, paidMap, transfers, type Cents, type PersonId } from '../money'
+import { involves, myNet, overall, pairNet, paidMap, transfers, type Cents, type PersonId } from '../money'
+import { currencyOr } from './currency'
 import type { AppBill, AppLedger, AppState, Notif, NoteList } from './types'
 import { ME } from './types'
 import { mAdd, nowKey } from './util'
@@ -32,7 +33,22 @@ export function findPayment(s: AppState, id: string) {
   return null
 }
 
-export const overallTotals = (s: AppState) => overall(s.ledgers, ME, Object.keys(s.people))
+// ---------- currencies ----------
+/** The currency of everything that has not chosen its own: the account's setting, dollars until it is changed. */
+export const defaultCurrency = (s: AppState): string => currencyOr(s.layout?.currency)
+/** The currency one group or 1-1 split is written in. */
+export const currencyOf = (s: AppState, l: Pick<AppLedger, 'currency'> | null | undefined): string => currencyOr(l?.currency, defaultCurrency(s))
+export const ledgerCurrency = (s: AppState, id: string | null | undefined): string => currencyOf(s, id ? ledgerById(s, id) : undefined)
+/** Ledgers written in one currency. Money in different currencies is never added together. */
+export const ledgersIn = (s: AppState, code: string): AppLedger[] => s.ledgers.filter((l) => currencyOf(s, l) === code)
+
+/** Totals for the account's own currency. Ledgers in another currency are reported by `otherTotals`. */
+export const overallTotals = (s: AppState) => overall(ledgersIn(s, defaultCurrency(s)), ME, Object.keys(s.people))
+/** What you owe and are owed in each other currency that has a balance, for the line under the totals. */
+export function otherTotals(s: AppState): { code: string; owe: Cents; owed: Cents }[] {
+  const codes = [...new Set(s.ledgers.map((l) => currencyOf(s, l)))].filter((c) => c !== defaultCurrency(s))
+  return codes.map((code) => ({ code, ...overall(ledgersIn(s, code), ME, Object.keys(s.people)) })).filter((x) => x.owe || x.owed)
+}
 export function groupTotals(l: AppLedger) {
   const n = myNet(l, ME)
   return { owe: n < 0 ? -n : 0, owed: n > 0 ? n : 0 }
@@ -45,7 +61,24 @@ export const pairInGroup = (l: AppLedger, p: PersonId): Cents => {
   }
   return a
 }
-export const pairBalance = (s: AppState, pid: PersonId) => pairNet(s.ledgers, ME, pid)
+/** Balance with one person in one currency (the account's own unless another is asked for). */
+export const pairBalance = (s: AppState, pid: PersonId, code: string = defaultCurrency(s)) => pairNet(ledgersIn(s, code), ME, pid)
+/** The currencies in which you share anything with this person, the account's own first. */
+export function pairCurrencies(s: AppState, pid: PersonId): string[] {
+  const set = new Set(s.ledgers.filter((l) => involves(l, pid) && involves(l, ME)).map((l) => currencyOf(s, l)))
+  return [...set].sort((a, b) => Number(b === defaultCurrency(s)) - Number(a === defaultCurrency(s)))
+}
+/** Currencies a payment with this person can be recorded in: where you share something, plus your own if there is no 1-1 split in another currency. */
+export function payableCurrencies(s: AppState, pid: PersonId): string[] {
+  const list = pairCurrencies(s, pid)
+  const one = oneLedger(s, pid)
+  const own = defaultCurrency(s)
+  if (!list.includes(own) && (!one || currencyOf(s, one) === own)) list.unshift(own)
+  return list
+}
+/** Balances with one person in the currencies other than the account's own. */
+export const otherPairBalances = (s: AppState, pid: PersonId): { code: string; tot: Cents }[] =>
+  pairCurrencies(s, pid).filter((c) => c !== defaultCurrency(s)).map((code) => ({ code, tot: pairBalance(s, pid, code).tot })).filter((x) => x.tot !== 0)
 
 export type BalanceFilter = 'net' | 'owe' | 'owed'
 const passes = (f: BalanceFilter, n: Cents) => f === 'net' || (f === 'owe' && n < 0) || (f === 'owed' && n > 0)
@@ -61,8 +94,9 @@ export function filteredPeople(s: AppState, f: BalanceFilter) {
       const L = oneLedger(s, p)
       return !!L && (L.bills.length > 0 || L.payments.length > 0)
     })
-    .map((p) => ({ p, t: pairBalance(s, p).tot }))
-    .filter((x) => x.t !== 0 && passes(f, x.t))
+    .map((p) => ({ p, t: pairBalance(s, p).tot, others: otherPairBalances(s, p) }))
+    // someone whose only balance is in another currency still has money outstanding
+    .filter((x) => (x.t !== 0 && passes(f, x.t)) || (f === 'net' && x.t === 0 && x.others.length > 0))
     .sort((a, b) => Math.abs(b.t) - Math.abs(a.t))
 }
 
@@ -82,8 +116,10 @@ export const PEOPLE_SHOWN = 5
 
 export interface PersonRow {
   p: PersonId
-  /** what they owe you (positive) or you owe them (negative) across everything */
+  /** what they owe you (positive) or you owe them (negative), in your own currency */
   t: Cents
+  /** balances with them in other currencies, when there are any */
+  others?: { code: string; tot: Cents }[]
   settled: boolean
 }
 
@@ -101,7 +137,7 @@ export function arrangedPeople(s: AppState, f: BalanceFilter): PersonRow[] {
     settled = others(s)
       .map((p) => ({ p, L: oneLedger(s, p) }))
       .filter((x): x is { p: PersonId; L: AppLedger } => !!x.L && (x.L.bills.length > 0 || x.L.payments.length > 0))
-      .filter((x) => pairBalance(s, x.p).tot === 0)
+      .filter((x) => pairBalance(s, x.p).tot === 0 && otherPairBalances(s, x.p).length === 0)
       .filter((x) => !(dismissed[x.p] && dismissed[x.p] >= lastActivity(x.L)))
       .sort((a, b) => (lastActivity(b.L) < lastActivity(a.L) ? -1 : lastActivity(b.L) > lastActivity(a.L) ? 1 : 0))
       .slice(0, room)
@@ -276,9 +312,9 @@ export function mergePayments(ledgers: AppLedger[], match: (p: AppLedger['paymen
 
 export type ActivityItem = { k: 'b'; d: string; ts: number; o: AppBill } | { k: 'p'; d: string; ts: number; o: MergedPayment }
 
-/** Newest first: by the moment it happened when known, otherwise by its day. */
+/** Newest first: by the day on the bill or payment (a bill can be dated in the past), then by the moment it was added. */
 function newestFirst(a: { d: string; ts: number }, b: { d: string; ts: number }) {
-  return b.ts - a.ts || (b.d < a.d ? -1 : b.d > a.d ? 1 : 0)
+  return (b.d < a.d ? -1 : b.d > a.d ? 1 : 0) || b.ts - a.ts
 }
 /** A day with no time of its own counts as the end of that day, so it sorts after anything dated earlier. */
 const stamp = (d: string, ts?: number) => ts ?? Date.parse(`${d}T12:00:00`)

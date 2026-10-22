@@ -6,7 +6,8 @@ import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { alertTarget, findBill, ledgerById, letterOf, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
 import type { Notif } from '../domain/types'
-import { ago, fmt } from '../domain/util'
+import { ago } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { NoteSheet } from '../sheets/NoteSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { Avatar, Bullet, Empty, Seg } from '../ui/bits'
@@ -193,6 +194,7 @@ function ReminderSheet({ n, close }: { n: Notif; close: () => void }) {
   const nav = useNavigate()
   const sheet = useSheet()
   const g = n.gid ? ledgerById(s, n.gid) : undefined
+  const fmt = useMoney(g)
   const from = n.from ?? ''
   const a = g ? pairInGroup(g, from) : 0
   const pay = () => {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
+import { useDraftMoney } from '../flow/useDraftMoney'
 import * as D from '../domain/draft'
 import { personName } from '../domain/selectors'
-import { fmt } from '../domain/util'
 import { allocCents } from '../money'
 import { useAppState } from '../data/store'
 import { Avatar, Seg, Stepper } from '../ui/bits'
@@ -10,6 +10,7 @@ import { useToast } from '../ui/Toast'
 
 /** Split the whole receipt without going item by item: equally (with guests) or by exact amounts. */
 export function WholeSheet({ d, apply, close }: { d: D.Draft; apply: (next: D.Draft) => void; close: () => void }) {
+  const fmt = useDraftMoney(d)
   const s = useAppState()
   const toast = useToast()
   const [w, setW] = useState<D.WholeSplit>(() => D.wholeFromDraft(d))

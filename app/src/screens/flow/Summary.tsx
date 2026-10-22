@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
+import { useDraftMoney } from '../../flow/useDraftMoney'
 import { Screen } from '../../app/Screen'
 import { useAppState } from '../../data/store'
 import * as D from '../../domain/draft'
 import { personName } from '../../domain/selectors'
 import { ME } from '../../domain/types'
-import { fmt } from '../../domain/util'
 import { discCents, extrasSum, itemWeights, paidMap } from '../../money'
 import { useSave } from '../../flow/useSave'
 import { withDraft } from '../../flow/withDraft'
@@ -12,6 +12,7 @@ import { Avatar, Empty } from '../../ui/bits'
 import { FlowFooter } from '../../ui/FlowFooter'
 
 export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
+  const fmt = useDraftMoney(d)
   const nav = useNavigate()
   const s = useAppState()
   const save = useSave()

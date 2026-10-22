@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { ledgerById, ledgerName, pairBalance, personName } from '../domain/selectors'
+import { currencyOf, defaultCurrency, ledgerById, ledgerName, pairBalance, payableCurrencies, personName } from '../domain/selectors'
+import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { ME } from '../domain/types'
-import { fmt, parseMoney, today, uid } from '../domain/util'
-import { planPayment, transfers } from '../money'
+import { fmt as fmtIn, parseMoney, today, uid } from '../domain/util'
+import { transfers } from '../money'
 import { Avatar } from '../ui/bits'
 import { Dropdown, type Option } from '../ui/Dropdown'
 import { useToast } from '../ui/Toast'
@@ -22,7 +23,10 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
     const tr = transfers(g)
     return tr.find((t) => t.from === ME || t.to === ME) ?? tr[0]
   })() : undefined
-  const tot = pid ? pairBalance(s, pid).tot : 0
+  const currencies = pid ? payableCurrencies(s, pid) : []
+  const [cur, setCur] = useState(g ? currencyOf(s, g) : currencies.includes(defaultCurrency(s)) ? defaultCurrency(s) : (currencies[0] ?? defaultCurrency(s)))
+  const fmt = (c: number) => fmtIn(c, cur)
+  const tot = pid ? pairBalance(s, pid, cur).tot : 0
 
   const [from, setFrom] = useState(suggestion?.from ?? ME)
   const [to, setTo] = useState(suggestion?.to ?? (g?.members[1] ?? ME))
@@ -34,7 +38,14 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
 
   const people: Option<string>[] = (g?.members ?? []).map((m) => ({ value: m, label: personName(s, m), sub: s.people[m]?.user ? '' : '· local', icon: <Avatar pid={m} size={28} /> }))
   const cents = parseMoney(amt)
-  const plan = pid && cents && cents > 0 ? planPayment(s.ledgers, ME, pid, dir, cents) : null
+  const plan = pid && cents && cents > 0 ? A.planPersonPayment(s, pid, dir, cents, cur).plan : null
+  const pickCurrency = (code: string) => {
+    // the balance, and so the suggested direction and amount, differ per currency
+    const t = pid ? pairBalance(s, pid, code).tot : 0
+    setCur(code)
+    setDir(t < 0 ? 'out' : 'in')
+    setAmt(t ? (Math.abs(t) / 100).toFixed(2) : '')
+  }
 
   const onFile = (file: File | undefined) => {
     if (!file) return
@@ -56,7 +67,7 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
     } else if (pid) {
       let text = ''
       store.update((st) => {
-        const r = A.applyPersonPayment(st, { id, newLedgerId: uid('o'), pid, direction: dir, amt: cents, date: today(), note: note.trim(), img, ts: Date.now() })
+        const r = A.applyPersonPayment(st, { id, newLedgerId: uid('o'), pid, direction: dir, amt: cents, date: today(), note: note.trim(), img, ts: Date.now(), currency: cur })
         text = r.steps.map((x) => `${ledgerName(r.state, ledgerById(r.state, x.ledgerId) as never)} ${fmt(x.amt)}`).join(', ')
         return r.state
       })
@@ -84,6 +95,12 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
               { value: 'in', label: `${personName(s, pid as string)} paid me`, icon: <Avatar pid={pid as string} size={28} /> },
             ]}
           />
+        </>
+      )}
+      {pid && currencies.length > 1 && (
+        <>
+          <label className="f">Currency</label>
+          <CurrencyPicker value={cur} onChange={pickCurrency} codes={currencies} />
         </>
       )}
       <label className="f" htmlFor="pa">Amount</label>

@@ -1,6 +1,7 @@
 import { CATEGORIES } from '../domain/bills'
 import type { MonthStats } from '../domain/selectors'
-import { fmt, mLabel, mShort } from '../domain/util'
+import { mLabel, mShort } from '../domain/util'
+import { useMoney } from './useMoney'
 import { Avatar, Bullet, personColor } from './bits'
 import { useAppState } from '../data/store'
 import { personName } from '../domain/selectors'
@@ -11,7 +12,7 @@ import type { PersonId } from '../money'
 
 interface Seg { k: string; v: number; c: string }
 
-function Arcs({ r, w, segs, total, sel, kind, onPick }: { r: number; w: number; segs: Seg[]; total: number; sel: string | null; kind: string; onPick: (k: string) => void }) {
+function Arcs({ r, w, segs, total, sel, kind, onPick, fmt }: { fmt: (c: number) => string; r: number; w: number; segs: Seg[]; total: number; sel: string | null; kind: string; onPick: (k: string) => void }) {
   if (!total) return <circle cx="110" cy="110" r={r} fill="none" stroke="var(--line)" strokeWidth={w} />
   const C = 2 * Math.PI * r
   const gap = segs.length > 1 ? 3 : 0
@@ -34,12 +35,12 @@ function Arcs({ r, w, segs, total, sel, kind, onPick }: { r: number; w: number; 
   )
 }
 
-function Donut({ outer, inner, sel, kind, center, onPick }: { outer: { segs: Seg[]; total: number }; inner: { segs: Seg[]; total: number }; sel: string | null; kind: string; center: React.ReactNode; onPick: (k: string) => void }) {
+function Donut({ outer, inner, sel, kind, center, onPick, fmt }: { fmt: (c: number) => string; outer: { segs: Seg[]; total: number }; inner: { segs: Seg[]; total: number }; sel: string | null; kind: string; center: React.ReactNode; onPick: (k: string) => void }) {
   return (
     <div className="donut">
       <svg viewBox="0 0 220 220" role="img" aria-label="Spending chart">
-        <Arcs r={90} w={26} {...outer} sel={sel} kind={kind} onPick={onPick} />
-        <Arcs r={58} w={16} {...inner} sel={sel} kind={kind} onPick={onPick} />
+        <Arcs r={90} w={26} {...outer} sel={sel} kind={kind} onPick={onPick} fmt={fmt} />
+        <Arcs r={58} w={16} {...inner} sel={sel} kind={kind} onPick={onPick} fmt={fmt} />
       </svg>
       <div className="dc">{center}</div>
     </div>
@@ -48,6 +49,7 @@ function Donut({ outer, inner, sel, kind, center, onPick }: { outer: { segs: Seg
 
 export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; st: MonthStats; pick: string | null; onPick: (k: string) => void }) {
   const s = useAppState()
+  const fmt = useMoney(ledger)
   const sg: Seg[] = []
   const pg: Seg[] = []
   for (const p of ledger.members) {
@@ -69,7 +71,7 @@ export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; s
   )
   return (
     <>
-      <Donut outer={{ segs: sg, total: st.tot }} inner={{ segs: pg, total: st.tot }} sel={sel} kind="p" center={center} onPick={onPick} />
+      <Donut outer={{ segs: sg, total: st.tot }} inner={{ segs: pg, total: st.tot }} sel={sel} kind="p" center={center} onPick={onPick} fmt={fmt} />
       <div className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '6px 0' }}>Outer ring: each person's share. Inner ring: what each person paid.</div>
       {ledger.members.filter((p) => st.share[p] > 0 || st.paid[p] > 0).map((p) => (
         <button key={p} className={`lg${sel === p ? ' on' : ''}`} onClick={() => onPick(p)} aria-pressed={sel === p}>
@@ -82,7 +84,8 @@ export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; s
   )
 }
 
-export function CategoryChart({ st, prev, monthKey, pick, onPick }: { st: MonthStats; prev: MonthStats; monthKey: string; pick: string | null; onPick: (k: string) => void }) {
+export function CategoryChart({ ledger, st, prev, monthKey, pick, onPick }: { ledger: AppLedger; st: MonthStats; prev: MonthStats; monthKey: string; pick: string | null; onPick: (k: string) => void }) {
+  const fmt = useMoney(ledger)
   const seg = (m: MonthStats): Seg[] => CATEGORIES.filter((c) => m.cat[c.k] > 0).map((c) => ({ k: c.k, v: m.cat[c.k], c: c.c }))
   const sel = pick && st.cat[pick] > 0 ? pick : null
   const pl = mShort(mAdd(monthKey, -1))
@@ -100,7 +103,7 @@ export function CategoryChart({ st, prev, monthKey, pick, onPick }: { st: MonthS
   )
   return (
     <>
-      <Donut outer={{ segs: seg(st), total: st.tot }} inner={{ segs: seg(prev), total: prev.tot }} sel={sel} kind="c" center={center} onPick={onPick} />
+      <Donut outer={{ segs: seg(st), total: st.tot }} inner={{ segs: seg(prev), total: prev.tot }} sel={sel} kind="c" center={center} onPick={onPick} fmt={fmt} />
       <div className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '6px 0' }}>Outer ring: {mLabel(monthKey)}. Inner ring: {mLabel(mAdd(monthKey, -1))}.</div>
       {CATEGORIES.filter((c) => st.cat[c.k] > 0 || prev.cat[c.k] > 0).map((c) => {
         const a = st.cat[c.k] ?? 0
@@ -121,6 +124,7 @@ export interface TrendState { all: boolean; people: boolean; off: string[]; st: 
 /** A subway-map style line chart: one line per person plus the whole group, a station per month. */
 export function TrendChart({ ledger, monthKey, state, onChange }: { ledger: AppLedger; monthKey: string; state: TrendState; onChange: (t: TrendState) => void }) {
   const s = useAppState()
+  const fmt = useMoney(ledger)
   const ms = [mAdd(monthKey, -2), mAdd(monthKey, -1), monthKey]
   const xs = [52, 176, 300]
   const ss = ms.map((m) => monthStats(ledger, m))

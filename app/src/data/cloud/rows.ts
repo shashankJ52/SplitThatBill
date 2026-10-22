@@ -10,7 +10,7 @@ import { ME } from '../../domain/types'
  */
 
 // ---------- what the database holds ----------
-export interface GroupRow { id: string; kind: 'group' | 'one'; name: string | null; color: string | null; simplify: boolean; owner_id: string; invite_code: string | null; created_at: string }
+export interface GroupRow { id: string; kind: 'group' | 'one'; name: string | null; color: string | null; simplify: boolean; currency?: string; owner_id: string; invite_code: string | null; created_at: string }
 export interface MemberRow { group_id: string; person_id: string; user_id: string | null; display_name: string; role: Role; status: 'invited' | 'active' | 'removed' | 'left'; created_at: string; joined_at: string | null }
 export interface ProfileRow { id: string; name: string; tag: string }
 export interface RequestRow { group_id: string; user_id: string; created_at: string }
@@ -150,6 +150,7 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
       ...(g.name ? { name: g.name } : {}),
       ...(g.color ? { color: g.color } : {}),
       simplify: g.simplify,
+      ...(g.currency ? { currency: g.currency } : {}),
       members: memberIds,
       ...(other ? { with: other } : {}),
       owner: t(g.owner_id),
@@ -214,7 +215,7 @@ export function toSnapshot(s: AppState, userId: string, pos: Positions): Snapsho
   for (const l of s.ledgers) {
     const role = l.roles?.[ME] ?? 'owner' // a group never saved before is one you own
     if (role === 'owner' || role === 'admin') {
-      add('groups', l.id, { kind: l.kind, name: l.name ?? null, color: l.color ?? null, simplify: l.simplify ?? true, owner_id: userId })
+      add('groups', l.id, { kind: l.kind, name: l.name ?? null, color: l.color ?? null, simplify: l.simplify ?? true, currency: l.currency ?? '', owner_id: userId })
     }
     // the owner row goes first: only an admin may add contacts, and the creator becomes one through this row
     if (role === 'owner') {
@@ -280,7 +281,7 @@ export const WRITE_MODE: Record<WriteTable, 'insert-update' | 'upsert' | 'insert
 }
 /** Columns allowed in an update of an existing row. */
 export const UPDATE_COLS: Partial<Record<WriteTable, string[]>> = {
-  groups: ['name', 'color', 'simplify'],
+  groups: ['name', 'color', 'simplify', 'currency'],
   members: ['display_name'],
   notifs: ['data'],
 }

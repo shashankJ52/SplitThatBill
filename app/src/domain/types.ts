@@ -93,6 +93,8 @@ export interface AppLedger extends Omit<Ledger, 'bills' | 'payments'> {
   invited?: PersonId[]
   /** left or removed; kept so old bills still show their names */
   former?: PersonId[]
+  /** the currency amounts are written in; missing means the viewer's own default */
+  currency?: string
   /** the group link code, when the link is on (admins only) */
   inviteCode?: string | null
   /** waiting to join through the group link (admins only) */
@@ -128,6 +130,8 @@ export interface SentReminder {
 
 /** How you like your Groups tab arranged. Personal, so it is not shared with the people in your groups. */
 export interface Layout {
+  /** your default currency, used by every group and split that has not chosen its own */
+  currency?: string
   /** group ids in the order you dragged them */
   groups?: string[]
   /** person ids in the order you dragged them */

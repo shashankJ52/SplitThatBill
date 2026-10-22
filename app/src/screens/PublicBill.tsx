@@ -2,7 +2,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
 import { findBill } from '../domain/selectors'
-import { fmt } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { calc } from '../money'
 import { Bullet } from '../ui/bits'
 import { BillBreakdown, receiptNote } from '../ui/BillBreakdown'
@@ -15,11 +15,12 @@ export function PublicBill({ bill: given, onGet }: { bill?: AppBill; onGet?: () 
   const { id = '' } = useParams()
   const s = useAppState()
   const toast = useToast()
+  const fmt = useMoney()
   const f = given ? { bill: given } : findBill(s, id)
   if (!f) return <Navigate to="/groups" replace />
   const b = f.bill
   const c = calc(b)
-  const rn = receiptNote(b)
+  const rn = receiptNote(b, fmt)
   return (
     <Screen id="v-public">
       <div className="vhead">

@@ -1,11 +1,12 @@
 import { useAppState } from '../data/store'
 import { ledgerById, ledgerName, personName, type MergedPayment } from '../domain/selectors'
-import { fmt } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { Bullet } from '../ui/bits'
 
 /** The details of one payment: who paid whom, when, the note, the proof image, and where it was applied. */
 export function PaymentSheet({ p, close }: { p: MergedPayment; close: () => void }) {
   const s = useAppState()
+  const fmt = useMoney(p.parts[0]?.ledgerId)
   const when = p.ts ? new Date(p.ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : p.date
   return (
     <>

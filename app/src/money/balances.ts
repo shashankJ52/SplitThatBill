@@ -145,6 +145,8 @@ export function planPayment(
   pid: PersonId,
   direction: 'out' | 'in',
   amt: Cents,
+  /** where a leftover goes when there is no 1-1 ledger: a shared group instead of a new 1-1 (used when the 1-1 is in another currency) */
+  creditGroup = false,
 ): { from: PersonId; to: PersonId; steps: PaymentStep[] } {
   const from = direction === 'out' ? me : pid
   const to = direction === 'out' ? pid : me
@@ -162,6 +164,6 @@ export function planPayment(
       }
     }
   }
-  if (rem > 0) steps.push({ ledger: ledgers.find((L) => L.kind === 'one' && involves(L, pid)) ?? null, amt: rem })
+  if (rem > 0) steps.push({ ledger: ledgers.find((L) => L.kind === 'one' && involves(L, pid)) ?? (creditGroup ? (shared[0] ?? null) : null), amt: rem })
   return { from, to, steps }
 }

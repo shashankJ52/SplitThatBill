@@ -1,6 +1,6 @@
 import { calc, discCents, extrasSum, itemsSum, itemWeights, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
-import { ledgerById, realGroups } from './selectors'
+import { currencyOf, ledgerById, oneLedger, realGroups } from './selectors'
 import type { ScanResult } from '../scan/receipt'
 import { ME, type AppBill, type AppLedger, type AppState, type Comment } from './types'
 
@@ -54,6 +54,12 @@ export interface Draft {
   scanned?: boolean
   /** private details the reader saw on the photo and left out */
   hidden?: string[]
+}
+
+/** The currency a bill in this draft is written in: its group's or 1-1's, or the account's own for a brand-new split. */
+export function draftCurrency(s: AppState, d: Draft): string {
+  const l = d.ledgerId ? ledgerById(s, d.ledgerId) : d.kind === 'group' ? (d.gid ? ledgerById(s, d.gid) : undefined) : d.withP ? oneLedger(s, d.withP) : undefined
+  return currencyOf(s, l)
 }
 
 export type Result = { d: Draft; err?: undefined } | { d: Draft; err: string }

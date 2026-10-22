@@ -16,7 +16,7 @@ export const Export = withDraft(function Export({ d }: { d: D.Draft }) {
   const save = useSave()
   const g = d.gid ? ledgerById(s, d.gid) : null
   const link = billLink(window.location.origin, d.token)
-  const text = whatsappText(s, { ...d, paid: d.multi ? d.paid : null }, g?.name ?? null, link)
+  const text = whatsappText(s, { ...d, paid: d.multi ? d.paid : null }, g?.name ?? null, link, D.draftCurrency(s, d))
   const copy = async (t: string, ok: string) => {
     try {
       await navigator.clipboard.writeText(t)

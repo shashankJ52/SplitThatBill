@@ -2,7 +2,9 @@ import { allocCents, calc, discCents, extrasSum, itemWeights, paidMap, type Extr
 import { useAppState } from '../data/store'
 import { personName } from '../domain/selectors'
 import type { AppBill } from '../domain/types'
-import { fmt, pf } from '../domain/util'
+import { pf } from '../domain/util'
+import type { AppLedger } from '../domain/types'
+import { useMoney } from './useMoney'
 import { Avatar } from './bits'
 
 export function extraLabel(e: Extra, name: (p: string) => string): string {
@@ -10,8 +12,9 @@ export function extraLabel(e: Extra, name: (p: string) => string): string {
 }
 
 /** Items, tax, tip, discount, extras and who pays what. Used on the bill page and the public preview. */
-export function BillBreakdown({ bill: b, forOthers = false }: { bill: AppBill; forOthers?: boolean }) {
+export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: AppBill; ledger?: AppLedger | null; forOthers?: boolean }) {
   const s = useAppState()
+  const fmt = useMoney(ledger)
   const name = (p: string) => personName(s, p, forOthers)
   const c = calc(b)
   const pm = paidMap(b, c.total)
@@ -85,7 +88,7 @@ export function BillBreakdown({ bill: b, forOthers = false }: { bill: AppBill; f
   )
 }
 
-export const receiptNote = (b: AppBill) => {
+export const receiptNote = (b: AppBill, fmt: (cents: number) => string) => {
   const dc = discCents(b)
   const ex = extrasSum(b)
   return dc || ex ? `Receipt ${fmt(b.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}` : ''

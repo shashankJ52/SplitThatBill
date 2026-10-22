@@ -1,7 +1,7 @@
 import { emptyState, seedState } from '../domain/seed'
 import { nets, planPayment, splitEven, type Cents, type PersonId } from '../money'
 import { ev, makeBill, item } from '../domain/bills'
-import { findBill, ledgerById, noteKey, oneLedger, pairInGroup, realGroups, type NoteEntry } from '../domain/selectors'
+import { currencyOf, defaultCurrency, findBill, ledgerById, ledgersIn, noteKey, oneLedger, pairInGroup, realGroups, type NoteEntry } from '../domain/selectors'
 import type { AppBill, AppLedger, AppPayment, AppState, Comment, NoteList, Notif, Profile, SentReminder } from '../domain/types'
 import { ME } from '../domain/types'
 import { derivedId, fmt, TAG_RE } from '../domain/util'
@@ -47,12 +47,14 @@ export interface GroupInput {
   color: string
   simplify: boolean
   members: PersonId[]
+  /** currency code, or missing to follow the account default */
+  currency?: string
 }
 export function createGroup(s: S, g: GroupInput): S {
-  const l: AppLedger = { id: g.id, kind: 'group', name: g.name, color: g.color, simplify: g.simplify, members: g.members, bills: [], payments: [], lists: [] }
+  const l: AppLedger = { id: g.id, kind: 'group', name: g.name, color: g.color, simplify: g.simplify, currency: g.currency ?? defaultCurrency(s), members: g.members, bills: [], payments: [], lists: [] }
   return { ...s, ledgers: [...s.ledgers, l] }
 }
-export function updateGroup(s: S, id: string, patch: Partial<Pick<GroupInput, 'name' | 'color' | 'simplify' | 'members'>>): S {
+export function updateGroup(s: S, id: string, patch: Partial<Pick<GroupInput, 'name' | 'color' | 'simplify' | 'members' | 'currency'>>): S {
   return mapLedger(s, id, (l) => ({ ...l, ...patch }))
 }
 export function deleteGroup(s: S, id: string): S {
@@ -69,10 +71,10 @@ export function deleteGroup(s: S, id: string): S {
 /** A member can only be removed from a group once their balance is settled. */
 export const canRemoveMember = (l: AppLedger, pid: PersonId) => (nets(l)[pid] ?? 0) === 0
 
-export function ensureOneLedger(s: S, pid: PersonId, newId: string): { state: S; id: string } {
+export function ensureOneLedger(s: S, pid: PersonId, newId: string, currency?: string): { state: S; id: string } {
   const existing = oneLedger(s, pid)
   if (existing) return { state: s, id: existing.id }
-  const l: AppLedger = { id: newId, kind: 'one', with: pid, members: [ME, pid], simplify: false, bills: [], payments: [], lists: [] }
+  const l: AppLedger = { id: newId, kind: 'one', with: pid, members: [ME, pid], simplify: false, currency: currency ?? defaultCurrency(s), bills: [], payments: [], lists: [] }
   return { state: { ...s, ledgers: [...s.ledgers, l] }, id: newId }
 }
 
@@ -112,16 +114,30 @@ export interface PersonPaymentInput {
   img?: string | null
   /** when it was recorded (milliseconds) */
   ts?: number
+  /** the currency being paid in; only ledgers in that currency are touched. Defaults to the account's own. */
+  currency?: string
 }
-/** Record a payment with one person, spread over the ledgers where it clears debt (1-1 first). */
+/**
+ * Record a payment with one person, spread over the ledgers where it clears debt (1-1 first). Only ledgers in the
+ * payment's currency are used, since money in different currencies is never added together.
+ */
+export function planPersonPayment(s: S, pid: PersonId, direction: 'out' | 'in', amt: Cents, currency: string = defaultCurrency(s)) {
+  const one = oneLedger(s, pid)
+  // the one 1-1 split with a person has a single currency; paying in another one credits a shared group instead
+  const oneElsewhere = !!one && currencyOf(s, one) !== currency
+  return { plan: planPayment(ledgersIn(s, currency), ME, pid, direction, amt, oneElsewhere), oneElsewhere }
+}
+
 export function applyPersonPayment(s: S, p: PersonPaymentInput): { state: S; steps: { ledgerId: string; amt: Cents }[] } {
-  const plan = planPayment(s.ledgers, ME, p.pid, p.direction, p.amt)
+  const cur = p.currency ?? defaultCurrency(s)
+  const { plan, oneElsewhere } = planPersonPayment(s, p.pid, p.direction, p.amt, cur)
   let state = s
   const steps: { ledgerId: string; amt: Cents }[] = []
   plan.steps.forEach((step, i) => {
     let id = (step.ledger as AppLedger | null)?.id
     if (!id) {
-      const r = ensureOneLedger(state, p.pid, p.newLedgerId)
+      if (oneElsewhere) return // nowhere in this currency to put it
+      const r = ensureOneLedger(state, p.pid, p.newLedgerId, cur)
       state = r.state
       id = r.id
     }
@@ -231,6 +247,14 @@ export const reloadSample = (s: S, now: number): S => ({ ...seedState(now), prof
 export const clearAllData = (s: S): S => ({ ...emptyState(s.profile, s.password), signedIn: s.signedIn })
 
 // ---------- how the Groups tab is arranged ----------
+/** Your default currency, for every group and split that has not chosen its own. */
+export const setDefaultCurrency = (s: S, code: string): S => {
+  const old = defaultCurrency(s)
+  // anything that never chose a currency keeps the one it has been shown in, instead of changing with the default
+  return { ...s, ledgers: s.ledgers.map((l) => (l.currency ? l : { ...l, currency: old })), layout: { ...s.layout, currency: code } }
+}
+/** The currency of one group or 1-1 split. Amounts are not converted, only written differently. */
+export const setLedgerCurrency = (s: S, id: string, code: string): S => mapLedger(s, id, (l) => ({ ...l, currency: code }))
 export const setGroupOrder = (s: S, ids: string[]): S => ({ ...s, layout: { ...s.layout, groups: ids } })
 export const setPeopleOrder = (s: S, ids: PersonId[]): S => ({ ...s, layout: { ...s.layout, people: ids } })
 /** Swipe a settled-up person away. They return when there is new activity with them. */

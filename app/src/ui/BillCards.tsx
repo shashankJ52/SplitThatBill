@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useAppState } from '../data/store'
-import { ledgerById, ledgerName, personName, type MergedPayment } from '../domain/selectors'
+import { findBill, ledgerById, ledgerName, personName, type MergedPayment } from '../domain/selectors'
 import type { AppBill } from '../domain/types'
 import { ME } from '../domain/types'
-import { fmt, whenLabel } from '../domain/util'
+import { whenLabel } from '../domain/util'
+import { useMoney } from './useMoney'
 import { paidMap } from '../money'
 import { PaymentSheet } from '../sheets/PaymentSheet'
 import { Bullet } from './bits'
@@ -16,6 +17,7 @@ export function paidText(s: Parameters<typeof personName>[0], b: AppBill, forOth
 
 export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number }) {
   const s = useAppState()
+  const fmt = useMoney(findBill(s, b.id)?.ledger)
   const mine = b.shares[ME]
   const n = b.comments.filter((c) => !c.sys).length
   return (
@@ -37,6 +39,7 @@ export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number
 
 export function PayCard({ payment: p, index = 0 }: { payment: MergedPayment; index?: number }) {
   const s = useAppState()
+  const fmt = useMoney(p.parts[0]?.ledgerId)
   const sheet = useSheet()
   const open = () => sheet.open('Payment', (close) => <PaymentSheet p={p} close={close} />)
   const places = p.parts.length > 1 ? p.parts.map((x) => `${fmt(x.amt)} ${ledgerName(s, ledgerById(s, x.ledgerId) ?? ({ kind: 'group', name: 'a split' } as never))}`).join(' · ') : ''

@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
+import { useDraftMoney } from '../../flow/useDraftMoney'
 import { Screen } from '../../app/Screen'
 import { useAppState } from '../../data/store'
 import { CATEGORIES } from '../../domain/bills'
 import * as D from '../../domain/draft'
 import { letterOf, ledgerById, personName } from '../../domain/selectors'
-import { fmt } from '../../domain/util'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
 import { Avatar, Bullet } from '../../ui/bits'
@@ -13,6 +13,7 @@ import { FlowFooter } from '../../ui/FlowFooter'
 import { MoneyField } from '../../ui/MoneyField'
 
 export const Details = withDraft(function Details({ d }: { d: D.Draft }) {
+  const fmt = useDraftMoney(d)
   const { set } = useFlow()
   const nav = useNavigate()
   const s = useAppState()

@@ -4,10 +4,11 @@ import * as A from '../data/actions'
 import { useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { isShared } from '../domain/membership'
-import { ledgerById, personName, realGroups } from '../domain/selectors'
+import { currencyOf, defaultCurrency, ledgerById, personName, realGroups } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { COLORS, uid } from '../domain/util'
 import { Avatar, Bullet } from '../ui/bits'
+import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
 
@@ -24,6 +25,7 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
   const [name, setName] = useState(existing?.name ?? '')
   const [color, setColor] = useState(() => existing?.color ?? COLORS[Math.floor(Math.random() * COLORS.length)])
   const [simplify, setSimplify] = useState(existing?.simplify ?? true)
+  const [currency, setCurrency] = useState(existing ? currencyOf(s, existing) : defaultCurrency(s))
   const [members, setMembers] = useState<string[]>(existing?.members ?? [ME])
   const [add, setAdd] = useState('')
   const [nameBad, setNameBad] = useState(false)
@@ -47,11 +49,11 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
     }
     if (realGroups(s).some((g) => g.id !== gid && (g.name ?? '').toLowerCase() === n.toLowerCase())) return toast('You already have a group with that name')
     if (existing) {
-      store.update((st) => A.updateGroup(st, existing.id, { name: n, color, simplify, members }))
+      store.update((st) => A.updateGroup(st, existing.id, { name: n, color, simplify, members, currency }))
       toast('Group updated')
     } else {
       const id = uid('g')
-      store.update((st) => A.createGroup(st, { id, name: n, color, simplify, members }))
+      store.update((st) => A.createGroup(st, { id, name: n, color, simplify, members, currency }))
       toast('Group created')
       onCreated?.(id)
     }
@@ -86,6 +88,11 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
           <div className="mute">On: fewest payments to settle up. Off: shows who owes whom directly.</div>
         </span>
       </label>
+      <label className="f">Currency</label>
+      <CurrencyPicker value={currency} onChange={setCurrency} />
+      <div className="mute" style={{ marginTop: 4 }}>
+        {existing && existing.bills.length + existing.payments.length > 0 ? 'Changing this only changes the symbol. Amounts already entered are not converted.' : 'Every amount in this group is written in this currency.'}
+      </div>
       {!shared && <label className="f">People</label>}
       {!shared && live && <div className="mute" style={{ marginBottom: 6 }}>Add friends with an account by @tag. They get an invite and join once they accept. Add anyone else by name.</div>}
       {!shared && members.map((m) => (

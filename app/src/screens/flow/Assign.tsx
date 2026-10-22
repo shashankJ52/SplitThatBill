@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import { useDraftMoney } from '../../flow/useDraftMoney'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
 import * as A from '../../data/actions'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
 import { ledgerById, personName } from '../../domain/selectors'
-import { fmt } from '../../domain/util'
 import { assignText, ItemPanel } from '../../flow/ItemPanel'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
@@ -17,6 +17,7 @@ import { useAddPerson } from '../../ui/useAddPerson'
 import { useToast } from '../../ui/Toast'
 
 export const Assign = withDraft(function Assign({ d }: { d: D.Draft }) {
+  const fmt = useDraftMoney(d)
   const { set } = useFlow()
   const nav = useNavigate()
   const s = useAppState()

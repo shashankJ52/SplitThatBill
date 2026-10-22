@@ -2,7 +2,9 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useSaveStatus, useStore } from '../data/store'
+import { defaultCurrency } from '../domain/selectors'
 import { ME } from '../domain/types'
+import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/ProfileSheet'
 import { Bullet } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
@@ -106,6 +108,11 @@ export function AccountTab() {
             <span className="mute">Edit ›</span>
           </div>
         ))}
+        <h2>Currency</h2>
+        <CurrencyPicker label="Default currency" value={defaultCurrency(s)} onChange={(code) => { store.update((x) => A.setDefaultCurrency(x, code)); toast(`New groups and splits will use ${code}`) }} />
+        <p className="mute">
+          Used for new groups and 1-1 splits, and for the totals on the Groups tab. Each group can have its own currency in its settings, for example euros for a trip. Amounts are never converted.
+        </p>
         <h2>Invite friends</h2>
         <button className="primary" onClick={share}>Share my tag @{p.tag}</button>
         <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>

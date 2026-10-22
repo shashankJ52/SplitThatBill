@@ -4,9 +4,12 @@ import * as A from '../data/actions'
 import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { isAdmin, isOwner, isShared, memberActions, memberLines, myRole, removalCheck, writeOffPayments, type MemberLine } from '../domain/membership'
-import { ledgerById, letterOf, personName } from '../domain/selectors'
+import { currencyLabel } from '../domain/currency'
+import { currencyOf, ledgerById, letterOf, personName } from '../domain/selectors'
+import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { ME } from '../domain/types'
-import { fmt, today, uid } from '../domain/util'
+import { today, uid } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { Avatar, Bullet } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
@@ -32,6 +35,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
   const nav = useNavigate()
   const addByInput = useAddPerson()
   const l = ledgerById(s, gid)
+  const fmt = useMoney(l)
   const [add, setAdd] = useState('')
   const [busy, setBusy] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
@@ -194,6 +198,18 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
             </div>
           ))}
         </>
+      )}
+
+      <label className="f">Currency</label>
+      {admin ? (
+        <>
+          <CurrencyPicker value={currencyOf(s, l)} onChange={(code) => { store.update((st) => A.setLedgerCurrency(st, gid, code)); toast(`Amounts in this group now show in ${code}`) }} />
+          <div className="mute" style={{ marginTop: 4 }}>
+            {l.bills.length + l.payments.length > 0 ? 'Changing this only changes the symbol for everyone. Amounts already entered are not converted.' : 'Every amount in this group is written in this currency.'}
+          </div>
+        </>
+      ) : (
+        <div className="mute">{currencyLabel(currencyOf(s, l))}. An admin can change it.</div>
       )}
 
       <label className="f">Group link</label>

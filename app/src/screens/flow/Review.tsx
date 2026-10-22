@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
+import { useDraftMoney } from '../../flow/useDraftMoney'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
 import { useAppState } from '../../data/store'
 import * as D from '../../domain/draft'
-import { fmt, parseMoney } from '../../domain/util'
+import { parseMoney } from '../../domain/util'
 import { discCents, extrasSum, itemsSum, type Extra } from '../../money'
 import { ItemPanel, PriceSeg } from '../../flow/ItemPanel'
 import { useFlow } from '../../flow/FlowProvider'
@@ -22,6 +23,7 @@ const SPLITS: { value: Extra['split']; label: string; letter: string; color: str
 ]
 
 export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
+  const fmt = useDraftMoney(d)
   const { set } = useFlow()
   const nav = useNavigate()
   const toast = useToast()
@@ -121,7 +123,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
                           <button className="del" aria-label="Delete item" onClick={() => { set((x) => D.removeItem(x, i.id)); setOpen(null) }}>✕</button>
                         </div>
                         {i.qty > 1 && (
-                          <PriceSeg it={i} onChange={(m) => { const r = D.setItemPe(d, i.id, m); set(() => r.d); if (r.rounded !== undefined) toast(`Rounded to ${fmt(r.rounded)} each`) }} />
+                          <PriceSeg fmt={fmt} it={i} onChange={(m) => { const r = D.setItemPe(d, i.id, m); set(() => r.d); if (r.rounded !== undefined) toast(`Rounded to ${fmt(r.rounded)} each`) }} />
                         )}
                       </div>
                       <div className="mute">Who split it</div>

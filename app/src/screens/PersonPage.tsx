@@ -1,9 +1,9 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { filterActivity, ledgerName, letterOf, pairBalance, personActivity, type ActivityKind } from '../domain/selectors'
+import { defaultCurrency, filterActivity, ledgerName, letterOf, otherPairBalances, pairBalance, pairCurrencies, personActivity, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
-import { fmt } from '../domain/util'
+import { fmt as fmtIn } from '../domain/util'
 import { RemindSheet } from '../sheets/RemindSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { Avatar, BellIcon, Bullet, Empty } from '../ui/bits'
@@ -20,8 +20,13 @@ export function PersonPage() {
   const [kind, setKind] = useUiState<ActivityKind>(`person.${pid}.filter`, 'all')
   const p = s.people[pid]
   if (!p || pid === ME) return <Navigate to="/groups" replace />
+  const own = defaultCurrency(s)
+  const fmt = (c: number) => fmtIn(c, own)
   const pr = pairBalance(s, pid)
   const t = pr.tot
+  const elsewhere = otherPairBalances(s, pid)
+  // every currency you share something in, your own first, each with where its balance comes from
+  const groupsByCurrency = pairCurrencies(s, pid).map((code) => ({ code, parts: pairBalance(s, pid, code).parts }))
 
   // 1-1 bills plus every payment between the two of you, with the pieces of one payment shown as one
   const all = personActivity(s, pid)
@@ -50,6 +55,11 @@ export function PersonPage() {
               </button>
             )}
           </div>
+          {elsewhere.length > 0 && (
+            <div className="mute" style={{ marginTop: 6 }}>
+              {elsewhere.map((o) => `${o.tot > 0 ? `${p.name} also owes you` : `You also owe ${p.name}`} ${fmtIn(Math.abs(o.tot), o.code)}`).join(' · ')}
+            </div>
+          )}
         </div>
         <div className="btnrow" style={{ margin: '0 0 6px' }}>
           <button className="primary" onClick={() => nav('/scan', { state: { target: `p:${pid}` } })}>Split 1-1</button>
@@ -58,13 +68,13 @@ export function PersonPage() {
       </div>
       <div className="vbody">
         <h2 style={{ marginTop: 6 }}>Where it adds up</h2>
-        {pr.parts.length ? pr.parts.map((x) => {
+        {groupsByCurrency.some((c) => c.parts.length) ? groupsByCurrency.flatMap((c) => c.parts.map((x) => ({ ...x, code: c.code }))).map((x) => {
           const l = x.ledger as unknown as (typeof s.ledgers)[number]
           const inner = (
             <>
               {l.kind === 'group' ? <Bullet letter={letterOf(l.name ?? '?')} color={l.color ?? '#A7A9AC'} size={36} /> : <Avatar pid={pid} size={36} />}
               <div className="grow"><b>{ledgerName(s, l)}</b></div>
-              <span className={`stat ${x.amt > 0 ? 'g' : 'r'}`}>{x.amt > 0 ? 'owes you ' : 'you owe '}{fmt(Math.abs(x.amt))}</span>
+              <span className={`stat ${x.amt > 0 ? 'g' : 'r'}`}>{x.amt > 0 ? 'owes you ' : 'you owe '}{fmtIn(Math.abs(x.amt), x.code)}</span>
             </>
           )
           return l.kind === 'group' ? <Link className="card row tap rise" to={`/groups/${l.id}`} key={l.id}>{inner}</Link> : <div className="card row rise" key={l.id}>{inner}</div>

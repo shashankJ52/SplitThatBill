@@ -1,3 +1,5 @@
+import { formatMoney } from './currency'
+
 export const MAX_CENTS = 100_000_000
 
 export const COLORS = ['#0039A6', '#FF6319', '#6CBE45', '#996633', '#A7A9AC', '#FCCC0A', '#EE352E', '#00933C', '#B933AD']
@@ -5,15 +7,12 @@ export const COLORS = ['#0039A6', '#FF6319', '#6CBE45', '#996633', '#A7A9AC', '#
 /** Readable text color on a route-bullet color. */
 export const ink = (c: string) => (c === '#FCCC0A' || c === '#6CBE45' || c === '#A7A9AC' ? '#000' : '#fff')
 
-export function fmt(c: number): string {
-  const s = c < 0 ? '-' : ''
-  const a = Math.abs(c)
-  return `${s}$${Math.floor(a / 100).toLocaleString('en-US')}.${String(a % 100).padStart(2, '0')}`
-}
+/** Cents as money in the given currency (dollars when none is given). */
+export const fmt = (c: number, currency?: string): string => formatMoney(c, currency)
 
 /** Parse a typed amount like "12.50" into cents, or null when invalid or too large. */
 export function parseMoney(str: string): number | null {
-  const t = str.replace(/[$,\s]/g, '')
+  const t = str.replace(/[$€£₹฿,\s]/g, '')
   if (!/^\d+(\.\d{1,2})?$/.test(t)) return null
   const c = Math.round(parseFloat(t) * 100)
   return c > MAX_CENTS ? null : c

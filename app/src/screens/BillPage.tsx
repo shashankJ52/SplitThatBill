@@ -6,7 +6,8 @@ import { useAppState, useStore } from '../data/store'
 import { billLink, whatsappText } from '../domain/share'
 import { findBill, ledgerName, personName } from '../domain/selectors'
 import { ME } from '../domain/types'
-import { ago, fmt, uid, whenLabel } from '../domain/util'
+import { ago, uid, whenLabel } from '../domain/util'
+import { useMoney } from '../ui/useMoney'
 import { BillBreakdown, receiptNote } from '../ui/BillBreakdown'
 import { paidText } from '../ui/BillCards'
 import { useFlow } from '../flow/FlowProvider'
@@ -24,10 +25,11 @@ export function BillPage() {
   const [comment, setComment] = useState('')
   const [bad, setBad] = useState(false)
   const f = findBill(s, id)
+  const fmt = useMoney(f?.ledger)
   if (!f) return <Navigate to="/groups" replace />
   const { bill: b, ledger: L } = f
   const mine = b.by === ME
-  const rn = receiptNote(b)
+  const rn = receiptNote(b, fmt)
 
   const post = () => {
     const t = comment.trim()
@@ -70,7 +72,7 @@ export function BillPage() {
       </div>
       <div className="vbody">
         {b.notes && <div className="card" style={{ display: 'block' }}><div className="mute">Notes</div>{b.notes}</div>}
-        <BillBreakdown bill={b} />
+        <BillBreakdown bill={b} ledger={L} />
         <h2>Share</h2>
         <button className="secondary" onClick={share}>Share link to this bill</button>
         <h2>Manage</h2>

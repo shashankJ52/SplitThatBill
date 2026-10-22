@@ -1,12 +1,13 @@
 import { itemWeights, type Item } from '../money'
 import * as D from '../domain/draft'
 import { personName } from '../domain/selectors'
-import { fmt, pf } from '../domain/util'
+import { pf } from '../domain/util'
+import { useDraftMoney } from './useDraftMoney'
 import { useAppState } from '../data/store'
 import { Avatar, Seg, Stepper } from '../ui/bits'
 
 /** The "Price is for all or each" switch shown when the quantity is above one. */
-export function PriceSeg({ it, onChange }: { it: Item; onChange: (m: 'total' | 'each') => void }) {
+export function PriceSeg({ it, onChange, fmt }: { it: Item; onChange: (m: 'total' | 'each') => void; fmt: (cents: number) => string }) {
   const each = it.pe === 'each'
   return (
     <>
@@ -59,6 +60,7 @@ export function ItemPanel({ d, it, set }: { d: D.Draft; it: Item; set: (fn: (d: 
 
 function Portions({ d, it, set }: { d: D.Draft; it: Item; set: (fn: (d: D.Draft) => D.Draft) => void }) {
   const s = useAppState()
+  const fmt = useDraftMoney(d)
   const left = Math.round((it.qty - D.porSum(it)) * 100) / 100
   return (
     <>

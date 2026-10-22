@@ -1,7 +1,7 @@
 import { calc, paidMap, type BillInput } from '../money'
 import type { AppState } from './types'
 import { personName } from './selectors'
-import { fmt } from './util'
+import { fmt as fmtIn } from './util'
 
 export interface ShareBill extends BillInput {
   title: string
@@ -16,7 +16,8 @@ export const billLink = (origin: string, token: string) => `${origin}/b/${token}
  * The WhatsApp message. It is read by other people, so "You" becomes your first name,
  * and it only mentions this bill: nothing about earlier balances.
  */
-export function whatsappText(s: AppState, b: ShareBill, groupName: string | null, link: string): string {
+export function whatsappText(s: AppState, b: ShareBill, groupName: string | null, link: string, currency?: string): string {
+  const fmt = (c: number) => fmtIn(c, currency)
   const c = calc(b)
   const pm = paidMap(b, c.total)
   const name = (p: string) => personName(s, p, true)
