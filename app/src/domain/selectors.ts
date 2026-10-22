@@ -42,11 +42,22 @@ export const ledgerCurrency = (s: AppState, id: string | null | undefined): stri
 /** Ledgers written in one currency. Money in different currencies is never added together. */
 export const ledgersIn = (s: AppState, code: string): AppLedger[] => s.ledgers.filter((l) => currencyOf(s, l) === code)
 
-/** Totals for the account's own currency. Ledgers in another currency are reported by `otherTotals`. */
-export const overallTotals = (s: AppState) => overall(ledgersIn(s, defaultCurrency(s)), ME, Object.keys(s.people))
-/** What you owe and are owed in each other currency that has a balance, for the line under the totals. */
-export function otherTotals(s: AppState): { code: string; owe: Cents; owed: Cents }[] {
-  const codes = [...new Set(s.ledgers.map((l) => currencyOf(s, l)))].filter((c) => c !== defaultCurrency(s))
+/**
+ * The currencies worth switching between on the Groups tab: only those where something has been recorded (a bill or a
+ * payment), plus your own default so there is always a way back to it. One entry or none means there is nothing to switch.
+ */
+export function activeCurrencies(s: AppState): string[] {
+  const own = defaultCurrency(s)
+  const used = new Set(s.ledgers.filter((l) => l.bills.length > 0 || l.payments.length > 0).map((l) => currencyOf(s, l)))
+  used.add(own)
+  return [...used].sort((a, b) => Number(b === own) - Number(a === own) || a.localeCompare(b))
+}
+
+/** Totals for one currency (your own unless another is being viewed). Other currencies are reported by `otherTotals`. */
+export const overallTotals = (s: AppState, view: string = defaultCurrency(s)) => overall(ledgersIn(s, view), ME, Object.keys(s.people))
+/** What you owe and are owed in each currency other than the one being viewed, for the line under the totals. */
+export function otherTotals(s: AppState, view: string = defaultCurrency(s)): { code: string; owe: Cents; owed: Cents }[] {
+  const codes = [...new Set(s.ledgers.map((l) => currencyOf(s, l)))].filter((c) => c !== view)
   return codes.map((code) => ({ code, ...overall(ledgersIn(s, code), ME, Object.keys(s.people)) })).filter((x) => x.owe || x.owed)
 }
 export function groupTotals(l: AppLedger) {
@@ -76,25 +87,25 @@ export function payableCurrencies(s: AppState, pid: PersonId): string[] {
   if (!list.includes(own) && (!one || currencyOf(s, one) === own)) list.unshift(own)
   return list
 }
-/** Balances with one person in the currencies other than the account's own. */
-export const otherPairBalances = (s: AppState, pid: PersonId): { code: string; tot: Cents }[] =>
-  pairCurrencies(s, pid).filter((c) => c !== defaultCurrency(s)).map((code) => ({ code, tot: pairBalance(s, pid, code).tot })).filter((x) => x.tot !== 0)
+/** Balances with one person in the currencies other than the one being viewed (your own by default). */
+export const otherPairBalances = (s: AppState, pid: PersonId, view: string = defaultCurrency(s)): { code: string; tot: Cents }[] =>
+  pairCurrencies(s, pid).filter((c) => c !== view).map((code) => ({ code, tot: pairBalance(s, pid, code).tot })).filter((x) => x.tot !== 0)
 
 export type BalanceFilter = 'net' | 'owe' | 'owed'
 const passes = (f: BalanceFilter, n: Cents) => f === 'net' || (f === 'owe' && n < 0) || (f === 'owed' && n > 0)
 
-export function filteredGroups(s: AppState, f: BalanceFilter) {
-  return realGroups(s).filter((g) => passes(f, myNet(g, ME)))
+export function filteredGroups(s: AppState, f: BalanceFilter, view: string = defaultCurrency(s)) {
+  return realGroups(s).filter((g) => currencyOf(s, g) === view && passes(f, myNet(g, ME)))
 }
 
 /** People with a 1-1 ledger and money outstanding, biggest first. */
-export function filteredPeople(s: AppState, f: BalanceFilter) {
+export function filteredPeople(s: AppState, f: BalanceFilter, view: string = defaultCurrency(s)) {
   return others(s)
     .filter((p) => {
       const L = oneLedger(s, p)
       return !!L && (L.bills.length > 0 || L.payments.length > 0)
     })
-    .map((p) => ({ p, t: pairBalance(s, p).tot, others: otherPairBalances(s, p) }))
+    .map((p) => ({ p, t: pairBalance(s, p, view).tot, others: otherPairBalances(s, p, view) }))
     // someone whose only balance is in another currency still has money outstanding
     .filter((x) => (x.t !== 0 && passes(f, x.t)) || (f === 'net' && x.t === 0 && x.others.length > 0))
     .sort((a, b) => Math.abs(b.t) - Math.abs(a.t))
@@ -109,7 +120,7 @@ export function orderBy<T>(items: T[], key: (x: T) => string, order?: string[]):
   return [...placed, ...items.filter((x) => !pos.has(key(x)))]
 }
 
-export const arrangedGroups = (s: AppState, f: BalanceFilter) => orderBy(filteredGroups(s, f), (g) => g.id, s.layout?.groups)
+export const arrangedGroups = (s: AppState, f: BalanceFilter, view: string = defaultCurrency(s)) => orderBy(filteredGroups(s, f, view), (g) => g.id, s.layout?.groups)
 
 /** How many people the list aims to show, counting settled-up ones that fill the gaps. */
 export const PEOPLE_SHOWN = 5
@@ -128,8 +139,8 @@ export interface PersonRow {
  * the most recent settled-up people fill it (tagged "settled up") instead of vanishing. A settled person you swiped away
  * stays gone until something new happens with them. Your own drag order wins over the default.
  */
-export function arrangedPeople(s: AppState, f: BalanceFilter): PersonRow[] {
-  const owing: PersonRow[] = filteredPeople(s, f).map((x) => ({ ...x, settled: false }))
+export function arrangedPeople(s: AppState, f: BalanceFilter, view: string = defaultCurrency(s)): PersonRow[] {
+  const owing: PersonRow[] = filteredPeople(s, f, view).map((x) => ({ ...x, settled: false }))
   let settled: PersonRow[] = []
   if (f === 'net') {
     const dismissed = s.layout?.dismissed ?? {}
@@ -137,7 +148,7 @@ export function arrangedPeople(s: AppState, f: BalanceFilter): PersonRow[] {
     settled = others(s)
       .map((p) => ({ p, L: oneLedger(s, p) }))
       .filter((x): x is { p: PersonId; L: AppLedger } => !!x.L && (x.L.bills.length > 0 || x.L.payments.length > 0))
-      .filter((x) => pairBalance(s, x.p).tot === 0 && otherPairBalances(s, x.p).length === 0)
+      .filter((x) => pairBalance(s, x.p, view).tot === 0 && otherPairBalances(s, x.p, view).length === 0)
       .filter((x) => !(dismissed[x.p] && dismissed[x.p] >= lastActivity(x.L)))
       .sort((a, b) => (lastActivity(b.L) < lastActivity(a.L) ? -1 : lastActivity(b.L) > lastActivity(a.L) ? 1 : 0))
       .slice(0, room)

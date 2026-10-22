@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, letterOf, otherTotals, overallTotals, personName, type BalanceFilter } from '../domain/selectors'
+import { activeCurrencies, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, letterOf, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
+import { currencyLabel } from '../domain/currency'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
 import { fmt as fmtIn, today } from '../domain/util'
-import { useMoney } from '../ui/useMoney'
 import { GroupSheet } from '../sheets/GroupSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { PickSheet } from '../sheets/PickSheet'
@@ -36,11 +36,27 @@ export function GroupsTab() {
   const drag = useRef<{ k: 'lines' | 'people'; y: number; x: number } | null>(null)
   const swallow = useRef(false)
 
-  const fmt = useMoney()
-  const t = overallTotals(s)
-  const others = otherTotals(s)
-  const groups = arrangedGroups(s, filter)
-  const people = arrangedPeople(s, filter)
+  // the currency being looked at: only currencies where something was recorded are offered, and only when there are several
+  const [picked, setPicked] = useUiState<string | null>('groups.currency', null)
+  const options = activeCurrencies(s)
+  const view = picked && options.includes(picked) ? picked : defaultCurrency(s)
+  const fmt = (c: number) => fmtIn(c, view)
+  const t = overallTotals(s, view)
+  const others = otherTotals(s, view)
+  const groups = arrangedGroups(s, filter, view)
+  const people = arrangedPeople(s, filter, view)
+  const chooseCurrency = () =>
+    sheet.open('Show amounts in', (close) => (
+      <>
+        {options.map((code) => (
+          <button key={code} className="card tap row" style={{ width: '100%', textAlign: 'left' }} aria-pressed={code === view} onClick={() => { setPicked(code); close() }}>
+            <div className="grow"><b>{currencyLabel(code)}</b></div>
+            {code === view && <span className="mute">Showing</span>}
+          </button>
+        ))}
+        <p className="mute">Each currency is shown on its own. Amounts are never converted between them.</p>
+      </>
+    ))
   const allGroups = s.ledgers.filter((l) => l.kind === 'group').length
 
   const pickTile = (f: BalanceFilter) => setFilter(filter === f && f !== 'net' ? 'net' : f)
@@ -106,6 +122,11 @@ export function GroupsTab() {
       <div className="vhead">
         <h1 className="display">Groups</h1>
         <div className="sign">
+          {options.length > 1 && (
+            <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button className="secondary pillb" aria-label={`Showing ${view}. Change currency`} onClick={chooseCurrency}>{view} ⌄</button>
+            </div>
+          )}
           <div className="cols">
             <Tile active={filter === 'owe'} onClick={() => pickTile('owe')} label="You owe" cls="r" value={fmt(t.owe)} icon={<Bullet letter="−" color="#EE352E" size={16} />} />
             <Tile active={filter === 'owed'} onClick={() => pickTile('owed')} label="Owed" cls="g" value={fmt(t.owed)} icon={<Bullet letter="+" color="#00933C" size={16} />} />
@@ -114,7 +135,7 @@ export function GroupsTab() {
           {filter !== 'net' && <div className="mute" style={{ marginTop: 8, fontSize: 12 }}>{CAPTION[filter]}</div>}
           {others.length > 0 && (
             <div className="mute" style={{ marginTop: 8, fontSize: 12 }}>
-              Totals are in {defaultCurrency(s)}. Other currencies: {others.map((o) => `${fmtIn(o.owed - o.owe, o.code)} net`).join(' · ')}
+              Totals are in {view}. Other currencies: {others.map((o) => `${fmtIn(o.owed - o.owe, o.code)} net`).join(' · ')}
             </div>
           )}
         </div>
@@ -126,7 +147,7 @@ export function GroupsTab() {
           <div className="sscroll">
             {groups.length ? (
               <ReorderList
-                onReorder={(keys) => store.update((st) => A.setGroupOrder(st, reorderSubset(arrangedGroups(st, 'net').map((g) => g.id), keys)))}
+                onReorder={(keys) => store.update((st) => A.setGroupOrder(st, reorderSubset(orderBy(realGroups(st), (g) => g.id, st.layout?.groups).map((g) => g.id), keys)))}
                 items={groups.map((g) => {
                   const n = myNet(g, ME)
                   return {
@@ -157,15 +178,15 @@ export function GroupsTab() {
             {people.length ? (
               <ReorderList
                 dismissLabel="Remove"
-                onReorder={(keys) => store.update((st) => A.setPeopleOrder(st, reorderSubset(arrangedPeople(st, 'net').map((x) => x.p), keys)))}
+                onReorder={(keys) => store.update((st) => A.setPeopleOrder(st, reorderSubset(arrangedPeople(st, 'net', view).map((x) => x.p), keys)))}
                 onDismiss={(pid) => {
                   store.update((st) => A.dismissPerson(st, pid, today()))
                   toast(`${personName(s, pid)} removed from People. They come back when something new happens.`, () => store.update((st) => A.undismissPerson(st, pid)))
                 }}
                 items={people.map((x) => {
-                  const parts = pairBalance(s, x.p).parts.length
+                  const parts = pairBalance(s, x.p, view).parts.length
                   // the balance shown is in your own currency; with none there, the first other currency stands in for it
-                  const bal = x.t !== 0 ? { tot: x.t, code: defaultCurrency(s) } : (x.others?.[0] ?? null)
+                  const bal = x.t !== 0 ? { tot: x.t, code: view } : (x.others?.[0] ?? null)
                   const extra = x.t !== 0 ? (x.others ?? []) : (x.others ?? []).slice(1)
                   return {
                     key: x.p,

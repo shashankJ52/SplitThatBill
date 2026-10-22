@@ -124,3 +124,35 @@ describe('a bill in progress', () => {
     expect(fmt(1250, 'EUR')).toBe('€12.50')
   })
 })
+
+describe('switching the currency shown on the Groups tab', () => {
+  const s = stateOf([led('flat', 'group', 'USD', 10000), led('trip', 'group', 'INR', 16000), led('empty', 'group', 'EUR', 0)])
+  // the empty euro group has a bill with no amount; make it truly empty
+  const t: AppState = { ...s, ledgers: s.ledgers.map((l) => (l.id === 'empty' ? { ...l, bills: [] } : l)) }
+
+  it('offers only currencies where something was recorded, your own first', () => {
+    expect(S.activeCurrencies(t)).toEqual(['USD', 'INR'])
+  })
+  it('offers nothing to switch when only one currency is in use', () => {
+    expect(S.activeCurrencies(stateOf([led('flat', 'group', 'USD', 100)]))).toEqual(['USD'])
+    expect(S.activeCurrencies(stateOf([]))).toEqual(['USD'])
+  })
+  it('keeps your own currency as a way back even if nothing was recorded in it', () => {
+    expect(S.activeCurrencies(stateOf([led('trip', 'group', 'INR', 100)], 'USD'))).toEqual(['USD', 'INR'])
+  })
+  it('a payment alone makes a currency count', () => {
+    const p = stateOf([{ ...led('trip', 'group', 'EUR', 0), bills: [], payments: [{ id: 'p', from: AMY, to: ME, amt: 100, date: '2026-10-20' }] }])
+    expect(S.activeCurrencies(p)).toEqual(['USD', 'EUR'])
+  })
+  it('totals, groups and people follow the viewed currency', () => {
+    expect(S.overallTotals(t, 'INR')).toEqual({ owe: 0, owed: 8000 })
+    expect(S.otherTotals(t, 'INR')).toEqual([{ code: 'USD', owe: 0, owed: 5000 }])
+    expect(S.arrangedGroups(t, 'net', 'INR').map((g) => g.id)).toEqual(['trip'])
+    expect(S.arrangedGroups(t, 'net').map((g) => g.id)).toEqual(['flat'])
+    expect(S.arrangedGroups(t, 'net', 'EUR').map((g) => g.id)).toEqual(['empty'])
+    // people are the ones you split 1-1 with: Amy has a dollar 1-1 split, so in rupees her balance is the trip and dollars are "other"
+    const withOne: AppState = { ...t, ledgers: [...t.ledgers, led('one', 'one', 'USD', 2000)] }
+    expect(S.arrangedPeople(withOne, 'net', 'INR')[0]).toMatchObject({ p: AMY, t: 8000, others: [{ code: 'USD', tot: 6000 }] })
+    expect(S.arrangedPeople(withOne, 'net')[0]).toMatchObject({ p: AMY, t: 6000, others: [{ code: 'INR', tot: 8000 }] })
+  })
+})
