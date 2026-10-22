@@ -6,6 +6,7 @@ import { useAppState, useSaveStatus, useStore } from '../data/store'
 import { defaultCurrency, paperSize } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { DeleteAccountSheet } from '../sheets/DeleteAccountSheet'
 import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/ProfileSheet'
 import { Bullet, Seg } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
@@ -142,6 +143,11 @@ export function AccountTab() {
         )}
         <div style={{ height: 6 }} />
         <button className="secondary danger" onClick={logout}>Log out</button>
+        {live && (
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button className="linkbtn" onClick={() => sheet.open('Delete your account?', (close) => <DeleteAccountSheet close={close} />)}>Delete my account</button>
+          </div>
+        )}
         <p className="mute" style={{ fontSize: 12 }}>
           {live
             ? `Signed in as ${p.email}. ${saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? "Couldn't save. Will retry when you're back online." : 'All changes saved to your account.'}`

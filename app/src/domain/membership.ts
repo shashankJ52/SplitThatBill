@@ -108,3 +108,42 @@ export function balanceWith(l: AppLedger, pid: PersonId): Cents {
   }
   return amt
 }
+
+/** What deleting your account would do to each group you are in, so the screen can explain it and ask the right questions. */
+export interface DeletionPlan {
+  /** groups you run that other people with an account are still active in: each needs a new owner (or to be deleted for everyone) */
+  handover: { ledger: AppLedger; candidates: PersonId[] }[]
+  /** groups that go away with you: only you, contacts without the app, or people who never accepted */
+  removed: AppLedger[]
+  /** groups run by someone else: you leave, and your name stays on the old bills */
+  leaving: AppLedger[]
+  /** unsettled balances in groups that carry on (negative: you owe). These are written off when you go. */
+  balances: { ledger: AppLedger; net: Cents }[]
+}
+
+/** The people who could take over a group: active members with an account, admins first. */
+export function handoverCandidates(s: AppState, l: AppLedger): PersonId[] {
+  const rank = (p: PersonId) => (l.roles?.[p] === 'admin' ? 0 : 1)
+  return l.members
+    .filter((p) => p !== ME && s.people[p]?.user && l.roles?.[p] && !l.invited?.includes(p) && !l.former?.includes(p))
+    .sort((a, b) => rank(a) - rank(b))
+}
+
+export function deletionPlan(s: AppState): DeletionPlan {
+  const plan: DeletionPlan = { handover: [], removed: [], leaving: [], balances: [] }
+  for (const l of s.ledgers) {
+    if (isOwner(l)) {
+      const candidates = isShared(l) ? handoverCandidates(s, l) : []
+      if (candidates.length) {
+        plan.handover.push({ ledger: l, candidates })
+        const net = balanceOf(l, ME)
+        if (net !== 0) plan.balances.push({ ledger: l, net })
+      } else plan.removed.push(l)
+    } else {
+      plan.leaving.push(l)
+      const net = balanceOf(l, ME)
+      if (net !== 0) plan.balances.push({ ledger: l, net })
+    }
+  }
+  return plan
+}

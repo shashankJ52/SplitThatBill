@@ -3,7 +3,7 @@ import { makeBill } from './bills'
 import { emptyState } from './seed'
 import type { AppLedger, AppState } from './types'
 import { ME } from './types'
-import { balanceWith, isAdmin, isOwner, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
+import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
 import { balanceOf } from './membership'
 import { nets } from '../money'
 
@@ -132,5 +132,59 @@ describe('where a reminder can be sent from', () => {
     const group = setup({ members: [ME, A], bills: [bill(ME, [ME, A], 20000)], roles: { [ME]: 'owner', [A]: 'member' } }).l
     expect(reminderRoute(stateOf(l, group), A, l).via?.id).toBe('o') // the bigger group is ignored
     expect(reminderRoute(stateOf(l), A, group).via?.id).toBe('g')
+  })
+})
+
+describe('deleting your account', () => {
+  it('a group you run with another person who has an account needs a new owner', () => {
+    const { s, l } = setup()
+    const plan = deletionPlan(s)
+    expect(plan.handover.map((h) => [h.ledger.id, h.candidates])).toEqual([['g', [A]]])
+    expect(plan.removed).toEqual([])
+    expect(plan.leaving).toEqual([])
+    // you paid 3000 for three people, so you are owed 2000 and it is written off if the group carries on
+    expect(plan.balances.map((b) => [b.ledger.id, b.net])).toEqual([[l.id, 2000]])
+  })
+
+  it('offers only active people with an account, admins first', () => {
+    const B2 = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+    const { s, l } = setup({ members: [ME, A, SAM, B2], roles: { [ME]: 'owner', [A]: 'member', [SAM]: 'member', [B2]: 'admin' }, invited: [] })
+    const withB2 = { ...s, people: { ...s.people, [B2]: { id: B2, name: 'Bea', user: true, tag: 'bea' } } }
+    expect(handoverCandidates(withB2, l)).toEqual([B2, A])
+    // someone still only invited, or gone, cannot take over
+    const l2 = { ...l, roles: { [ME]: 'owner' as const, [B2]: 'admin' as const }, invited: [A] }
+    expect(handoverCandidates(withB2, l2)).toEqual([B2])
+  })
+
+  it('a group with only you and contacts goes away with the account, with no questions', () => {
+    const { s } = setup({ members: [ME, SAM], roles: { [ME]: 'owner', [SAM]: 'member' }, bills: [] })
+    const plan = deletionPlan(s)
+    expect(plan.handover).toEqual([])
+    expect(plan.removed.map((l) => l.id)).toEqual(['g'])
+  })
+
+  it('a group that was never shared goes away too', () => {
+    const { s } = setup({ roles: undefined })
+    expect(deletionPlan(s).removed.map((l) => l.id)).toEqual(['g'])
+  })
+
+  it('a group someone else runs is one you leave, and an unsettled balance there is listed', () => {
+    const { s } = setup({ roles: { [ME]: 'member', [A]: 'owner', [SAM]: 'member' }, bills: [bill(A, [ME, A, SAM])] })
+    const plan = deletionPlan(s)
+    expect(plan.leaving.map((l) => l.id)).toEqual(['g'])
+    expect(plan.handover).toEqual([])
+    expect(plan.balances.map((b) => b.net)).toEqual([-1000])
+  })
+
+  it('settled balances are not listed', () => {
+    const { s } = setup({ bills: [] })
+    expect(deletionPlan(s).balances).toEqual([])
+  })
+
+  it('a 1-1 split you started with a friend who has the app is handed to them', () => {
+    const one: AppLedger = { id: 'o', kind: 'one', with: A, members: [ME, A], simplify: false, bills: [], payments: [], lists: [], roles: { [ME]: 'owner', [A]: 'member' } }
+    const { s } = setup()
+    const plan = deletionPlan({ ...s, ledgers: [one] })
+    expect(plan.handover.map((h) => [h.ledger.id, h.candidates])).toEqual([['o', [A]]])
   })
 })

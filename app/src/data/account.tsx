@@ -47,6 +47,10 @@ export interface Account {
   removeMember(groupId: string, person: string): Promise<Result>
   leaveGroup(groupId: string): Promise<Result>
   transferOwnership(groupId: string, person: string): Promise<Result>
+  /** Permanently delete the signed-in account, after checking the password. Groups you own must be handed over first. */
+  deleteAccount(password: string): Promise<Result>
+  /** Check the password without changing anything (used before the steps that cannot be undone). */
+  checkPassword(password: string): Promise<Result>
   sendReminder(groupId: string, person: string, amount: number, text: string): Promise<Result>
   /** Save anything waiting, then show what the database really holds. */
   reload(): Promise<void>
@@ -274,6 +278,23 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
     removeMember: (gid, person) => rpc('remove_member', { gid, pid: toDb(person) }),
     leaveGroup: (gid) => rpc('leave_group', { gid }),
     transferOwnership: (gid, person) => rpc('transfer_ownership', { gid, pid: toDb(person) }),
+    async checkPassword(password) {
+      if (mode !== 'cloud' || !userEmail) return { err: 'You are signed out. Log in again.' }
+      const check = await client.auth.signInWithPassword({ email: userEmail, password })
+      return check.error ? { err: 'Password is wrong' } : {}
+    },
+    async deleteAccount(password) {
+      if (mode !== 'cloud' || !userEmail) return { err: 'You are signed out. Log in again.' }
+      // prove it is really them, whatever the project setting says; a stolen open session must not be enough
+      const check = await client.auth.signInWithPassword({ email: userEmail, password })
+      if (check.error) return { err: 'Password is wrong' }
+      await store.flush()
+      const { error } = await client.rpc('delete_my_account')
+      if (error) return { err: friendly(error.message) }
+      await client.auth.signOut({ scope: 'local' }).catch(() => undefined)
+      leave()
+      return {}
+    },
     sendReminder: (gid, person, amt, msg) => rpc('send_reminder', { gid, to_person: toDb(person), amt, msg }),
     async reload() {
       await store.flush()

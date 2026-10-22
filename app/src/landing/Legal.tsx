@@ -79,7 +79,8 @@ export function Privacy() {
       <h2>Your choices</h2>
       <ul>
         <li>You can edit your name and tag in the Account tab, and delete bills and payments you created.</li>
-        <li>To have your account and data removed, or to ask what we hold about you, contact us at {contact}. A self-service delete option is planned.</li>
+        <li>You can delete your account yourself in the Account tab (Delete my account). Groups you run must be handed to someone else first, or deleted. Your name stays on the bills and payments other people still share with you, so their history still adds up, and your notes, lists, alerts and settings are removed.</li>
+        <li>To ask what we hold about you, or if you cannot sign in to delete your account, contact us at {contact}.</li>
         <li>You can log out at any time, and the demo keeps its sample data only on your own device.</li>
       </ul>
 
@@ -116,7 +117,7 @@ export function Terms() {
       <p>This is an early service provided as is. We try to keep it working and your data safe, but we cannot promise it will always be available or free of errors, and we may change or stop features. To the extent the law allows, we are not liable for losses that come from using it.</p>
 
       <h2>Ending your use</h2>
-      <p>You can stop using the app whenever you like. We may suspend accounts that break these terms. To have your account removed, contact us at {contact}.</p>
+      <p>You can stop using the app whenever you like, and you can delete your account yourself in the Account tab. We may suspend accounts that break these terms. If you cannot sign in to delete it, contact us at {contact}.</p>
 
       <h2>Changes</h2>
       <p>We may update these terms. If we do, we will change the date above, and continuing to use the app means you accept the new version.</p>
