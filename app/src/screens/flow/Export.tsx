@@ -41,7 +41,7 @@ export const Export = withDraft(function Export({ d }: { d: D.Draft }) {
           <input id="lnk" readOnly value={link} aria-label="Bill link" />
           <button className="secondary" onClick={() => copy(link, 'Link copied')}>Copy</button>
         </div>
-        <p className="mute">Anyone can open it without the app. It shows only this bill, how it's split and your notes. No balances or account details. It goes live when you save, once sharing is connected.</p>
+        <p className="mute">Anyone can open it without the app. It shows only this bill, how it's split and your notes. No balances or account details. The link starts working once you save the bill.</p>
         <button className="secondary" onClick={() => nav('/preview/draft')}>Preview what friends see</button>
         <div style={{ height: 10 }} />
         <button className="secondary" onClick={() => toast('Image export comes in a later phase')}>Export as image</button>

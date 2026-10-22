@@ -9,7 +9,7 @@ import { EMAIL_RE } from '../../domain/util'
 import { writePending } from './pendingSignup'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
-import { ErrBar, PwField, Social } from './parts'
+import { ErrBar, PwField } from './parts'
 
 export function Login() {
   const nav = useNavigate()
@@ -73,7 +73,6 @@ export function Login() {
         </div>
         <ErrBar msg={err} />
         <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Logging in…' : 'Log in'}</button>
-        <Social />
         {!account && s.password === DEMO_PASSWORD && <div className="bar info" style={{ marginTop: 16 }}>Demo account: {s.profile.email} · {DEMO_PASSWORD}</div>}
         <div style={{ textAlign: 'center', marginTop: 6 }} className="mute">
           New here? <button className="linkbtn" onClick={() => nav('/signup', { replace: true })}>Create account</button>

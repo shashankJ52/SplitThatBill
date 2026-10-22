@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { PW_LABELS, pwScore } from '../../domain/auth'
-import { useToast } from '../../ui/Toast'
 
 export function PwField({ id, label, value, onChange, auto, first }: { id: string; label: string; value: string; onChange: (v: string) => void; auto: string; first?: boolean }) {
   const [show, setShow] = useState(false)
@@ -30,17 +29,4 @@ export function Meter({ value }: { value: string }) {
 
 export function ErrBar({ msg, style }: { msg: string; style?: React.CSSProperties }) {
   return msg ? <div className="bar bad" role="alert" style={style}>{msg}</div> : null
-}
-
-/** Apple and Google are placeholders until the backend can handle them. */
-export function Social() {
-  const toast = useToast()
-  return (
-    <>
-      <div className="sep">or</div>
-      <button className="secondary" onClick={() => toast('Apple sign-in is not connected yet')}>Continue with Apple</button>
-      <div style={{ height: 10 }} />
-      <button className="secondary" onClick={() => toast('Google sign-in is not connected yet')}>Continue with Google</button>
-    </>
-  )
 }

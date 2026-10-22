@@ -12,14 +12,19 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SplitThatBill" />
-    <meta name="description" content="Split the receipt, not the friendship." />
-    <title>SplitThatBill</title>
+    <meta name="description" content="Scan a receipt, say who had what, and see who owes whom, item by item. Split that Bill, the right way." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SplitThatBill · Split that Bill, the right way" />
+    <meta property="og:description" content="Scan a receipt, say who had what, and see who owes whom, item by item." />
+    <meta name="format-detection" content="telephone=no" />
+    <title>SplitThatBill · Split that Bill, the right way</title>
     <script>
       // apply the saved or system theme before first paint to avoid a flash
       try {
         var t = localStorage.getItem('stb-theme')
         if (!t) t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
         document.documentElement.dataset.theme = t
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'dark' ? '#000000' : '#ffffff')
       } catch (e) {}
     </script>
   </head>

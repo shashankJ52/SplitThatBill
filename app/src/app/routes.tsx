@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { Home } from './Home'
 import { FlowProvider } from '../flow/FlowProvider'
 import { BillPage } from '../screens/BillPage'
 import { GroupPage } from '../screens/GroupPage'
@@ -27,7 +29,14 @@ import { Verify } from '../screens/auth/Verify'
 import { Welcome } from '../screens/auth/Welcome'
 import { Shell } from './Shell'
 
+const LegalPrivacy = lazy(() => import('../landing/Legal').then((m) => ({ default: m.Privacy })))
+const LegalTerms = lazy(() => import('../landing/Legal').then((m) => ({ default: m.Terms })))
+
 export const router = createBrowserRouter([
+  // the public front door and the legal pages live outside the app shell: they scroll and are wider than the app
+  { path: '/', element: <Home /> },
+  { path: '/privacy', element: <Suspense fallback={null}><LegalPrivacy /></Suspense> },
+  { path: '/terms', element: <Suspense fallback={null}><LegalTerms /></Suspense> },
   {
     // Providers live inside the router so sheets and toasts can use router hooks.
     element: (
@@ -40,7 +49,6 @@ export const router = createBrowserRouter([
       </ToastProvider>
     ),
     children: [
-      { path: '/', element: <Navigate to="/groups" replace /> },
       { path: '/groups', element: <GroupsTab /> },
       { path: '/groups/:gid', element: <GroupPage /> },
       { path: '/bill/:id', element: <BillPage /> },

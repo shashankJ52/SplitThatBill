@@ -229,3 +229,10 @@ a{color:inherit;text-decoration:none}
 
 /* a single line of text that ends in an ellipsis instead of wrapping */
 .oneline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* feels like an app once it is on the home screen */
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{overscroll-behavior:none}
+button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* iOS always draws the status bar text in white over an installed app, so on the light theme keep the strip behind it black, like the sign above a platform */
+@media (display-mode:standalone){:root[data-theme="light"] body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#000;z-index:9999;pointer-events:none}}

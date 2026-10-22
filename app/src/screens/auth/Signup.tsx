@@ -8,7 +8,7 @@ import { ME } from '../../domain/types'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { readPending, writePending } from './pendingSignup'
-import { ErrBar, Meter, PwField, Social } from './parts'
+import { ErrBar, Meter, PwField } from './parts'
 
 export interface PendingSignup {
   name: string
@@ -97,7 +97,6 @@ export function Signup() {
         </label>
         <ErrBar msg={err} />
         <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
-        <Social />
         <div style={{ textAlign: 'center', marginTop: 14 }} className="mute">
           Already have an account? <button className="linkbtn" onClick={() => nav('/login', { replace: true })}>Log in</button>
         </div>
