@@ -112,7 +112,12 @@ body.sheet-open #scrim{opacity:1;pointer-events:auto}body.sheet-open #sheet{tran
 .swatches{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
 .swatches button{background:none;border:0;padding:0;cursor:pointer;border-radius:50%}
 .switch{display:flex;align-items:center;gap:12px}
-.switch input{width:auto;accent-color:var(--fg);transform:scale(1.5);margin:0 6px}
+.switch input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:none;width:26px;height:26px;margin:0 4px;padding:0;border:2px solid var(--fg);border-radius:7px;background:transparent;display:inline-grid;place-items:center;cursor:pointer;transition:background .15s var(--ease)}
+.switch input[type=checkbox]::after{content:'';width:12px;height:7px;border:solid var(--bg);border-width:0 0 3px 3px;transform:translateY(-1px) rotate(-45deg) scale(0);transition:transform .15s var(--ease)}
+.switch input[type=checkbox]:checked{background:var(--fg)}
+.switch input[type=checkbox]:checked::after{transform:translateY(-1px) rotate(-45deg) scale(1)}
+.switch input[type=checkbox]:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.switch input:not([type=checkbox]){width:auto;accent-color:var(--fg);transform:scale(1.5);margin:0 6px}
 #toast{position:fixed;bottom:92px;left:50%;transform:translate(-50%,16px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:20;max-width:90%;text-align:center}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--red);flex:none}
