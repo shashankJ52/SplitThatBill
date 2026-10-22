@@ -6,9 +6,11 @@ import { useFlow } from '../flow/FlowProvider'
 import { useSheet } from '../ui/Sheet'
 import { pendingJoin, rememberJoin } from './pendingJoin'
 import { Bullet } from '../ui/bits'
+import { SideGrip } from '../ui/SideGrip'
+import { SideLines } from '../ui/SideLines'
 import { useTheme } from '../ui/useTheme'
 
-const TAB_ROOTS = ['/groups', '/alerts', '/account']
+const TAB_ROOTS = ['/groups', '/alerts', '/notes', '/account']
 const AUTH_ROUTES = ['/welcome', '/signup', '/login', '/forgot', '/verify', '/reset']
 const FLOW_STEPS = ['/scan/privacy', '/scan/review', '/scan/assign', '/scan/details', '/scan/summary', '/scan/export']
 
@@ -49,7 +51,7 @@ export function Shell() {
   const showTabs = !isAuth && !isPublic && !isFlow
   const showBack = !TAB_ROOTS.includes(path) && path !== '/welcome' && ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0
   const bb = showTabs ? '82px' : isFlow ? '94px' : '16px'
-  const tab = path.startsWith('/alerts') ? 'alerts' : path.startsWith('/account') ? 'account' : path.startsWith('/scan') ? 'scan' : 'groups'
+  const tab = path.startsWith('/alerts') ? 'alerts' : path.startsWith('/notes') ? 'notes' : path.startsWith('/account') ? 'account' : path.startsWith('/scan') ? 'scan' : 'groups'
   const unread = unreadCount(s)
 
   const goTab = (to: string) => nav(to, { replace: true, state: { anim: 'fade' } })
@@ -79,7 +81,7 @@ export function Shell() {
 
   return (
     <FooterCtx.Provider value={footerEl}>
-      <div id="app">
+      <div id="app" className={`${showTabs ? '' : 'noside'}${isFlow ? ' flow' : ''}`.trim()}>
         <div id="top">
           {showBack && (
             <button id="back" onClick={() => nav(-1)} aria-label="Back">
@@ -108,6 +110,10 @@ export function Shell() {
           <Outlet key={path} />
         </main>
         <nav id="tabbar" className={showTabs ? '' : 'hide'} aria-label="Main">
+          <div className="sidebrand" aria-hidden="true">
+            <Bullet letter="S" color="#FCCC0A" size={38} />
+            <span><b>SplitThatBill</b><small>The Right Way</small></span>
+          </div>
           <button className={`tab${tab === 'groups' ? ' on' : ''}`} onClick={() => goTab('/groups')} aria-current={tab === 'groups' ? 'page' : undefined}>
             <svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.6" /><circle cx="18" cy="7" r="2.6" /><circle cx="12" cy="18" r="2.6" /><path d="M8.2 8.6l2.6 7M15.8 8.6l-2.6 7M8.8 7h6.4" /></svg>
             Groups
@@ -117,17 +123,23 @@ export function Shell() {
             Alerts
             {unread > 0 && <span className="badge" aria-label={`${unread} unread`}>{unread > 9 ? '9+' : unread}</span>}
           </button>
+          <button className={`tab wide-only${tab === 'notes' ? ' on' : ''}`} onClick={() => goTab('/notes')} aria-current={tab === 'notes' ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24"><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M8 9h8M8 13h5" /></svg>
+            Short notes
+          </button>
           <button className="tab cam" onClick={startSplit} aria-label="Split a new bill">
             <span className="disc">
               <svg viewBox="0 0 24 24"><path d="M3.5 8h3.2l1.8-2.6h7l1.8 2.6h3.2v11h-17z" /><circle cx="12" cy="13.5" r="3.4" /></svg>
             </span>
             <span className="t">Split</span>
           </button>
-          <button className={`tab${tab === 'account' ? ' on' : ''}`} onClick={() => goTab('/account')} aria-current={tab === 'account' ? 'page' : undefined}>
+          <button className={`tab acct${tab === 'account' ? ' on' : ''}`} onClick={() => goTab('/account')} aria-current={tab === 'account' ? 'page' : undefined}>
             <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
             Account
           </button>
+          <SideLines />
         </nav>
+        <SideGrip />
         <div id="footer" className={isFlow ? '' : 'hide'} ref={setFooterEl} />
       </div>
     </FooterCtx.Provider>

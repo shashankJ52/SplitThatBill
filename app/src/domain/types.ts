@@ -130,6 +130,8 @@ export interface SentReminder {
 
 /** How you like your Groups tab arranged. Personal, so it is not shared with the people in your groups. */
 export interface Layout {
+  /** people hidden from the laptop sidebar's recent 1-1s (they stay in the Groups tab) */
+  sideHidden?: PersonId[]
   /** paper size for PDFs; missing means Letter in the USA, Canada and Mexico and A4 elsewhere */
   paper?: 'Letter' | 'A4'
   /** your default currency, used by every group and split that has not chosen its own */

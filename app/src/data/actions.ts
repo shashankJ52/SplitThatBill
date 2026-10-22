@@ -260,6 +260,10 @@ export const setDefaultCurrency = (s: S, code: string): S => {
 /** Your paper size for PDFs. */
 export const setPaperSize = (s: S, paper: 'Letter' | 'A4'): S => ({ ...s, layout: { ...s.layout, paper } })
 export const setLedgerCurrency = (s: S, id: string, code: string): S => mapLedger(s, id, (l) => ({ ...l, currency: code }))
+/** Take someone off the sidebar's recent 1-1s (they stay in the Groups tab). */
+export const hideSidePerson = (s: S, pid: PersonId): S => ({ ...s, layout: { ...s.layout, sideHidden: [...(s.layout?.sideHidden ?? []).filter((x) => x !== pid), pid] } })
+/** Bring back everyone hidden from the sidebar. */
+export const showSidePeople = (s: S): S => ({ ...s, layout: { ...s.layout, sideHidden: [] } })
 export const setGroupOrder = (s: S, ids: string[]): S => ({ ...s, layout: { ...s.layout, groups: ids } })
 export const setPeopleOrder = (s: S, ids: PersonId[]): S => ({ ...s, layout: { ...s.layout, people: ids } })
 /** Swipe a settled-up person away. They return when there is new activity with them. */

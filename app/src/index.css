@@ -297,3 +297,109 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 .fb-r.on{border-color:var(--fg)}
 .fb-r.dim{opacity:.45}
 .fb-b{font-size:22px;letter-spacing:-.04em}
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Laptop and iPad (768px and wider): a sidebar instead of the bottom tab bar, a wider page, side-by-side lists on the
+   Groups tab, and sheets as centered dialogs. Phones keep the layout above.
+   --------------------------------------------------------------------------------------------------------------- */
+.sidebrand{display:none}
+@media (min-width:768px){
+  :root{--side:clamp(200px,22vw,244px)}
+  html{background:var(--bg)}
+  #app{max-width:none;margin:0;border:0;display:grid;grid-template-columns:var(--side) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #app.noside{grid-template-columns:minmax(0,1fr)}
+  #top{grid-column:2;grid-row:1;width:100%;max-width:960px;justify-self:center;padding:calc(env(safe-area-inset-top) + 14px) 32px 0}
+  #app.noside #top{grid-column:1}
+  #top .brand{display:none}
+  main{grid-column:2;grid-row:2;width:100%;max-width:960px;justify-self:center;padding:0 32px max(24px,calc(var(--bb,82px) - 58px))}
+  #app.noside main{grid-column:1}
+  #app.flow main{padding-bottom:112px}
+
+  /* the sidebar */
+  #tabbar,#tabbar.hide{position:fixed;left:0;top:0;bottom:0;right:auto;width:var(--side);max-width:none;height:auto;margin:0;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:calc(env(safe-area-inset-top) + 18px) 14px calc(env(safe-area-inset-bottom) + 16px);border-top:0;border-right:2px solid var(--fg);transform:none;visibility:visible;overflow-y:auto}
+  #tabbar.hide{display:none}
+  .sidebrand{display:flex;align-items:center;gap:10px;padding:2px 6px 18px;order:-2}
+  .sidebrand span{display:grid;line-height:1.05}
+  .sidebrand b{font-size:17px;letter-spacing:-.03em}
+  .sidebrand small{font-size:11px;font-weight:700;color:#FF6319;letter-spacing:.02em;margin-top:2px}
+  .tab{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;border-radius:12px;font-size:16px;color:var(--mute)}
+  .tab:hover{background:var(--card);color:var(--fg)}
+  .tab svg{width:24px;height:24px}
+  .tab.on{background:var(--card);color:var(--fg)}
+  .tab.on:before{top:10px;bottom:10px;left:-14px;right:auto;width:5px;height:auto;border-radius:0 4px 4px 0}
+  .badge{position:static;margin-left:auto}
+  .tab.cam{order:-1;background:var(--yellow);color:#000;margin-bottom:10px;padding:12px 14px;box-shadow:0 0 0 2px var(--fg)}
+  .tab.cam:hover{background:var(--yellow);filter:brightness(.96)}
+  .tab.cam .disc{width:auto;height:auto;margin:0;border:0;box-shadow:none;background:none;display:inline-grid}
+  .tab.cam .disc svg{width:26px;height:26px}
+  .tab.cam span.t{color:#000;margin:0;font-size:16px}
+  .tab.cam span.t:after{content:" a bill"}
+
+  /* the flow's main button floats in the middle of the page */
+  #footer,#footer.hide{left:calc(var(--side) + (100vw - var(--side) - 640px)/2);right:auto;width:640px;max-width:calc(100vw - var(--side));border:2px solid var(--fg);border-bottom:0;border-radius:20px 20px 0 0}
+  #app.noside #footer{left:calc((100vw - 640px)/2)}
+  #footer.hide{transform:translateY(170%)}
+
+  /* sheets become dialogs in the middle of the page */
+  #sheet{top:50%;bottom:auto;left:50%;right:auto;margin:0;width:min(540px,92vw);max-width:none;max-height:86vh;border:2px solid var(--fg);border-radius:20px;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;transition:transform .25s var(--ease),opacity .2s}
+  body.sheet-open #sheet{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+  #toast{bottom:32px;left:calc(50% + var(--side)/2)}
+  body:has(#app.noside) #toast{left:50%}
+
+  /* the Groups tab: groups, then people, one page that scrolls; nothing is collapsed */
+  .vbody.split{display:block;overflow-y:auto;padding-bottom:16px}
+  .vbody.split .sect,.vbody.split .sect.col{display:block;flex:none;min-height:0;overflow:visible}
+  .sect .sscroll,.sect.col .sscroll{overflow:visible;opacity:1;pointer-events:auto}
+  .shead .chev{display:none}
+  h1.display,#v-groups h1.display,#v-alerts h1.display{font-size:40px}
+  .vbody{padding-right:4px}
+}
+/* a laptop-wide window: groups and people side by side, each scrolling on its own */
+@media (min-width:1000px){
+  .vbody.split{display:flex;flex-direction:row;gap:28px;overflow:hidden;padding-bottom:0}
+  .vbody.split .sect,.vbody.split .sect.col{display:flex;flex:1 1 0;min-width:0;min-height:0}
+  .sect .sscroll,.sect.col .sscroll{overflow-y:auto}
+}
+
+/* laptop sidebar: Short notes entry and the list of lines */
+.tab.wide-only,.sidelines{display:none}
+@media (min-width:768px){
+  .tab.wide-only{display:flex}
+  .sidelines{display:block;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);order:5}
+  .sl-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:6px 8px;cursor:pointer;color:var(--mute);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:left}
+  .sl-head span:first-child{flex:1}
+  .sl-head .chev{transition:transform .25s var(--ease)}
+  .sl-head[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+  .sl-list .nc{margin-bottom:2px;border-radius:12px}
+  .side-line{display:flex;align-items:center;gap:4px;border-radius:12px;padding:3px 4px 3px 6px;background:var(--bg)}
+  .side-line:hover,.side-line.on{background:var(--card)}
+  .side-line .sl-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:6px 4px;color:inherit;text-decoration:none;overflow:hidden}
+  .side-line.on .sl-main{font-weight:700}
+  .sl-text{display:grid;min-width:0;line-height:1.15}
+  .sl-text b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sl-text small{font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sl-text small.r{color:var(--red-t)}
+  .sl-text small.g{color:var(--green-t)}
+  .sl-pay{flex:none;width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:none;color:var(--mute);font-weight:700;cursor:pointer;font-size:14px;display:grid;place-items:center;transition:border-color .15s,color .15s,background .15s}
+  .sl-pay:hover,.sl-pay:focus-visible{border-color:var(--fg);color:var(--bg);background:var(--fg)}
+  .sl-hint{font-size:11px;color:var(--mute);padding:6px 8px 0;line-height:1.35}
+  /* Account sits at the bottom of the sidebar, the lists in between */
+  .tab.acct{order:9;margin-top:auto}
+  .sidelines+.sidelines{margin-top:6px;padding-top:6px}
+  .side-line{position:relative}
+  .sl-x{position:absolute;top:1px;right:1px;width:18px;height:18px;border-radius:50%;border:0;background:var(--bg);color:var(--mute);cursor:pointer;font-size:10px;line-height:1;opacity:0;transition:opacity .15s,background .15s}
+  .side-line:hover .sl-x,.sl-x:focus-visible{opacity:1}
+  .sl-x:hover{background:var(--line);color:var(--fg)}
+  @media (hover:none){.sl-x{opacity:.55}}
+  .sl-restore{background:none;border:0;padding:6px 8px;font:inherit;font-size:12px;font-weight:700;color:var(--fg);text-decoration:underline;cursor:pointer}
+  /* the line you drag to change the sidebar's width */
+  .side-grip{position:fixed;top:0;bottom:0;left:calc(var(--side) - 5px);width:10px;cursor:col-resize;z-index:7;touch-action:none}
+  .side-grip:after{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:transparent;transition:background .15s}
+  .side-grip:hover:after,.side-grip:focus-visible:after,body.resizing .side-grip:after{background:var(--yellow)}
+  .side-grip:focus-visible{outline:none}
+  #app.noside .side-grip{display:none}
+  body.resizing{cursor:col-resize;user-select:none;-webkit-user-select:none}
+  body.resizing #tabbar,body.resizing main,body.resizing #footer{transition:none}
+}
+.side-grip{display:none}
+@media (min-width:768px){.side-grip{display:block}}

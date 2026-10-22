@@ -164,6 +164,23 @@ export function arrangedPeople(s: AppState, f: BalanceFilter, view: string = def
   return orderBy([...owing, ...settled], (x) => x.p, s.layout?.people)
 }
 
+// ---------- the laptop sidebar's recent 1-1s ----------
+/** Everyone you have a 1-1 split with that has something in it, most recent first, then in the order you dragged them. */
+export function sideCandidates(s: AppState): PersonId[] {
+  const withLedger = others(s)
+    .map((p) => ({ p, L: oneLedger(s, p) }))
+    .filter((x): x is { p: PersonId; L: AppLedger } => !!x.L && (x.L.bills.length > 0 || x.L.payments.length > 0))
+    .sort((a, b) => (lastActivity(b.L) < lastActivity(a.L) ? -1 : lastActivity(b.L) > lastActivity(a.L) ? 1 : 0))
+  return orderBy(withLedger.map((x) => x.p), (p) => p, s.layout?.people)
+}
+/** The few shown in the sidebar: the candidates you have not hidden from it. */
+export function sidePeople(s: AppState, limit = 4): PersonId[] {
+  const hidden = new Set(s.layout?.sideHidden ?? [])
+  return sideCandidates(s).filter((p) => !hidden.has(p)).slice(0, limit)
+}
+/** How many people you hid from the sidebar (and who still exist). */
+export const sideHiddenCount = (s: AppState): number => (s.layout?.sideHidden ?? []).filter((p) => s.people[p] && sideCandidates(s).includes(p)).length
+
 // ---------- recents for the scan picker ----------
 export function lastActivity(l: AppLedger): string {
   let d = ''

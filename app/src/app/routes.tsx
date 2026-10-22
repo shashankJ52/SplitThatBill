@@ -21,6 +21,7 @@ import { Review } from '../screens/flow/Review'
 import { Summary } from '../screens/flow/Summary'
 import { AccountTab } from '../screens/AccountTab'
 import { AlertsTab } from '../screens/AlertsTab'
+import { useWide } from '../ui/useWide'
 import { Forgot } from '../screens/auth/Forgot'
 import { Login } from '../screens/auth/Login'
 import { Reset } from '../screens/auth/Reset'
@@ -28,6 +29,12 @@ import { Signup } from '../screens/auth/Signup'
 import { Verify } from '../screens/auth/Verify'
 import { Shell } from './Shell'
 
+/** On a phone one Alerts tab holds splits and short notes; on a laptop or iPad each has its own entry in the sidebar. */
+function AlertsRoute() {
+  return <AlertsTab only={useWide() ? 'splits' : undefined} />
+}
+
+const AdminPage = lazy(() => import('../admin/Admin'))
 const LegalPrivacy = lazy(() => import('../landing/Legal').then((m) => ({ default: m.Privacy })))
 const LegalTerms = lazy(() => import('../landing/Legal').then((m) => ({ default: m.Terms })))
 
@@ -36,6 +43,8 @@ export const router = createBrowserRouter([
   { path: '/', element: <Home /> },
   { path: '/welcome', element: <Home /> },
   { path: '/home', element: <Website /> },
+  // private page for the person who runs the app; not linked from anywhere
+  { path: '/admin', element: <Suspense fallback={null}><AdminPage /></Suspense> },
   { path: '/privacy', element: <Suspense fallback={null}><LegalPrivacy /></Suspense> },
   { path: '/terms', element: <Suspense fallback={null}><LegalTerms /></Suspense> },
   {
@@ -58,7 +67,8 @@ export const router = createBrowserRouter([
       { path: '/b/:token', element: <PublicBillLink /> },
       { path: '/preview/draft', element: <DraftPreview /> },
       { path: '/preview/:id', element: <PublicBill /> },
-      { path: '/alerts', element: <AlertsTab /> },
+      { path: '/alerts', element: <AlertsRoute /> },
+      { path: '/notes', element: <AlertsTab only="notes" /> },
       { path: '/account', element: <AccountTab /> },
       { path: '/scan', element: <Capture /> },
       { path: '/scan/privacy', element: <Privacy /> },

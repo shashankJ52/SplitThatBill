@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import './index.css'
 import { captureInstallPrompt } from './app/install'
+import { applySavedSideWidth } from './ui/sideWidth'
 import { router } from './app/routes'
 import { AccountProvider, createAccount, type Account } from './data/account'
 import { localRepository } from './data/persist'
@@ -11,6 +12,7 @@ import { loggedOutState, seedState } from './domain/seed'
 import { supabase } from './lib/supabase'
 
 captureInstallPrompt()
+applySavedSideWidth()
 
 async function boot() {
   let store: Store

@@ -225,14 +225,16 @@ function ReminderSheet({ n, close }: { n: Notif; close: () => void }) {
   )
 }
 
-export function AlertsTab() {
+/** `only` shows just the splits (alerts) or just the short notes, for the laptop sidebar where each has its own entry. */
+export function AlertsTab({ only }: { only?: 'splits' | 'notes' }) {
   const s = useAppState()
   const store = useStore()
   const nav = useNavigate()
   const sheet = useSheet()
   const toast = useToast()
   const account = useAccount()
-  const [tab, setTab] = useUiState<'splits' | 'notes'>('al.tab', 'splits')
+  const [savedTab, setTab] = useUiState<'splits' | 'notes'>('al.tab', 'splits')
+  const tab = only ?? savedTab
   const [q, setQ] = useUiState('al.q', '')
   const [filter, setFilter] = useUiState<NoteFilter>('al.filter', 'all')
   const list = s.notifs.slice().sort((a, b) => b.ts - a.ts)
@@ -274,14 +276,16 @@ export function AlertsTab() {
   return (
     <Screen id="v-alerts">
       <div className="vhead">
-        <h1 className="display">Alerts</h1>
-        <Seg
-          className="al"
-          label="Alerts view"
-          value={tab}
-          options={[{ value: 'splits', label: <>Splits{unread ? <span className="cnt">{unread}</span> : null}</> }, { value: 'notes', label: 'Short notes' }]}
-          onChange={setTab}
-        />
+        <h1 className="display">{only === 'notes' ? 'Short notes' : 'Alerts'}</h1>
+        {!only && (
+          <Seg
+            className="al"
+            label="Alerts view"
+            value={tab}
+            options={[{ value: 'splits', label: <>Splits{unread ? <span className="cnt">{unread}</span> : null}</> }, { value: 'notes', label: 'Short notes' }]}
+            onChange={setTab}
+          />
+        )}
       </div>
       <div className="vbody split">
         {tab === 'splits' ? (
