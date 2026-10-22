@@ -27,7 +27,7 @@ export function useSave() {
         let state = s
         let lid = d.gid ?? ''
         if (d.kind === 'one' && d.withP) {
-          const r = A.ensureOneLedger(state, d.withP, uid('o'))
+          const r = A.ensureOneLedger(state, d.withP, uid('o'), d.currency)
           state = r.state
           lid = r.id
         }

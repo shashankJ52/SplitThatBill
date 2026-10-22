@@ -50,6 +50,8 @@ export interface Draft {
   manual: boolean
   /** what the quick-add price means for quantities above one */
   qm: 'total' | 'each'
+  /** the currency picked for a split with someone you have no 1-1 split with yet (it becomes that split's currency) */
+  currency?: string
   /** the items came from reading a receipt photo (not the sample) */
   scanned?: boolean
   /** private details the reader saw on the photo and left out */
@@ -59,7 +61,7 @@ export interface Draft {
 /** The currency a bill in this draft is written in: its group's or 1-1's, or the account's own for a brand-new split. */
 export function draftCurrency(s: AppState, d: Draft): string {
   const l = d.ledgerId ? ledgerById(s, d.ledgerId) : d.kind === 'group' ? (d.gid ? ledgerById(s, d.gid) : undefined) : d.withP ? oneLedger(s, d.withP) : undefined
-  return currencyOf(s, l)
+  return currencyOf(s, l ?? { currency: d.currency })
 }
 
 export type Result = { d: Draft; err?: undefined } | { d: Draft; err: string }

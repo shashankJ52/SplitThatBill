@@ -4,7 +4,7 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
 import { activeCurrencies, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, letterOf, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
-import { currencyLabel } from '../domain/currency'
+import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
 import { fmt as fmtIn, today } from '../domain/util'
@@ -45,18 +45,6 @@ export function GroupsTab() {
   const others = otherTotals(s, view)
   const groups = arrangedGroups(s, filter, view)
   const people = arrangedPeople(s, filter, view)
-  const chooseCurrency = () =>
-    sheet.open('Show amounts in', (close) => (
-      <>
-        {options.map((code) => (
-          <button key={code} className="card tap row" style={{ width: '100%', textAlign: 'left' }} aria-pressed={code === view} onClick={() => { setPicked(code); close() }}>
-            <div className="grow"><b>{currencyLabel(code)}</b></div>
-            {code === view && <span className="mute">Showing</span>}
-          </button>
-        ))}
-        <p className="mute">Each currency is shown on its own. Amounts are never converted between them.</p>
-      </>
-    ))
   const allGroups = s.ledgers.filter((l) => l.kind === 'group').length
 
   const pickTile = (f: BalanceFilter) => setFilter(filter === f && f !== 'net' ? 'net' : f)
@@ -120,13 +108,11 @@ export function GroupsTab() {
   return (
     <Screen id="v-groups">
       <div className="vhead">
-        <h1 className="display">Groups</h1>
+        <div className="titlerow">
+          <h1 className="display">Groups</h1>
+          {options.length > 1 && <CurrencyChip value={view} options={options} onPick={setPicked} label="Show amounts in" />}
+        </div>
         <div className="sign">
-          {options.length > 1 && (
-            <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
-              <button className="secondary pillb" aria-label={`Showing ${view}. Change currency`} onClick={chooseCurrency}>{view} ⌄</button>
-            </div>
-          )}
           <div className="cols">
             <Tile active={filter === 'owe'} onClick={() => pickTile('owe')} label="You owe" cls="r" value={fmt(t.owe)} icon={<Bullet letter="−" color="#EE352E" size={16} />} />
             <Tile active={filter === 'owed'} onClick={() => pickTile('owed')} label="Owed" cls="g" value={fmt(t.owed)} icon={<Bullet letter="+" color="#00933C" size={16} />} />

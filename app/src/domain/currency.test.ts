@@ -156,3 +156,18 @@ describe('switching the currency shown on the Groups tab', () => {
     expect(S.arrangedPeople(withOne, 'net')[0]).toMatchObject({ p: AMY, t: 6000, others: [{ code: 'INR', tot: 8000 }] })
   })
 })
+
+describe('the currency picked while building a split', () => {
+  it('is used for someone you have no 1-1 split with yet, and the 1-1 split of an existing one wins', () => {
+    const s = stateOf([], 'USD')
+    const d = { ...newDraft(s, { id: 'd', token: 't', date: '2026-10-21' }, `p:${AMY}`), currency: 'GBP' }
+    expect(draftCurrency(s, d)).toBe('GBP')
+    const withOne = stateOf([led('o', 'one', 'EUR', 100)], 'USD')
+    const d2 = { ...newDraft(withOne, { id: 'd', token: 't', date: '2026-10-21' }, `p:${AMY}`), currency: 'GBP' }
+    expect(draftCurrency(withOne, d2)).toBe('EUR')
+  })
+  it('becomes the currency of the new 1-1 split when it is created', () => {
+    const r = A.ensureOneLedger(stateOf([], 'USD'), AMY, 'o', 'GBP')
+    expect(r.state.ledgers[0].currency).toBe('GBP')
+  })
+})

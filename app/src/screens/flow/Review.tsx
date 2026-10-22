@@ -2,14 +2,19 @@ import { useRef, useState } from 'react'
 import { useDraftMoney } from '../../flow/useDraftMoney'
 import { useNavigate } from 'react-router-dom'
 import { Screen } from '../../app/Screen'
-import { useAppState } from '../../data/store'
+import * as A from '../../data/actions'
+import { useAppState, useStore } from '../../data/store'
+import { CURRENCIES } from '../../domain/currency'
+import { isAdmin } from '../../domain/membership'
+import { CurrencyChip } from '../../ui/CurrencyChip'
+import { useSheet } from '../../ui/Sheet'
 import * as D from '../../domain/draft'
 import { parseMoney } from '../../domain/util'
 import { discCents, extrasSum, itemsSum, type Extra } from '../../money'
 import { ItemPanel, PriceSeg } from '../../flow/ItemPanel'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
-import { personName } from '../../domain/selectors'
+import { ledgerById, ledgerName, oneLedger, personName } from '../../domain/selectors'
 import { Bullet, Empty, Seg } from '../../ui/bits'
 import { Dropdown } from '../../ui/Dropdown'
 import { FlowFooter } from '../../ui/FlowFooter'
@@ -28,6 +33,26 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
   const nav = useNavigate()
   const toast = useToast()
   const s = useAppState()
+  const store = useStore()
+  const sheet = useSheet()
+  const cur = D.draftCurrency(s, d)
+  const ledger = d.ledgerId ? ledgerById(s, d.ledgerId) : d.kind === 'group' ? (d.gid ? ledgerById(s, d.gid) : undefined) : d.withP ? oneLedger(s, d.withP) : undefined
+  /** A split is written in the currency of its group or 1-1, so changing it there changes that group (for everyone). */
+  const pickCurrency = (code: string) => {
+    if (code === cur) return
+    if (!ledger) return set((x) => ({ ...x, currency: code }))
+    if (!isAdmin(ledger)) return toast('Only an admin of this group can change its currency')
+    sheet.open('Change currency?', (close) => (
+      <>
+        <p className="mute">
+          {ledgerName(s, ledger)} is in {cur}. Changing it to {code} changes the symbol on every amount in it, for everyone. Nothing is converted.
+        </p>
+        <button className="primary" onClick={() => { store.update((st) => A.setLedgerCurrency(st, ledger.id, code)); close(); toast(`${ledgerName(s, ledger)} is now in ${code}`) }}>Change to {code}</button>
+        <div style={{ height: 10 }} />
+        <button className="secondary" onClick={close}>Keep {cur}</button>
+      </>
+    ))
+  }
   const [open, setOpen] = useState<number | null>(null)
   const [qty, setQty] = useState('1')
   const [name, setName] = useState('')
@@ -65,7 +90,10 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
   return (
     <Screen id="v-review">
       <div className="vhead">
-        <h1 className="display">Review items</h1>
+        <div className="titlerow">
+          <h1 className="display">Review items</h1>
+          <CurrencyChip value={cur} options={CURRENCIES.map((c) => c.code)} onPick={pickCurrency} label="Currency of this split" />
+        </div>
         {!d.manual && (
           <div className={`bar ${ok ? 'ok' : 'bad'}`}>
             {ok ? (

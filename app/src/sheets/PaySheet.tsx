@@ -2,7 +2,7 @@ import { useState } from 'react'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
 import { currencyOf, defaultCurrency, ledgerById, ledgerName, pairBalance, payableCurrencies, personName } from '../domain/selectors'
-import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { fmt as fmtIn, parseMoney, today, uid } from '../domain/util'
 import { transfers } from '../money'
@@ -98,10 +98,9 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
         </>
       )}
       {pid && currencies.length > 1 && (
-        <>
-          <label className="f">Currency</label>
-          <CurrencyPicker value={cur} onChange={pickCurrency} codes={currencies} />
-        </>
+        <div className="sheet-corner">
+          <CurrencyChip value={cur} options={currencies} onPick={pickCurrency} label="Pay in" />
+        </div>
       )}
       <label className="f" htmlFor="pa">Amount</label>
       <input id="pa" inputMode="decimal" placeholder="0.00" value={amt} className={err.includes('amount') ? 'bad' : ''} onChange={(e) => { setAmt(e.target.value); setErr('') }} />
