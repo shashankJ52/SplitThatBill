@@ -1,4 +1,4 @@
-import { get, set } from 'idb-keyval'
+import { del, get, set } from 'idb-keyval'
 import type { AppState } from '../domain/types'
 
 const KEY = 'stb-state-v1'
@@ -7,6 +7,8 @@ const KEY = 'stb-state-v1'
 export interface Repository {
   load(): Promise<AppState | null>
   save(s: AppState): Promise<void>
+  /** forget what was kept (used to reset the demo) */
+  clear?(): Promise<void>
 }
 
 /** Older saved data numbered checklist items 1, 2, 3. Items now have unique string ids. */
@@ -30,6 +32,13 @@ export const localKeyRepository = (key: string): Repository => ({
       await set(key, s)
     } catch {
       /* storage can be blocked or full; the app keeps working in memory */
+    }
+  },
+  async clear() {
+    try {
+      await del(key)
+    } catch {
+      /* nothing to forget if storage is blocked */
     }
   },
 })

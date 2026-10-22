@@ -194,14 +194,18 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
       if (mode === 'cloud') {
         await store.flush()
         await client.auth.signOut()
-      } else if (mode === 'demo') await store.flush()
+      }
+      const wasDemo = mode === 'demo'
       leave()
+      // finishing the demo throws away what was changed in it
+      if (wasDemo) await demoRepo.clear?.()
     },
 
     async enterDemo() {
-      const saved = await demoRepo.load()
+      // every demo starts from the same fresh sample data, whatever a previous visit changed
+      await demoRepo.clear?.()
       store.setRepository(demoRepo)
-      store.replace(saved ?? seedState(Date.now()))
+      store.replace(seedState(Date.now()))
       setMode('demo')
     },
 

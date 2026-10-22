@@ -127,7 +127,6 @@ export function AccountTab() {
         </div>
         <button className="secondary" style={{ marginBottom: 10 }} onClick={friendBill}>Demo: friend adds a bill</button>
         <button className="secondary" style={{ marginBottom: 10 }} onClick={friendRemind}>Demo: friend sends me a reminder</button>
-        <button className="secondary" style={{ marginBottom: 12 }} onClick={() => nav('/welcome', { state: { anim: 'fade' } })}>Demo: show onboarding and sign up</button>
           </>
         )}
         <button className="secondary danger" onClick={logout}>Log out</button>

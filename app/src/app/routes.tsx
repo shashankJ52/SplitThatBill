@@ -26,7 +26,6 @@ import { Login } from '../screens/auth/Login'
 import { Reset } from '../screens/auth/Reset'
 import { Signup } from '../screens/auth/Signup'
 import { Verify } from '../screens/auth/Verify'
-import { Welcome } from '../screens/auth/Welcome'
 import { Shell } from './Shell'
 
 const LegalPrivacy = lazy(() => import('../landing/Legal').then((m) => ({ default: m.Privacy })))
@@ -35,6 +34,7 @@ const LegalTerms = lazy(() => import('../landing/Legal').then((m) => ({ default:
 export const router = createBrowserRouter([
   // the public front door and the legal pages live outside the app shell: they scroll and are wider than the app
   { path: '/', element: <Home /> },
+  { path: '/welcome', element: <Home /> },
   { path: '/privacy', element: <Suspense fallback={null}><LegalPrivacy /></Suspense> },
   { path: '/terms', element: <Suspense fallback={null}><LegalTerms /></Suspense> },
   {
@@ -66,7 +66,6 @@ export const router = createBrowserRouter([
       { path: '/scan/details', element: <Details /> },
       { path: '/scan/summary', element: <Summary /> },
       { path: '/scan/export', element: <Export /> },
-      { path: '/welcome', element: <Welcome /> },
       { path: '/signup', element: <Signup /> },
       { path: '/verify', element: <Verify /> },
       { path: '/login', element: <Login /> },

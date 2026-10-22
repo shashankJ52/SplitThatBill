@@ -159,3 +159,6 @@
 .lp-legal ul{padding-left:22px;margin:0 0 12px}
 .lp-legal li{margin-bottom:8px}
 .lp-legal a{text-decoration:underline;text-underline-offset:3px}
+
+.lp-brand-text{display:grid;line-height:1.05}
+.lp-brand-text small{font-size:12px;font-weight:700;color:#FF6319;letter-spacing:.02em;margin-top:2px}

@@ -104,7 +104,7 @@ export default function Landing() {
       <header className="lp-top">
         <Link to="/" className="lp-brand" aria-label="SplitThatBill home">
           <Bullet letter="S" color="#FCCC0A" size={36} />
-          <b>SplitThatBill</b>
+          <span className="lp-brand-text"><b>SplitThatBill</b><small>{TAGLINE}</small></span>
         </Link>
         <span className="grow" />
         <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
@@ -164,6 +164,7 @@ export default function Landing() {
           </div>
         </section>
 
+        {!standalone && (
         <section className="lp-section" id="install" ref={installRef} aria-labelledby="inst">
           <Sign bullet={<Bullet letter="3" color="#0039A6" size={26} />}><span id="inst">Take it with you</span></Sign>
           <p className="lp-lead lp-narrow">SplitThatBill installs like an app, with its own icon and no browser bar. Nothing to download from a store.</p>
@@ -188,6 +189,7 @@ export default function Landing() {
             </div>
           </div>
         </section>
+        )}
 
         <section className="lp-final">
           <Sign bullet={<Bullet letter="S" color="#FCCC0A" size={26} />}>Next stop: your first split</Sign>

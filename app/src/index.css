@@ -236,3 +236,18 @@ body{overscroll-behavior:none}
 button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* iOS always draws the status bar text in white over an installed app, so on the light theme keep the strip behind it black, like the sign above a platform */
 @media (display-mode:standalone){:root[data-theme="light"] body::before{content:'';position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:#000;z-index:9999;pointer-events:none}}
+
+/* the name and logo at the top of the main screens (a back button takes this spot on inner pages) */
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand span{display:grid;line-height:1.05}
+.brand b{font-size:16px;letter-spacing:-.03em}
+.brand small{font-size:11px;font-weight:700;color:#FF6319;letter-spacing:.02em;margin-top:2px}
+
+/* the five-step intro on log in and sign up */
+.steps{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 12px;margin:2px 0 6px}
+.steps-slide{min-height:112px;display:flex;align-items:center}
+.steps-in{display:flex;gap:14px;align-items:center;animation:inFade .35s var(--ease) both}
+.steps-text{min-width:0}
+.steps-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.steps h2{font-size:22px;letter-spacing:-.04em;text-transform:none;color:var(--fg);margin:3px 0 4px;font-weight:700}
+.steps p{margin:0;color:var(--mute);font-size:14px;line-height:1.4}

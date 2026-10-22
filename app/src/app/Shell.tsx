@@ -5,6 +5,7 @@ import { unreadCount } from '../domain/selectors'
 import { useFlow } from '../flow/FlowProvider'
 import { useSheet } from '../ui/Sheet'
 import { pendingJoin, rememberJoin } from './pendingJoin'
+import { Bullet } from '../ui/bits'
 import { useTheme } from '../ui/useTheme'
 
 const TAB_ROOTS = ['/groups', '/alerts', '/account']
@@ -84,6 +85,12 @@ export function Shell() {
             <button id="back" onClick={() => nav(-1)} aria-label="Back">
               ‹ Back
             </button>
+          )}
+          {!showBack && showTabs && (
+            <div className="brand" aria-label="SplitThatBill, The Right Way">
+              <Bullet letter="S" color="#FCCC0A" size={30} />
+              <span><b>SplitThatBill</b><small>The Right Way</small></span>
+            </div>
           )}
           <span className="spacer" />
           {isFlow && (

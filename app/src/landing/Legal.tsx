@@ -22,7 +22,7 @@ function Page({ title, children }: { title: string; children: ReactNode }) {
       <header className="lp-top">
         <Link to="/" className="lp-brand" aria-label="SplitThatBill home">
           <Bullet letter="S" color="#FCCC0A" size={36} />
-          <b>SplitThatBill</b>
+          <span className="lp-brand-text"><b>SplitThatBill</b><small>The Right Way</small></span>
         </Link>
         <span className="grow" />
         <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
