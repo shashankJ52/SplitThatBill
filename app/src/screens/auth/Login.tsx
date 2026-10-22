@@ -9,6 +9,7 @@ import { EMAIL_RE } from '../../domain/util'
 import { writePending } from './pendingSignup'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
+import { StepsCarousel } from '../../ui/StepsCarousel'
 import { ErrBar, PwField } from './parts'
 
 export function Login() {
@@ -65,7 +66,8 @@ export function Login() {
     <Screen id="v-login">
       <div className="vhead"><h1 className="display">Log in</h1></div>
       <div className="vbody">
-        <label className="f" htmlFor="lg-email" style={{ marginTop: 0 }}>Email</label>
+        <StepsCarousel />
+        <label className="f" htmlFor="lg-email">Email</label>
         <input id="lg-email" type="email" autoComplete="email" maxLength={80} placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); setErr('') }} />
         <PwField id="lg-pw" label="Password" auto="current-password" value={pw} onChange={(v) => { setPw(v); setErr('') }} />
         <div style={{ textAlign: 'right', margin: '4px 0 10px' }}>

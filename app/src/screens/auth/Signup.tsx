@@ -8,6 +8,7 @@ import { ME } from '../../domain/types'
 import { useToast } from '../../ui/Toast'
 import { useUiState } from '../../ui/uiState'
 import { readPending, writePending } from './pendingSignup'
+import { StepsCarousel } from '../../ui/StepsCarousel'
 import { ErrBar, Meter, PwField } from './parts'
 
 export interface PendingSignup {
@@ -77,7 +78,8 @@ export function Signup() {
     <Screen id="v-signup">
       <div className="vhead"><h1 className="display">Create account</h1></div>
       <div className="vbody">
-        <label className="f" htmlFor="su-name" style={{ marginTop: 0 }}>Your name</label>
+        <StepsCarousel />
+        <label className="f" htmlFor="su-name">Your name</label>
         <input id="su-name" maxLength={40} autoComplete="name" value={name} placeholder="e.g. Alex Rivera" onChange={(e) => clear(setName)(e.target.value)} />
         <label className="f" htmlFor="su-email">Email</label>
         <input id="su-email" type="email" maxLength={80} autoComplete="email" value={email} placeholder="you@example.com" onChange={(e) => clear(setEmail)(e.target.value)} />
@@ -93,7 +95,9 @@ export function Signup() {
         <Meter value={pw} />
         <label className="switch" style={{ margin: '14px 0' }}>
           <input type="checkbox" checked={terms} onChange={(e) => clear(setTerms)(e.target.checked)} />
-          <span className="mute" style={{ fontSize: 14 }}>I agree to the Terms and Privacy Policy</span>
+          <span className="mute" style={{ fontSize: 14 }}>
+            I agree to the <a href="/terms" target="_blank" rel="noopener" style={{ color: 'var(--fg)', fontWeight: 700 }}>Terms</a> and <a href="/privacy" target="_blank" rel="noopener" style={{ color: 'var(--fg)', fontWeight: 700 }}>Privacy Policy</a>
+          </span>
         </label>
         <ErrBar msg={err} />
         <button className="primary" onClick={() => void submit()} disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
