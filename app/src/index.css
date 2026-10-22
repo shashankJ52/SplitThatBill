@@ -256,3 +256,29 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 .steps-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
 .steps h2{font-size:22px;letter-spacing:-.04em;text-transform:none;color:var(--fg);margin:3px 0 4px;font-weight:700}
 .steps p{margin:0;color:var(--mute);font-size:14px;line-height:1.4}
+
+/* the small currency button and its menu */
+.chipw{position:relative;display:inline-block;flex:none}
+.chipb{white-space:nowrap}
+.chipm{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:250px;max-width:86vw;max-height:260px;overflow:auto;background:var(--bg);color:var(--fg);border:2px solid var(--fg);border-radius:14px;padding:4px;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.chipm button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:15px}
+.chipm button:hover,.chipm button.on{background:var(--card)}
+#sheet-body{position:relative}
+.sheet-corner{position:absolute;right:0;top:-44px}
+.titlerow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.titlerow h1.display{margin-right:auto}
+
+/* sections that open downward (Account) */
+.fold{border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:10px}
+.fold-h{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:14px 14px;cursor:pointer;text-align:left}
+.fold-t{font-weight:700;font-size:17px;letter-spacing:-.02em}
+.fold-s{margin-left:auto;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.fold-h .chev{flex:none}
+.fold-h[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.fold-b{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s var(--ease)}
+.fold-b.open{grid-template-rows:1fr}
+.fold-i{overflow:hidden;min-height:0;padding:0 14px}
+.fold-b.open .fold-i{padding-bottom:14px}
+/* once fully open, menus inside (like the currency list) may stick out of the section */
+.fold-b.settled .fold-i{overflow:visible}
+@media (prefers-reduced-motion:reduce){.fold-b{transition:none}}

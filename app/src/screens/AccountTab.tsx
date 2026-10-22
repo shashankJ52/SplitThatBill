@@ -1,3 +1,4 @@
+import { useEffect, useState, type ReactNode } from 'react'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAccount, useAccountMode } from '../data/account'
@@ -9,7 +10,7 @@ import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/Profile
 import { Bullet, Seg } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
-import { resetUiState } from '../ui/uiState'
+import { resetUiState, useUiState } from '../ui/uiState'
 import { useTheme } from '../ui/useTheme'
 import { uid } from '../domain/util'
 import { useNavigate } from 'react-router-dom'
@@ -23,7 +24,10 @@ export function AccountTab() {
   const account = useAccount()
   const live = useAccountMode() === 'cloud'
   const saveStatus = useSaveStatus()
-  const { toggle } = useTheme()
+  const { theme, toggle } = useTheme()
+  // one section open at a time, remembered while you move around the app
+  const [unfolded, setUnfolded] = useUiState<string | null>('account.open', null)
+  const toggleFold = (id: string) => setUnfolded(unfolded === id ? null : id)
   const p = s.profile
 
   const edit = (f: ProfileField) => {
@@ -101,37 +105,42 @@ export function AccountTab() {
             <div style={{ color: '#bdbdbd' }}>@{p.tag}</div>
           </div>
         </div>
-        <h2>Profile</h2>
-        {rows.map(([f, label, val]) => (
-          <div className="card tap row" key={f} role="button" tabIndex={0} onClick={() => edit(f)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), edit(f))}>
-            <div className="grow"><div className="mute">{label}:</div><b>{val}</b></div>
-            <span className="mute">Edit ›</span>
-          </div>
-        ))}
-        <h2>Currency</h2>
-        <CurrencyPicker label="Default currency" value={defaultCurrency(s)} onChange={(code) => { store.update((x) => A.setDefaultCurrency(x, code)); toast(`New groups and splits will use ${code}`) }} />
-        <p className="mute">
-          Used for new groups and 1-1 splits, and for the totals on the Groups tab. Each group can have its own currency in its settings, for example euros for a trip. Amounts are never converted.
-        </p>
-        <h2>Invite friends</h2>
-        <button className="primary" onClick={share}>Share my tag @{p.tag}</button>
-        <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>
-        <h2>Appearance</h2>
-        <button className="secondary" onClick={toggle}>Switch light / dark</button>
-        <label className="f">Paper size for PDFs</label>
-        <Seg<'Letter' | 'A4'> label="Paper size for PDFs" value={paperSize(s)} onChange={(p) => store.update((x) => A.setPaperSize(x, p))} options={[{ value: 'Letter', label: 'Letter' }, { value: 'A4', label: 'A4' }]} />
-        <p className="mute">Used when you save a bill as a PDF.</p>
-        {!live && <h2>Demo tools</h2>}
+        <div style={{ height: 14 }} />
+        <Fold id="profile" title="Profile" summary={`@${p.tag}`} open={unfolded === 'profile'} onToggle={toggleFold}>
+          {rows.map(([f, label, val]) => (
+            <div className="card tap row" key={f} role="button" tabIndex={0} onClick={() => edit(f)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), edit(f))}>
+              <div className="grow"><div className="mute">{label}:</div><b>{val}</b></div>
+              <span className="mute">Edit ›</span>
+            </div>
+          ))}
+        </Fold>
+        <Fold id="currency" title="Currency" summary={defaultCurrency(s)} open={unfolded === 'currency'} onToggle={toggleFold}>
+          <CurrencyPicker label="Default currency" value={defaultCurrency(s)} onChange={(code) => { store.update((x) => A.setDefaultCurrency(x, code)); toast(`New groups and splits will use ${code}`) }} />
+          <p className="mute">
+            Used for new groups and 1-1 splits, and for the totals on the Groups tab. Each group can have its own currency in its settings, for example euros for a trip. Amounts are never converted.
+          </p>
+        </Fold>
+        <Fold id="appearance" title="Appearance" summary={`${theme === 'dark' ? 'Dark' : 'Light'} · ${paperSize(s)}`} open={unfolded === 'appearance'} onToggle={toggleFold}>
+          <button className="secondary" onClick={toggle}>Switch light / dark</button>
+          <label className="f">Paper size for PDFs</label>
+          <Seg<'Letter' | 'A4'> label="Paper size for PDFs" value={paperSize(s)} onChange={(p) => store.update((x) => A.setPaperSize(x, p))} options={[{ value: 'Letter', label: 'Letter' }, { value: 'A4', label: 'A4' }]} />
+          <p className="mute">Used when you save a bill as a PDF.</p>
+        </Fold>
+        <Fold id="invite" title="Invite friends" summary={`@${p.tag}`} open={unfolded === 'invite'} onToggle={toggleFold}>
+          <button className="primary" onClick={share}>Share my tag @{p.tag}</button>
+          <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>
+        </Fold>
         {!live && (
-          <>
-        <div className="btnrow">
-          <button className="secondary" onClick={() => { store.update((x) => A.reloadSample(x, Date.now())); resetUiState(); toast('Sample data reloaded') }}>Reload sample data</button>
-          <button className="secondary" onClick={confirmClear}>Clear all data</button>
-        </div>
-        <button className="secondary" style={{ marginBottom: 10 }} onClick={friendBill}>Demo: friend adds a bill</button>
-        <button className="secondary" style={{ marginBottom: 10 }} onClick={friendRemind}>Demo: friend sends me a reminder</button>
-          </>
+          <Fold id="demo" title="Demo tools" summary="Sample data" open={unfolded === 'demo'} onToggle={toggleFold}>
+            <div className="btnrow">
+              <button className="secondary" onClick={() => { store.update((x) => A.reloadSample(x, Date.now())); resetUiState(); toast('Sample data reloaded') }}>Reload sample data</button>
+              <button className="secondary" onClick={confirmClear}>Clear all data</button>
+            </div>
+            <button className="secondary" style={{ marginBottom: 10 }} onClick={friendBill}>Demo: friend adds a bill</button>
+            <button className="secondary" style={{ marginBottom: 10 }} onClick={friendRemind}>Demo: friend sends me a reminder</button>
+          </Fold>
         )}
+        <div style={{ height: 6 }} />
         <button className="secondary danger" onClick={logout}>Log out</button>
         <p className="mute" style={{ fontSize: 12 }}>
           {live
@@ -142,5 +151,27 @@ export function AccountTab() {
         </p>
       </div>
     </Screen>
+  )
+}
+
+/** A section that opens downward when its header is tapped, showing a short summary while it is closed. */
+function Fold({ id, title, summary, open, onToggle, children }: { id: string; title: string; summary: string; open: boolean; onToggle: (id: string) => void; children: ReactNode }) {
+  // content is clipped while the section slides open or shut, then freed so a menu inside can stick out
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(open), open ? 320 : 0)
+    return () => clearTimeout(t)
+  }, [open])
+  return (
+    <section className="fold">
+      <button type="button" className="fold-h" aria-expanded={open} aria-controls={`fold-${id}`} onClick={() => onToggle(id)}>
+        <span className="fold-t">{title}</span>
+        <span className="fold-s mute">{summary}</span>
+        <span className="chev" aria-hidden="true">⌄</span>
+      </button>
+      <div className={`fold-b${open ? ' open' : ''}${open && settled ? ' settled' : ''}`} id={`fold-${id}`} inert={!open}>
+        <div className="fold-i">{children}</div>
+      </div>
+    </section>
   )
 }
