@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bullet } from '../ui/bits'
+import { AccountLink } from './AccountLink'
 import { useTheme } from '../ui/useTheme'
 import './landing.css'
 
@@ -26,7 +27,7 @@ function Page({ title, children }: { title: string; children: ReactNode }) {
         </Link>
         <span className="grow" />
         <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
-        <Link to="/login" className="lp-login">Log in</Link>
+        <AccountLink />
       </header>
       <main className="lp-legal">
         <h1>{title}</h1>

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as A from '../data/actions'
 import { useAccount } from '../data/account'
-import { useStore } from '../data/store'
+import { useAppState, useStore } from '../data/store'
+import { AccountLink } from './AccountLink'
 import { useInstall } from '../app/install'
 import { Bullet } from '../ui/bits'
 import { useTheme } from '../ui/useTheme'
@@ -75,6 +76,7 @@ function useJourney(scroller: React.RefObject<HTMLElement | null>, journey: Reac
 export default function Landing() {
   const nav = useNavigate()
   const store = useStore()
+  const signedIn = useAppState().signedIn
   const account = useAccount()
   const { theme, toggle } = useTheme()
   const { standalone, ios, canPrompt, prompt } = useInstall()
@@ -108,7 +110,7 @@ export default function Landing() {
         </Link>
         <span className="grow" />
         <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
-        <Link to="/login" className="lp-login">Log in</Link>
+        <AccountLink />
       </header>
 
       <main>
@@ -118,11 +120,17 @@ export default function Landing() {
             <h1>Split that Bill.<br /><em>{TAGLINE}.</em></h1>
             <p className="lp-lead">Scan a receipt, say who had what, and see who owes whom, item by item. For groups, roommates, trips, or just the two of you.</p>
             <div className="lp-cta">
-              <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
-              <Link to="/login" className="lp-btn lp-secondary">Log in</Link>
+              {signedIn ? (
+                <Link to="/groups" className="lp-btn lp-primary">Open SplitThatBill</Link>
+              ) : (
+                <>
+                  <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
+                  <Link to="/login" className="lp-btn lp-secondary">Log in</Link>
+                </>
+              )}
             </div>
             <div className="lp-cta2">
-              <button className="lp-link-btn" onClick={() => void demo()}>Try the demo</button>
+              {!signedIn && <button className="lp-link-btn" onClick={() => void demo()}>Try the demo</button>}
               {!standalone && <button className="lp-link-btn" onClick={() => void install()}>Install app</button>}
             </div>
             {hint && <p className="mute" role="status">{hint}</p>}
@@ -194,8 +202,14 @@ export default function Landing() {
         <section className="lp-final">
           <Sign bullet={<Bullet letter="S" color="#FCCC0A" size={26} />}>Next stop: your first split</Sign>
           <div className="lp-cta lp-center">
-            <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
-            <button className="lp-btn lp-secondary" onClick={() => void demo()}>Try the demo</button>
+            {signedIn ? (
+              <Link to="/groups" className="lp-btn lp-primary">Open SplitThatBill</Link>
+            ) : (
+              <>
+                <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
+                <button className="lp-btn lp-secondary" onClick={() => void demo()}>Try the demo</button>
+              </>
+            )}
           </div>
         </section>
       </main>

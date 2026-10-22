@@ -282,3 +282,6 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 /* once fully open, menus inside (like the currency list) may stick out of the section */
 .fold-b.settled .fold-i{overflow:visible}
 @media (prefers-reduced-motion:reduce){.fold-b{transition:none}}
+
+.chipm a{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:15px;color:inherit;text-decoration:none}
+.chipm a:hover{background:var(--card)}

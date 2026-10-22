@@ -25,6 +25,13 @@ export function Login() {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
 
+  /** Look around with sample data kept on this device; the installed app has no website to offer this from. */
+  const demo = async () => {
+    if (account) await account.enterDemo()
+    else if (!store.get().signedIn) store.update(A.signIn)
+    nav('/groups', { replace: true, state: { anim: 'fade' } })
+  }
+
   const submit = async () => {
     const now = Date.now()
     if (now >= lock.lockUntil) {
@@ -78,6 +85,12 @@ export function Login() {
         {!account && s.password === DEMO_PASSWORD && <div className="bar info" style={{ marginTop: 16 }}>Demo account: {s.profile.email} · {DEMO_PASSWORD}</div>}
         <div style={{ textAlign: 'center', marginTop: 6 }} className="mute">
           New here? <button className="linkbtn" onClick={() => nav('/signup', { replace: true })}>Create account</button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 4 }}>
+          <button className="linkbtn" onClick={() => void demo()}>Or try the demo</button>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: 4 }}>
+          <button className="linkbtn" onClick={() => nav('/home')}>What is SplitThatBill?</button>
         </div>
       </div>
     </Screen>

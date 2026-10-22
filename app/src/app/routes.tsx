@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { Home } from './Home'
+import { Home, Website } from './Home'
 import { FlowProvider } from '../flow/FlowProvider'
 import { BillPage } from '../screens/BillPage'
 import { GroupPage } from '../screens/GroupPage'
@@ -35,6 +35,7 @@ export const router = createBrowserRouter([
   // the public front door and the legal pages live outside the app shell: they scroll and are wider than the app
   { path: '/', element: <Home /> },
   { path: '/welcome', element: <Home /> },
+  { path: '/home', element: <Website /> },
   { path: '/privacy', element: <Suspense fallback={null}><LegalPrivacy /></Suspense> },
   { path: '/terms', element: <Suspense fallback={null}><LegalTerms /></Suspense> },
   {

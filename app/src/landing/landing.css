@@ -162,3 +162,9 @@
 
 .lp-brand-text{display:grid;line-height:1.05}
 .lp-brand-text small{font-size:12px;font-weight:700;color:#FF6319;letter-spacing:.02em;margin-top:2px}
+
+/* the name button shown when someone is signed in */
+button.lp-login.lp-name{background:none;color:var(--fg);font-family:inherit;font-size:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;max-width:170px;position:relative}
+.lp-name-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lp-dot{position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:var(--red);border:2px solid var(--bg)}
+.lp-top .chipm{right:0;z-index:40}

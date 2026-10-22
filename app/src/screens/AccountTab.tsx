@@ -143,6 +143,9 @@ export function AccountTab() {
         )}
         <div style={{ height: 6 }} />
         <button className="secondary danger" onClick={logout}>Log out</button>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button className="linkbtn" onClick={() => nav('/home')}>About SplitThatBill</button>
+        </div>
         {live && (
           <div style={{ textAlign: 'center', marginTop: 12 }}>
             <button className="linkbtn" onClick={() => sheet.open('Delete your account?', (close) => <DeleteAccountSheet close={close} />)}>Delete my account</button>
