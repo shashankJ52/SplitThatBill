@@ -158,3 +158,36 @@ describe('paying more than is owed', () => {
     }
   })
 })
+
+describe('the note and proof of a payment', () => {
+  it.each([['out', true], ['in', true], ['out', false], ['in', false]] as const)('are seen by both people when it spans a 1-1 split and a group (direction %s, 1-1 accepted: %s)', async (direction, accepted) => {
+    const { personActivity } = await import('../domain/selectors.ts')
+    const a = await load(ann)
+    const gid = uid()
+    const oid = uid()
+    let s: AppState = A.createGroup(a.state, { id: gid, name: 'Flat', color: '#0039A6', simplify: true, members: [ME] })
+    s = { ...s, people: { ...s.people, [ben]: { id: ben, name: 'Ben Ray', user: true, tag: 'ben' } } }
+    s = A.ensureOneLedger(s, ben, oid).state
+    await a.repo.save(s)
+    for (const g of [gid, oid]) {
+      await t.as(ann, () => t.sql('select invite_user($1, $2)', [g, ben]))
+      if (g === gid || accepted) await t.as(ben, () => t.sql('select accept_invite($1)', [g]))
+    }
+    s = (await load(ann)).state
+    s = A.addBill(s, gid, bill('Group dinner', ME, [ME, ben], 10000))
+    s = A.addBill(s, oid, bill('Coffee', ME, [ME, ben], 6000))
+    await a.repo.save(s)
+    // Ben pays Ann from his own device ('out'), or Ann records it from hers ('in')
+    const maker = direction === 'out' ? await load(ben) : await load(ann)
+    const r = A.applyPersonPayment(maker.state, { id: uid(), newLedgerId: uid(), pid: direction === 'out' ? ann : ben, direction, amt: 8000, date: '2026-10-21', note: 'Zelle ref 4821', img: 'data:image/png;base64,AAAA' })
+    await maker.repo.save(r.state)
+    for (const [who, other] of [[ann, ben], [ben, ann]] as const) {
+      const v = (await load(who)).state
+      const pays = personActivity(v, other).filter((x) => x.k === 'p')
+      expect(pays).toHaveLength(1)
+      expect(pays[0].o).toMatchObject({ note: 'Zelle ref 4821', img: 'data:image/png;base64,AAAA' })
+      // a person who has not accepted the 1-1 invitation cannot read that part, so sees only the group's share
+      expect(pays[0].o.amt).toBe(accepted || who === (direction === 'out' ? ben : ann) ? 8000 : 5000)
+    }
+  })
+})

@@ -8,6 +8,7 @@ import { ME } from '../domain/types'
 import { myNet } from '../money'
 import { fmt, today } from '../domain/util'
 import { GroupSheet } from '../sheets/GroupSheet'
+import { PaySheet } from '../sheets/PaySheet'
 import { PickSheet } from '../sheets/PickSheet'
 import { Avatar, Bullet, Empty } from '../ui/bits'
 import { ReorderList } from '../ui/ReorderList'
@@ -57,6 +58,33 @@ export function GroupsTab() {
       setTimeout(() => (swallow.current = false), 150)
     }
   }
+  /** Ask what the payment is for, then who or which group, then open the same sheet as on that person's or group's page. */
+  const recordPayment = () =>
+    sheet.open('Record payment', (close) => (
+      <>
+        <button className="card tap row" style={{ width: '100%', textAlign: 'left' }} onClick={() => { close(); pickPerson() }}>
+          <div className="grow">
+            <b>With a person</b>
+            <div className="mute">Applied to your 1-1 splits first, then shared groups</div>
+          </div>
+        </button>
+        <button className="card tap row" style={{ width: '100%', textAlign: 'left' }} onClick={() => { close(); pickGroup() }}>
+          <div className="grow">
+            <b>In a group</b>
+            <div className="mute">Who paid whom inside one group</div>
+          </div>
+        </button>
+      </>
+    ))
+  const pickPerson = () =>
+    sheet.open('Who was the payment with?', (close) => (
+      <PickSheet mode="p" close={close} onPick={(v) => sheet.open('Record payment', (done) => <PaySheet pid={v.slice(2)} close={done} />)} />
+    ))
+  const pickGroup = () =>
+    sheet.open('Which group?', (close) => (
+      <PickSheet mode="g" close={close} onPick={(v) => sheet.open('Record payment', (done) => <PaySheet gid={v.slice(2)} close={done} />)} />
+    ))
+
   const head = (k: 'lines' | 'people', title: string, btn: string, aria: string, onBtn: () => void) => (
     <div
       className="shead" role="button" tabIndex={0} aria-expanded={exp === k}
@@ -82,6 +110,7 @@ export function GroupsTab() {
           </div>
           {filter !== 'net' && <div className="mute" style={{ marginTop: 8, fontSize: 12 }}>{CAPTION[filter]}</div>}
         </div>
+        <button className="secondary" style={{ marginTop: 10 }} onClick={recordPayment}>Record payment</button>
       </div>
       <div className="vbody split">
         <section className={`sect${exp === 'people' ? ' col' : ''}`} id="sect-lines">
