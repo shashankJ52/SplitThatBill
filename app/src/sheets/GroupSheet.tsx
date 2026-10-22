@@ -9,6 +9,7 @@ import { ME } from '../domain/types'
 import { COLORS, uid } from '../domain/util'
 import { Avatar, Bullet } from '../ui/bits'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { TypeToConfirm } from '../ui/TypeToConfirm'
 import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
 
@@ -29,7 +30,7 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
   const [members, setMembers] = useState<string[]>(existing?.members ?? [ME])
   const [add, setAdd] = useState('')
   const [nameBad, setNameBad] = useState(false)
-  const [delArm, setDelArm] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const addMember = async () => {
     const r = await addByInput(add, members)
@@ -61,7 +62,6 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
   }
   const remove = () => {
     if (!existing) return
-    if (!delArm) return setDelArm(true)
     store.update((st) => A.deleteGroup(st, existing.id))
     close()
     toast('Group deleted')
@@ -113,7 +113,18 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
       {existing && !shared && (
         <>
           <div style={{ height: 10 }} />
-          <button className="secondary danger" onClick={remove}>{delArm ? 'Tap again to delete the group and its bills' : 'Delete group'}</button>
+          {confirmDelete ? (
+            <TypeToConfirm
+              title={`Delete ${existing.name ?? 'this group'}?`}
+              body="All its bills, payments and lists are deleted. This can't be undone."
+              word={existing.name ?? 'delete'}
+              confirmLabel="Delete group"
+              onConfirm={remove}
+              onCancel={() => setConfirmDelete(false)}
+            />
+          ) : (
+            <button className="secondary danger" onClick={() => setConfirmDelete(true)}>Delete group</button>
+          )}
         </>
       )}
     </>

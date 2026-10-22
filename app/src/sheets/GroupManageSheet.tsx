@@ -7,6 +7,7 @@ import { isAdmin, isOwner, isShared, memberActions, memberLines, myRole, removal
 import { currencyLabel } from '../domain/currency'
 import { currencyOf, ledgerById, letterOf, personName } from '../domain/selectors'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { TypeToConfirm } from '../ui/TypeToConfirm'
 import { ME } from '../domain/types'
 import { today, uid } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
@@ -271,13 +272,14 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
         </div>
       )}
       {panel?.kind === 'delete' && (
-        <div className="card">
-          <b>Delete {name} for everyone?</b>
-          <p className="mute">All its bills, payments and lists disappear for every member. This can't be undone.</p>
-          <button className="primary" style={{ background: 'var(--red)', borderColor: 'var(--red)', color: '#fff' }} onClick={destroy}>Delete group</button>
-          <div style={{ height: 8 }} />
-          <button className="secondary" onClick={() => setPanel(null)}>Keep it</button>
-        </div>
+        <TypeToConfirm
+          title={`Delete ${name} for everyone?`}
+          body="All its bills, payments and lists disappear for every member. This can't be undone."
+          word={name}
+          confirmLabel="Delete group"
+          onConfirm={destroy}
+          onCancel={() => setPanel(null)}
+        />
       )}
       {!panel && (
         <>
