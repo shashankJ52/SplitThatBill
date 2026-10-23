@@ -1,12 +1,9 @@
 # SplitThatBill app
 
-Phase 1 foundation of the SplitThatBill web app (installable PWA).
+The web app and the receipt-reading function. See the [project README](../README.md) for what it is, how it's built and how to run it.
 
 - `npm run dev` start the dev server
 - `npm run build` type-check and build to `dist/` (also generates the web manifest and service worker)
 - `npm run preview` serve the production build
-- `npm test` run the money engine tests
-- `npm run lint` run the linter
-
-The money engine lives in `src/money/`. It is plain TypeScript with no UI imports, and every amount is whole cents.
-The approved wireframe (`../wireframe/index.html`) and decisions (`../docs/DECISIONS.md`) are the spec for the screens.
+- `npm test` run the unit and database-rule tests
+- `npm run lint`
