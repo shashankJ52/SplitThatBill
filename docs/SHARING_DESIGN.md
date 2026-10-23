@@ -10,9 +10,9 @@ Status: design agreed with the owner on 2026-10-20. Migration `0004_sharing.sql`
 | Invites | The invited person must accept. Until then they can see nothing about the group. |
 | Roles | **Owner** (creator, the "super admin"), **Admin** (made by the owner), **Member**. |
 | Owner | Renames or deletes the group, makes and removes admins, can transfer ownership. Cannot leave without transferring. |
-| Admins | Add and remove members, approve or deny join requests, turn the group link on or off, rename the group. Cannot remove the owner or other admins. |
+| Admins | Add and remove members, approve or deny join requests, rename the group. Cannot remove the owner or other admins. |
 | Members | Add bills, payments, comments and tick lists. Can leave. |
-| Group link | Anyone in the group can share it. Opening it shows only the group name and who runs it. The visitor taps **Request to join**; an admin approves or denies. Admins can turn it off or make a new one. |
+| Group link | Anyone in the group can share it. Opening it shows only the group name and who runs it. The visitor taps **Request to join**; an admin approves or denies. Every group gets one automatically and it is permanent; there is no off switch or reset in the app. |
 | Removing someone | The app only allows it when their balance is zero. Old bills stay exactly as they were and the person is listed as a former member. If someone will not settle, an admin can **Remove and write off**, which records a visible adjustment so the others' balances stay correct. The removed person loses all access. |
 | Editing bills | Only the person who added a bill can edit or delete it. Everyone else comments. |
 | Contacts | A friend without the app is a named member of the group (no account). Linking a contact to a real account later is not built yet. |

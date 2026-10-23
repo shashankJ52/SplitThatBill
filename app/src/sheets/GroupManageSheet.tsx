@@ -221,20 +221,14 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
             <button className="secondary" onClick={() => void copy(link, 'Link copied')}>Copy</button>
           </div>
           <div className="mute" style={{ marginTop: 4 }}>Anyone can share this. People who open it can only ask to join; an admin approves each one.</div>
-          {admin && (
-            <div className="row" style={{ marginTop: 6 }}>
-              <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setLink(gid, true), 'New link made. The old one stopped working.')}>Make a new link</button>
-              <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setLink(gid, false), 'Group link turned off')}>Turn off</button>
-            </div>
-          )}
         </>
       ) : admin ? (
         <>
-          <div className="mute">The link is off. Turn it on to let people ask to join.</div>
-          <button className="secondary" disabled={busy} onClick={() => void act(() => account.setLink(gid, true), 'Group link is on')}>Turn on group link</button>
+          <div className="mute">This group has no link yet.</div>
+          <button className="secondary" disabled={busy} onClick={() => void act(() => account.setLink(gid, true), 'Group link is ready')}>Get the group link</button>
         </>
       ) : (
-        <div className="mute">The link is off. An admin can turn it on.</div>
+        <div className="mute">This group has no link yet. An admin can get one.</div>
       )}
 
       <div style={{ height: 14 }} />
