@@ -101,3 +101,7 @@ Live and being tested by a few people. Still on my list: a proper legal review o
 ## Feedback
 
 I'd love for you to try it and tell me what's confusing, what's broken and what's missing. You can use the feedback button inside the app, open an issue here, or write to **hello@splitthatbill.app**.
+
+## Licence
+
+[MIT](LICENSE). The code is free to use, change and share. The name and look of SplitThatBill are mine, so please pick your own if you build on it.
