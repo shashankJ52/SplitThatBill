@@ -9,6 +9,7 @@ import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
 import { GroupSheet } from '../../sheets/GroupSheet'
+import { PERSONAL_COLOR } from '../../data/actions'
 import { PickSheet } from '../../sheets/PickSheet'
 import { Avatar, Bullet } from '../../ui/bits'
 import { useSheet } from '../../ui/Sheet'
@@ -120,6 +121,12 @@ export function Capture() {
               <b style={{ color: 'var(--fg)' }}>{selGroup.name}</b>
               <span>· {selGroup.members.length} people</span>
             </div>
+          ) : sel === 'me' ? (
+            <div className="row">
+              <Bullet letter="👤" color={PERSONAL_COLOR} size={30} />
+              <b style={{ color: 'var(--fg)' }}>Personal</b>
+              <span>· just you, nothing to split</span>
+            </div>
           ) : sel.startsWith('p:') ? (
             <div className="row">
               <Avatar pid={sel.slice(2)} size={30} />
@@ -128,6 +135,12 @@ export function Capture() {
           ) : (
             "Pick who you're splitting with, or add someone new."
           )}
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <button className={`fchip${sel === 'me' ? ' on' : ''}`} onClick={() => pick('me')}>
+            <Bullet letter="👤" color={PERSONAL_COLOR} size={28} />
+            Personal
+          </button>
         </div>
         <h2 style={{ margin: '10px 0 8px' }}>Recent groups</h2>
         <div>

@@ -255,7 +255,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
           <div className="num" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.04em' }}>{fmt(d.rt + extrasSum(d))}</div>
         </div>
       </div>
-      <FlowFooter label="Continue" disabled={!D.canContinue(d, 'review')} onClick={() => nav('/scan/assign')} />
+      <FlowFooter label="Continue" disabled={!D.canContinue(d, 'review')} onClick={() => nav(d.personal ? '/scan/details' : '/scan/assign')} />
     </Screen>
   )
 })

@@ -17,19 +17,20 @@ export function paidText(s: Parameters<typeof personName>[0], b: AppBill, forOth
 
 export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number }) {
   const s = useAppState()
-  const fmt = useMoney(findBill(s, b.id)?.ledger)
-  const mine = b.shares[ME]
+  const home = findBill(s, b.id)?.ledger
+  const fmt = useMoney(home)
+  const mine = home?.kind === 'me' ? 0 : b.shares[ME]
   const n = b.comments.filter((c) => !c.sys).length
   return (
     <Link className="card tap rise" style={{ display: 'block', ['--i' as string]: index }} to={`/bill/${b.id}`}>
       <div className="row">
         <div className="grow">
           <b>{b.title}</b>
-          <div className="mute">{whenLabel(b.ts, b.date)} · {paidText(s, b)}</div>
+          <div className="mute">{whenLabel(b.ts, b.date)}{home?.kind === 'me' ? ` · ${b.cat || 'Other'}` : ` · ${paidText(s, b)}`}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <b>{fmt(b.total)}</b>
-          <div className="mute">{mine ? `your share ${fmt(mine)}` : 'not in this one'}</div>
+          {home?.kind !== 'me' && <div className="mute">{mine ? `your share ${fmt(mine)}` : 'not in this one'}</div>}
         </div>
       </div>
       {n > 0 && <div className="mute" style={{ marginTop: 4 }}>💬 {n} comment{n > 1 ? 's' : ''}</div>}

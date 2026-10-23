@@ -76,7 +76,7 @@ export function Shell() {
     if (path === '/scan') return
     const m = path.match(/^\/groups\/([^/]+)/)
     const p = path.match(/^\/person\/([^/]+)/)
-    nav('/scan', { state: { target: m ? `g:${m[1]}` : p ? `p:${p[1]}` : null } })
+    nav('/scan', { state: { target: m ? `g:${m[1]}` : p ? `p:${p[1]}` : path.startsWith('/personal') ? 'me' : null } })
   }
 
   return (

@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { activeCurrencies, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, groupGlyph, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
+import { activeCurrencies, monthStats, personalLedger, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, groupGlyph, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
 import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
-import { fmt as fmtIn, today } from '../domain/util'
+import { fmt as fmtIn, nowKey, today } from '../domain/util'
+import { useWide } from '../ui/useWide'
 import { GroupSheet } from '../sheets/GroupSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { PickSheet } from '../sheets/PickSheet'
@@ -46,6 +47,9 @@ export function GroupsTab() {
   const groups = arrangedGroups(s, filter, view)
   const people = arrangedPeople(s, filter, view)
   const allGroups = s.ledgers.filter((l) => l.kind === 'group').length
+  const wide = useWide()
+  const personal = personalLedger(s)
+  const mine = personal ? monthStats(personal, nowKey()).tot : 0
 
   const pickTile = (f: BalanceFilter) => setFilter(filter === f && f !== 'net' ? 'net' : f)
 
@@ -126,6 +130,13 @@ export function GroupsTab() {
           )}
         </div>
         <button className="secondary" style={{ marginTop: 10 }} onClick={recordPayment}>Record payment</button>
+        {!wide && (
+          <Link className="card row tap" style={{ marginTop: 10 }} to="/personal">
+            <Bullet letter="👤" color={A.PERSONAL_COLOR} size={34} />
+            <div className="grow"><b>Personal</b><div className="mute">Spending that is just yours</div></div>
+            <div style={{ textAlign: 'right' }}><b>{fmtIn(mine, defaultCurrency(s))}</b><div className="mute">this month</div></div>
+          </Link>
+        )}
       </div>
       <div className="vbody split">
         <section className={`sect${exp === 'people' ? ' col' : ''}`} id="sect-lines">

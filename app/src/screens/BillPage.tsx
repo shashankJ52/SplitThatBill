@@ -59,15 +59,15 @@ export function BillPage() {
       <div className="vhead">
         <div className="gname" style={{ fontSize: 30, lineHeight: 1.05, marginTop: 4 }}>{b.title}</div>
         <div className="mute">{b.date}{b.loc ? ` · 📍 ${b.loc}` : ''}</div>
-        <div className="mute">{paidText(s, b)} · added by {personName(s, b.by)}{b.ts ? ` · ${whenLabel(b.ts, b.date, { exact: true })}` : ''}</div>
+        <div className="mute">{L.kind === 'me' ? 'Personal' : `${paidText(s, b)} · added by ${personName(s, b.by)}`}{b.ts ? ` · ${whenLabel(b.ts, b.date, { exact: true })}` : ''}</div>
         <div className="row" style={{ margin: '8px 0', flexWrap: 'wrap', gap: 8 }}>
-          <Link className="pill tap" to={L.kind === 'group' ? `/groups/${L.id}` : `/person/${L.with}`}>{ledgerName(s, L)} ›</Link>
+          <Link className="pill tap" to={L.kind === 'group' ? `/groups/${L.id}` : L.kind === 'me' ? '/personal' : `/person/${L.with}`}>{ledgerName(s, L)} ›</Link>
           <span className="pill">{b.cat || 'Other'}</span>
         </div>
         <div className="sign" style={{ marginBottom: 6 }}>
           <div className="row">
             <div className="grow"><div className="lbl">Total</div><div className="num" style={{ fontSize: 30 }}>{fmt(b.total)}</div></div>
-            {b.shares[ME] ? <div style={{ textAlign: 'right' }}><div className="lbl" style={{ justifyContent: 'flex-end' }}>Your share</div><div className="num" style={{ fontSize: 22 }}>{fmt(b.shares[ME])}</div></div> : null}
+            {L.kind !== 'me' && b.shares[ME] ? <div style={{ textAlign: 'right' }}><div className="lbl" style={{ justifyContent: 'flex-end' }}>Your share</div><div className="num" style={{ fontSize: 22 }}>{fmt(b.shares[ME])}</div></div> : null}
           </div>
           {rn && <div className="mute">{rn}</div>}
         </div>
@@ -75,18 +75,22 @@ export function BillPage() {
       <div className="vbody">
         {b.notes && <div className="card" style={{ display: 'block' }}><div className="mute">Notes</div>{b.notes}</div>}
         <BillBreakdown bill={b} ledger={L} />
-        <h2>Share</h2>
-        <button className="secondary" onClick={share}>Share link to this bill</button>
-        <div style={{ height: 10 }} />
-        <button
-          className="secondary"
-          onClick={() => {
-            const m = buildExportModel(s, b, { groupName: L.kind === 'group' ? (L.name ?? null) : null, currency: currencyOf(s, L), link: b.token ? billLink(window.location.origin, b.token) : null })
-            sheet.open('Share this bill', (close) => <ShareImageSheet model={m} linkWorks close={close} />)
-          }}
-        >
-          Share as a picture or PDF
-        </button>
+        {L.kind !== 'me' && (
+          <>
+            <h2>Share</h2>
+            <button className="secondary" onClick={share}>Share link to this bill</button>
+            <div style={{ height: 10 }} />
+            <button
+              className="secondary"
+              onClick={() => {
+                const m = buildExportModel(s, b, { groupName: L.kind === 'group' ? (L.name ?? null) : null, currency: currencyOf(s, L), link: b.token ? billLink(window.location.origin, b.token) : null })
+                sheet.open('Share this bill', (close) => <ShareImageSheet model={m} linkWorks close={close} />)
+              }}
+            >
+              Share as a picture or PDF
+            </button>
+          </>
+        )}
         <h2>Manage</h2>
         {mine ? (
           <div className="btnrow">
@@ -96,20 +100,24 @@ export function BillPage() {
         ) : (
           <div className="bar info">Added by {personName(s, b.by)}. Only they can edit or delete this bill. Leave a comment below to ask for a change.</div>
         )}
-        <h2>Comments</h2>
-        {b.comments.length ? b.comments.map((c) => (
-          <div className={`cmt${c.sys ? ' sys' : ''}`} key={c.id}>
-            <div className="row">
-              <div className="grow">{!c.sys && <b>{personName(s, c.by)} </b>}<span className="mute">{ago(c.ts)}</span></div>
-              {!c.sys && c.by === ME && <button className="del" aria-label="Delete comment" onClick={() => store.update((st) => A.deleteComment(st, b.id, c.id))}>✕</button>}
-            </div>
-            {c.sys ? c.text : <div>{c.text}</div>}
-          </div>
-        )) : <div className="empty sm"><b>No comments yet</b>Ask a question or flag a mistake.</div>}
-        <label className="f" htmlFor="cm-text">Add a comment</label>
-        <textarea id="cm-text" rows={2} maxLength={300} className={bad ? 'bad' : ''} placeholder="e.g. I didn't have the nachos" value={comment} onChange={(e) => { setComment(e.target.value); setBad(false) }} />
-        <div style={{ height: 10 }} />
-        <button className="primary" onClick={post}>Post comment</button>
+        {L.kind !== 'me' && (
+          <>
+            <h2>Comments</h2>
+            {b.comments.length ? b.comments.map((c) => (
+              <div className={`cmt${c.sys ? ' sys' : ''}`} key={c.id}>
+                <div className="row">
+                  <div className="grow">{!c.sys && <b>{personName(s, c.by)} </b>}<span className="mute">{ago(c.ts)}</span></div>
+                  {!c.sys && c.by === ME && <button className="del" aria-label="Delete comment" onClick={() => store.update((st) => A.deleteComment(st, b.id, c.id))}>✕</button>}
+                </div>
+                {c.sys ? c.text : <div>{c.text}</div>}
+              </div>
+            )) : <div className="empty sm"><b>No comments yet</b>Ask a question or flag a mistake.</div>}
+            <label className="f" htmlFor="cm-text">Add a comment</label>
+            <textarea id="cm-text" rows={2} maxLength={300} className={bad ? 'bad' : ''} placeholder="e.g. I didn't have the nachos" value={comment} onChange={(e) => { setComment(e.target.value); setBad(false) }} />
+            <div style={{ height: 10 }} />
+            <button className="primary" onClick={post}>Post comment</button>
+          </>
+        )}
       </div>
     </Screen>
   )

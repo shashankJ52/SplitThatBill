@@ -6,6 +6,7 @@ import { BillPage } from '../screens/BillPage'
 import { GroupPage } from '../screens/GroupPage'
 import { GroupsTab } from '../screens/GroupsTab'
 import { PersonPage } from '../screens/PersonPage'
+import { PersonalPage } from '../screens/PersonalPage'
 import { JoinPage } from '../screens/JoinPage'
 import { PublicBill } from '../screens/PublicBill'
 import { PublicBillLink } from '../screens/PublicBillLink'
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
       { path: '/groups/:gid', element: <GroupPage /> },
       { path: '/bill/:id', element: <BillPage /> },
       { path: '/person/:pid', element: <PersonPage /> },
+      { path: '/personal', element: <PersonalPage /> },
       { path: '/join/:code', element: <JoinPage /> },
       { path: '/b/:token', element: <PublicBillLink /> },
       { path: '/preview/draft', element: <DraftPreview /> },

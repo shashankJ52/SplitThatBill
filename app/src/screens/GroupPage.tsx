@@ -75,7 +75,7 @@ export function GroupPage() {
   )
 }
 
-function BillsTab({ gid }: { gid: string }) {
+export function BillsTab({ gid, personal }: { gid: string; personal?: boolean }) {
   const s = useAppState()
   const g = ledgerById(s, gid)!
   const fmt = useMoney(g)
@@ -83,11 +83,13 @@ function BillsTab({ gid }: { gid: string }) {
   const [all, setAll] = useUiState<boolean>(`grp.${gid}.all`, false)
   const cur = month ?? nowKey()
   const ms = monthsAsc(g)
-  const [kind, setKind] = useUiState<ActivityKind>(`grp.${gid}.filter`, 'all')
+  const [picked, setKind] = useUiState<ActivityKind>(`grp.${gid}.filter`, 'all')
+  // a personal ledger has no payments, so there is nothing to filter
+  const kind = personal ? 'all' : picked
   const items = filterActivity(ledgerActivity(g), kind)
   const one = (x: ReturnType<typeof ledgerActivity>[number], i: number) =>
     x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />
-  const filter = <ActivityFilter value={kind} onChange={setKind} />
+  const filter = personal ? null : <ActivityFilter value={kind} onChange={setKind} />
   const none = kind === 'bills' ? 'No bills here' : kind === 'payments' ? 'No settle-ups here' : ''
 
   if (all) {
@@ -115,14 +117,16 @@ function BillsTab({ gid }: { gid: string }) {
   )
 }
 
-function OverviewTab({ gid }: { gid: string }) {
+export function OverviewTab({ gid, personal }: { gid: string; personal?: boolean }) {
   const s = useAppState()
   const g = ledgerById(s, gid)!
   const fmt = useMoney(g)
-  const [view, setView] = useUiState<0 | 1 | 2>(`grp.${gid}.ov`, 0)
+  const [picked, setView] = useUiState<0 | 1 | 2>(`grp.${gid}.ov`, personal ? 1 : 0)
+  // just you, so a chart of who paid and who had what has nothing to show
+  const view = personal && picked === 0 ? 1 : picked
   const [monthSel, setMonthSel] = useUiState<string | null>(`grp.${gid}.ovm`, null)
   const [pick, setPick] = useState<{ kind: string; k: string } | null>(null)
-  const [trend, setTrend] = useState<TrendState>({ all: true, people: true, off: [], st: null })
+  const [trend, setTrend] = useState<TrendState>({ all: true, people: !personal, off: [], st: null })
   const ms = monthsAsc(g)
   const key = monthSel && ms.includes(monthSel) ? monthSel : ms[ms.length - 1]
   const i = ms.indexOf(key)
@@ -153,12 +157,12 @@ function OverviewTab({ gid }: { gid: string }) {
   return (
     <>
       <Seg className="" value={String(view) as '0' | '1' | '2'} onChange={(v) => setView(Number(v) as 0 | 1 | 2)} label="Chart type"
-        options={[{ value: '0', label: 'People' }, { value: '1', label: 'Categories' }, { value: '2', label: 'Trend' }]} />
+        options={[...(personal ? [] : [{ value: '0' as const, label: 'People' }]), { value: '1' as const, label: 'Categories' }, { value: '2' as const, label: 'Trend' }]} />
       <MonthBar label={mLabel(key)} sub={`${fmt(st.tot)} · ${st.n} bill${st.n === 1 ? '' : 's'}`} canPrev={i > 0} canNext={i < ms.length - 1} onPrev={() => go(-1)} onNext={() => go(1)} />
       <div onPointerDown={onDown} onPointerUp={onUp} onPointerCancel={() => (down.current = null)} onClickCapture={(e) => { if (swallow.current) { e.stopPropagation(); e.preventDefault() } }} aria-live="polite">
         {view === 0 && <PeopleChart ledger={g} st={st} pick={pick?.kind === 'p' ? pick.k : null} onPick={pickFn('p')} />}
         {view === 1 && <CategoryChart ledger={g} st={st} prev={prev} monthKey={key} pick={pick?.kind === 'c' ? pick.k : null} onPick={pickFn('c')} />}
-        {view === 2 && <TrendChart ledger={g} monthKey={key} state={trend} onChange={setTrend} />}
+        {view === 2 && <TrendChart ledger={g} monthKey={key} state={trend} onChange={setTrend} solo={personal} />}
       </div>
       <p className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '8px 0 0' }}>Swipe the chart or use the arrows to change month.</p>
     </>

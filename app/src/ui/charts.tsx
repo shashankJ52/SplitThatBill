@@ -122,7 +122,7 @@ export function CategoryChart({ ledger, st, prev, monthKey, pick, onPick }: { le
 export interface TrendState { all: boolean; people: boolean; off: string[]; st: { k: string; i: number } | null }
 
 /** A subway-map style line chart: one line per person plus the whole group, a station per month. */
-export function TrendChart({ ledger, monthKey, state, onChange }: { ledger: AppLedger; monthKey: string; state: TrendState; onChange: (t: TrendState) => void }) {
+export function TrendChart({ ledger, monthKey, state, onChange, solo }: { ledger: AppLedger; monthKey: string; state: TrendState; onChange: (t: TrendState) => void; solo?: boolean }) {
   const s = useAppState()
   const fmt = useMoney(ledger)
   const ms = [mAdd(monthKey, -2), mAdd(monthKey, -1), monthKey]
@@ -178,8 +178,8 @@ export function TrendChart({ ledger, monthKey, state, onChange }: { ledger: AppL
         {picked && state.st ? <><b>{picked.l}</b> · {mLabel(ms[state.st.i])}: <b>{fmt(picked.v[state.st.i])}</b></> : 'Tap a station for amounts.'}
       </div>
       <div style={{ marginTop: 10 }}>
-        {chip('__all', state.all, <Bullet letter="G" color={ledger.color ?? '#0039A6'} size={24} />, 'Whole group')}
-        {chip('__people', state.people, <Bullet letter="P" color="#A7A9AC" size={24} />, 'People lines')}
+        {chip('__all', state.all, <Bullet letter={solo ? '$' : 'G'} color={ledger.color ?? '#0039A6'} size={24} />, solo ? 'All spending' : 'Whole group')}
+        {!solo && chip('__people', state.people, <Bullet letter="P" color="#A7A9AC" size={24} />, 'People lines')}
         {state.people && ledger.members.map((p) => chip(p, !state.off.includes(p), <Avatar pid={p} size={24} />, personName(s, p)))}
       </div>
     </>

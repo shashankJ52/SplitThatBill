@@ -2,9 +2,9 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { currencyOf, defaultCurrency, groupGlyph, orderBy, otherPairBalances, pairBalance, personName, realGroups, sideCandidates, sideHiddenCount, sidePeople } from '../domain/selectors'
+import { currencyOf, defaultCurrency, groupGlyph, monthStats, orderBy, otherPairBalances, pairBalance, personalLedger, personName, realGroups, sideCandidates, sideHiddenCount, sidePeople } from '../domain/selectors'
 import { ME } from '../domain/types'
-import { fmt } from '../domain/util'
+import { fmt, nowKey } from '../domain/util'
 import { myNet } from '../money'
 import { PaySheet } from '../sheets/PaySheet'
 import { Avatar, Bullet } from './bits'
@@ -54,6 +54,7 @@ export function SideLines() {
   return (
     <>
       <Lines />
+      <Personal />
       <People />
     </>
   )
@@ -96,6 +97,32 @@ function Lines() {
           </div>
           <div className="sl-hint">Hold a line, then drag, to reorder. $ records a payment.</div>
         </>
+      )}
+    </Section>
+  )
+}
+
+/** Your own spending, kept apart from anything shared. One row that opens the Personal page. */
+function Personal() {
+  const s = useAppState()
+  const loc = useLocation()
+  const l = personalLedger(s)
+  const spent = l ? monthStats(l, nowKey()).tot : 0
+  const here = loc.pathname === '/personal'
+  return (
+    <Section id="stb-side-personal" title="Personal">
+      {() => (
+        <div className="sl-list">
+          <div className={`side-line ncf${here ? ' on' : ''}`}>
+            <Link to="/personal" className="sl-main" aria-current={here ? 'page' : undefined}>
+              <Bullet letter="👤" color={A.PERSONAL_COLOR} size={28} />
+              <span className="sl-text">
+                <b>Personal</b>
+                <small>{`spent ${fmt(spent, currencyOf(s, l))} this month`}</small>
+              </span>
+            </Link>
+          </div>
+        </div>
       )}
     </Section>
   )
