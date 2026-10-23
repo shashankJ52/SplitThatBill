@@ -1,6 +1,6 @@
 import { calc, discCents, extrasSum, itemsSum, itemWeights, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
-import { currencyOf, ledgerById, oneLedger, realGroups } from './selectors'
+import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups } from './selectors'
 import type { ScanResult } from '../scan/receipt'
 import { ME, type AppBill, type AppLedger, type AppState, type Comment } from './types'
 
@@ -15,6 +15,8 @@ export interface Draft {
   /** the ledger being edited (kind "group" or a 1-1), when editing */
   ledgerId: string | null
   kind: 'group' | 'one'
+  /** a bill in your own Personal ledger: only you are in it, nothing is split, and the split steps are skipped */
+  personal?: boolean
   /** group id when kind is "group" */
   gid: string | null
   /** the other person for a 1-1 split */
@@ -95,6 +97,7 @@ export interface NewDraftIds {
 
 /** Where a new split goes by default: the asked-for group or person, else the most recent group. */
 export function defaultTarget(s: AppState, want?: string | null): string {
+  if (want === 'me') return 'me'
   if (want?.startsWith('g:') && ledgerById(s, want.slice(2))?.kind === 'group') return want
   if (want?.startsWith('p:') && s.people[want.slice(2)] && want.slice(2) !== ME) return want
   const g = realGroups(s)[0]
@@ -162,7 +165,14 @@ export function setTarget(s: AppState, d: Draft, target: string): Draft {
   let gid: string | null = null
   let withP: PersonId | null = null
   let people: PersonId[] = [ME]
-  if (target.startsWith('g:')) {
+  let personal = false
+  if (target === 'me') {
+    // the Personal ledger is made when the bill is saved, so there may be no id yet
+    const me = personalLedger(s)
+    kind = 'group'
+    gid = me?.id ?? null
+    personal = true
+  } else if (target.startsWith('g:')) {
     const g = ledgerById(s, target.slice(2))
     if (g) {
       kind = 'group'
@@ -174,8 +184,8 @@ export function setTarget(s: AppState, d: Draft, target: string): Draft {
     people = [ME, withP]
   }
   return {
-    ...d, target, kind, gid, withP, people,
-    items: d.items.map((i) => ({ ...i, a: ev([]) })),
+    ...d, target, kind, gid, withP, people, personal,
+    items: d.items.map((i) => ({ ...i, a: personal ? ev([ME]) : ev([]) })),
     extras: d.extras.map((e) => ({ ...e, people: [] })),
     guests: {}, fixed: null, payer: ME, multi: false, paid: {},
   }
@@ -186,8 +196,8 @@ export function draftFromBill(b: AppBill, ledger: AppLedger): Draft {
   const paid = b.paid ?? {}
   return {
     id: b.id, editingId: b.id, ledgerId: ledger.id,
-    kind: ledger.kind, gid: ledger.kind === 'group' ? ledger.id : null, withP: ledger.with ?? null,
-    target: ledger.kind === 'group' ? `g:${ledger.id}` : `p:${ledger.with}`,
+    kind: ledger.kind === 'one' ? 'one' : 'group', personal: ledger.kind === 'me', gid: ledger.kind === 'one' ? null : ledger.id, withP: ledger.with ?? null,
+    target: ledger.kind === 'me' ? 'me' : ledger.kind === 'group' ? `g:${ledger.id}` : `p:${ledger.with}`,
     people: b.people.slice(), title: b.title, loc: b.loc, cat: b.cat, date: b.date, notes: b.notes, token: b.token, by: b.by,
     comments: b.comments.slice(),
     ts: b.ts,
@@ -421,7 +431,7 @@ export function toBill(d: Draft): AppBill {
   }
   return makeBill({
     id: d.id, title: d.title.trim() || 'Untitled bill', loc: d.loc.trim(), cat: d.cat, date: d.date, by: d.by, notes: d.notes.trim(),
-    token: d.token, comments: d.comments, ts: d.ts ?? Date.now(), people: d.people, items: d.items, tax: d.tax, tip: d.tip, disc: d.disc, rt: d.rt,
+    token: d.token, comments: d.comments, ts: d.ts ?? Date.now(), people: d.people, items: d.personal ? d.items.map((i) => ({ ...i, a: ev([ME]) })) : d.items, tax: d.tax, tip: d.tip, disc: d.disc, rt: d.rt,
     extras: d.extras, guests: d.guests, payer, paid, fixed: d.fixed,
   })
 }

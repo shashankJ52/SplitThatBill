@@ -14,7 +14,9 @@ export function personName(s: AppState, id: PersonId, forOthers = false): string
   if (id === ME) return forOthers ? s.profile.name.split(' ')[0] : 'You'
   return s.people[id]?.name ?? 'Someone'
 }
-export const ledgerName = (s: AppState, l: AppLedger) => (l.kind === 'one' ? `1-1 with ${personName(s, l.with as PersonId)}` : (l.name ?? 'Group'))
+export const ledgerName = (s: AppState, l: AppLedger) => (l.kind === 'one' ? `1-1 with ${personName(s, l.with as PersonId)}` : l.kind === 'me' ? 'Personal' : (l.name ?? 'Group'))
+/** Your own private ledger, once it has been opened for the first time. */
+export const personalLedger = (s: AppState) => s.ledgers.find((l) => l.kind === 'me')
 export const letterOf = (name: string) => name.charAt(0).toUpperCase()
 /** What a group's bullet shows: its chosen emoji, else the first letter of its name. */
 export const groupGlyph = (l: { name?: string; icon?: string }) => l.icon || letterOf(l.name ?? '?')
@@ -49,7 +51,8 @@ export const defaultCurrency = (s: AppState): string => currencyOr(s.layout?.cur
 export const currencyOf = (s: AppState, l: Pick<AppLedger, 'currency'> | null | undefined): string => currencyOr(l?.currency, defaultCurrency(s))
 export const ledgerCurrency = (s: AppState, id: string | null | undefined): string => currencyOf(s, id ? ledgerById(s, id) : undefined)
 /** Ledgers written in one currency. Money in different currencies is never added together. */
-export const ledgersIn = (s: AppState, code: string): AppLedger[] => s.ledgers.filter((l) => currencyOf(s, l) === code)
+/** Your personal ledger is left out: nothing in it is owed to or by anyone. */
+export const ledgersIn = (s: AppState, code: string): AppLedger[] => s.ledgers.filter((l) => l.kind !== 'me' && currencyOf(s, l) === code)
 
 /**
  * The currencies worth switching between on the Groups tab: only those where something has been recorded (a bill or a
@@ -57,7 +60,7 @@ export const ledgersIn = (s: AppState, code: string): AppLedger[] => s.ledgers.f
  */
 export function activeCurrencies(s: AppState): string[] {
   const own = defaultCurrency(s)
-  const used = new Set(s.ledgers.filter((l) => l.bills.length > 0 || l.payments.length > 0).map((l) => currencyOf(s, l)))
+  const used = new Set(s.ledgers.filter((l) => l.kind !== 'me' && (l.bills.length > 0 || l.payments.length > 0)).map((l) => currencyOf(s, l)))
   used.add(own)
   return [...used].sort((a, b) => Number(b === own) - Number(a === own) || a.localeCompare(b))
 }
@@ -66,7 +69,7 @@ export function activeCurrencies(s: AppState): string[] {
 export const overallTotals = (s: AppState, view: string = defaultCurrency(s)) => overall(ledgersIn(s, view), ME, Object.keys(s.people))
 /** What you owe and are owed in each currency other than the one being viewed, for the line under the totals. */
 export function otherTotals(s: AppState, view: string = defaultCurrency(s)): { code: string; owe: Cents; owed: Cents }[] {
-  const codes = [...new Set(s.ledgers.map((l) => currencyOf(s, l)))].filter((c) => c !== view)
+  const codes = [...new Set(s.ledgers.filter((l) => l.kind !== 'me').map((l) => currencyOf(s, l)))].filter((c) => c !== view)
   return codes.map((code) => ({ code, ...overall(ledgersIn(s, code), ME, Object.keys(s.people)) })).filter((x) => x.owe || x.owed)
 }
 export function groupTotals(l: AppLedger) {
@@ -395,6 +398,7 @@ export function alertTarget(s: AppState, n: Notif): string | null {
   // a payment: open the person it is with, since that is where the whole payment and its note are shown
   if (n.pid && s.people[n.pid] && l) return `/person/${n.pid}`
   if (l?.kind === 'group') return `/groups/${l.id}`
+  if (l?.kind === 'me') return '/personal'
   if (l?.kind === 'one' && l.with) return `/person/${l.with}`
   if (n.pid && s.people[n.pid]) return `/person/${n.pid}`
   return null

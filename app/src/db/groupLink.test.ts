@@ -6,7 +6,7 @@ let t: TestDb
 let ann: string
 let ben: string
 
-const newGroup = async (owner: string, kind: 'group' | 'one' = 'group') => {
+const newGroup = async (owner: string, kind: 'group' | 'one' | 'me' = 'group') => {
   const g = randomUUID()
   await t.as(owner, () => t.sql(`insert into groups (id, kind, name, color, owner_id) values ($1, $2, 'Flat', '#0039A6', $3)`, [g, kind, owner]))
   return g
@@ -49,5 +49,17 @@ describe('group link and icon', () => {
     await t.as(ann, () => t.sql(`update groups set icon = '🍕' where id = $1`, [g]))
     expect((await t.sql('select icon from groups where id = $1', [g]))[0].icon).toBe('🍕')
     await expect(t.as(ann, () => t.sql(`update groups set icon = repeat('x', 40) where id = $1`, [g]))).rejects.toThrow()
+  })
+
+  it('a personal ledger is allowed, has no join link, and goes when its owner deletes their account', async () => {
+    const me = await newGroup(ann, 'me')
+    expect((await t.sql('select invite_code from groups where id = $1', [me]))[0].invite_code).toBeNull()
+    await t.as(ann, () => t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, $2, 'Ann Lee', 'owner', 'active')`, [me, ann]))
+    await t.as(ann, () => t.sql('select delete_my_account()'))
+    expect((await t.sql('select count(*)::int as n from groups where id = $1', [me]))[0].n).toBe(0)
+  })
+
+  it('other kinds are still refused', async () => {
+    await expect(newGroup(ann, 'team' as never)).rejects.toThrow()
   })
 })

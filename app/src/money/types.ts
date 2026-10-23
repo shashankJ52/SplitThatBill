@@ -97,7 +97,8 @@ export interface Bill extends BillInput {
 
 export interface Ledger {
   id: string
-  kind: 'group' | 'one'
+  /** 'me' is the owner's own private ledger: bills only they are in, no one to split with */
+  kind: 'group' | 'one' | 'me'
   members: PersonId[]
   simplify?: boolean
   bills: Bill[]

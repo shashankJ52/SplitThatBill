@@ -10,7 +10,7 @@ import { ME } from '../../domain/types'
  */
 
 // ---------- what the database holds ----------
-export interface GroupRow { id: string; kind: 'group' | 'one'; name: string | null; color: string | null; icon?: string; simplify: boolean; currency?: string; owner_id: string; invite_code: string | null; created_at: string }
+export interface GroupRow { id: string; kind: 'group' | 'one' | 'me'; name: string | null; color: string | null; icon?: string; simplify: boolean; currency?: string; owner_id: string; invite_code: string | null; created_at: string }
 export interface MemberRow { group_id: string; person_id: string; user_id: string | null; display_name: string; role: Role; status: 'invited' | 'active' | 'removed' | 'left'; created_at: string; joined_at: string | null }
 export interface ProfileRow { id: string; name: string; tag: string }
 export interface RequestRow { group_id: string; user_id: string; created_at: string }

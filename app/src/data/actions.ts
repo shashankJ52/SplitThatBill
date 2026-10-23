@@ -1,7 +1,7 @@
 import { emptyState, seedState } from '../domain/seed'
 import { nets, planPayment, splitEven, type Cents, type PersonId } from '../money'
 import { ev, makeBill, item } from '../domain/bills'
-import { currencyOf, defaultCurrency, findBill, ledgerById, ledgersIn, noteKey, oneLedger, pairInGroup, realGroups, type NoteEntry } from '../domain/selectors'
+import { currencyOf, defaultCurrency, findBill, ledgerById, ledgersIn, noteKey, oneLedger, pairInGroup, personalLedger, realGroups, type NoteEntry } from '../domain/selectors'
 import type { AppBill, AppLedger, AppPayment, AppState, Comment, NoteList, Notif, Profile, SentReminder } from '../domain/types'
 import { ME } from '../domain/types'
 import { derivedId, fmt, TAG_RE } from '../domain/util'
@@ -77,6 +77,15 @@ export function ensureOneLedger(s: S, pid: PersonId, newId: string, currency?: s
   const existing = oneLedger(s, pid)
   if (existing) return { state: s, id: existing.id }
   const l: AppLedger = { id: newId, kind: 'one', with: pid, members: [ME, pid], simplify: false, currency: currency ?? defaultCurrency(s), bills: [], payments: [], lists: [] }
+  return { state: { ...s, ledgers: [...s.ledgers, l] }, id: newId }
+}
+
+/** Your own private ledger for spending that is not split with anyone. There is only ever one. */
+export const PERSONAL_COLOR = '#6CBE45'
+export function ensurePersonal(s: S, newId: string): { state: S; id: string } {
+  const existing = personalLedger(s)
+  if (existing) return { state: s, id: existing.id }
+  const l: AppLedger = { id: newId, kind: 'me', name: 'Personal', color: PERSONAL_COLOR, icon: '👤', simplify: false, currency: defaultCurrency(s), members: [ME], bills: [], payments: [], lists: [] }
   return { state: { ...s, ledgers: [...s.ledgers, l] }, id: newId }
 }
 
