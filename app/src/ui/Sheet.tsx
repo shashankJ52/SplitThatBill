@@ -37,7 +37,10 @@ export function SheetProvider({ children }: { children: ReactNode }) {
       <div id="sheet" role="dialog" aria-modal="true" aria-hidden={!isOpen} aria-label={entry?.title} inert={!isOpen}>
         {entry && (
           <>
-            <h3 id="sheet-title">{entry.title}</h3>
+            <div id="sheet-head">
+              <h3 id="sheet-title">{entry.title}</h3>
+              <button type="button" id="sheet-x" aria-label="Close" onClick={close}>✕</button>
+            </div>
             <div id="sheet-body">{entry.render(close)}</div>
           </>
         )}
