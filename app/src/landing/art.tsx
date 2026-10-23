@@ -95,7 +95,7 @@ export function ShareArt() {
         <div>Total $91.50 · paid by Alex</div>
         <div>• Jamie owes $31.25</div>
         <div>• Sam owes $15.38</div>
-        <div className="lp-link">See the full split: split-that-bill.vercel.app/b/k3Zp…</div>
+        <div className="lp-link">See the full split: splitthatbill.app/b/k3Zp…</div>
       </div>
       <div className="lp-chip">Copy · WhatsApp · open in any browser</div>
     </div>

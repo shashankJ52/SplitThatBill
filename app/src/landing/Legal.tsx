@@ -7,7 +7,7 @@ import { useTheme } from '../ui/useTheme'
 import './landing.css'
 
 /** Where people can reach the person running the app. Fill this in before launch; until then the pages say so. */
-export const CONTACT_EMAIL = 'shashankclgstuff@gmail.com'
+export const CONTACT_EMAIL = 'hello@splitthatbill.app'
 
 const UPDATED = 'October 2026'
 const YEAR = new Date().getFullYear()
