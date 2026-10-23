@@ -33,7 +33,7 @@ export function PersonalPage() {
   const tab: Tab = TABS.includes(sp.get('tab') as Tab) ? (sp.get('tab') as Tab) : 'bills'
   const month = nowKey()
   const spent = monthStats(l, month).tot
-  const all = l.bills.reduce((a, b) => a + b.total, 0)
+  const year = l.bills.filter((b) => b.date.slice(0, 4) === month.slice(0, 4)).reduce((a, b) => a + b.total, 0)
   // your personal lists are your own notes (the same ones as in Short notes)
   const oc = s.notes.reduce((a, n) => a + n.items.filter((x) => !x.done).length, 0)
   const label: Record<Tab, string> = { bills: 'Bills', overview: 'Overview', lists: `Lists${oc ? ` (${oc})` : ''}` }
@@ -50,8 +50,8 @@ export function PersonalPage() {
         </div>
         <div className="sign" style={{ marginBottom: 8 }}>
           <div className="cols" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div><div className="lbl">You spent · {mLabel(month)}</div><div className="num">{fmt(spent)}</div></div>
-            <div><div className="lbl">All time</div><div className="num">{fmt(all)}</div></div>
+            <div><div className="lbl">You spent monthly</div><div className="num">{fmt(spent)}</div><div className="mute" style={{ fontSize: 12 }}>{mLabel(month)}</div></div>
+            <div><div className="lbl">This year</div><div className="num">{fmt(year)}</div><div className="mute" style={{ fontSize: 12 }}>{month.slice(0, 4)}</div></div>
           </div>
         </div>
         <div className="btnrow" style={{ margin: '0 0 8px' }}>
