@@ -18,7 +18,7 @@ Admins never see anyone's bills, notes or messages, only counts.
 
 ## Setting up the admin account (once)
 1. Run `supabase/migrations/0013_admin.sql` in the Supabase SQL Editor.
-2. Supabase dashboard, **Authentication, Users, Add user, Create new user**. Email `shashank.admin@splitthebill.com`
+2. Supabase dashboard, **Authentication, Users, Add user, Create new user**. Email `admin@splitthatbill.app`
    (the address does not need to receive mail), a strong password of your own, and tick **Auto Confirm User**.
    Do this soon after step 1, so nobody else can sign up with that address first.
 3. Make it an admin, in the SQL Editor:
@@ -26,7 +26,7 @@ Admins never see anyone's bills, notes or messages, only counts.
    ```sql
    insert into public.admins (user_id)
    select id from auth.users
-   where email = 'shashank.admin@splitthebill.com' and email_confirmed_at is not null;
+   where email = 'admin@splitthatbill.app' and email_confirmed_at is not null;
    ```
 
    It should say "Success. 1 row". If it says 0 rows, the user is missing or not confirmed.
