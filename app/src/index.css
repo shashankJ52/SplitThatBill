@@ -32,6 +32,7 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 .mute{color:var(--mute);font-size:14px}
 .row{display:flex;align-items:center;gap:12px}.grow{flex:1;min-width:0}
 .bullet{--s:40px;width:var(--s);height:var(--s);flex:none;border-radius:50%;background:var(--c);color:var(--t);display:inline-grid;place-items:center;font-weight:700;font-size:calc(var(--s)*.5);line-height:1;letter-spacing:0}
+.icons{display:flex;flex-direction:column;gap:8px}.icon-theme{display:flex;flex-direction:column;gap:4px;font-size:13px}.icon-row{display:flex;flex-wrap:wrap;gap:10px}.icon-pick{background:none;border:0;padding:0;cursor:pointer;line-height:0}.icon-pick.letter{align-self:flex-start}
 .bullet.ring{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--fg)}
 .sign{background:#000;color:#fff;border-radius:14px;padding:14px 16px;border:1px solid var(--line);margin-bottom:14px}
 .sign .cols{display:grid;grid-template-columns:1fr 1fr 1.35fr;gap:8px}
@@ -109,6 +110,8 @@ label.f{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-t
 #sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;max-height:90vh;overflow:auto;background:var(--bg);border:2px solid var(--fg);border-bottom:0;border-radius:20px 20px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .35s var(--ease);z-index:9}
 body.sheet-open #scrim{opacity:1;pointer-events:auto}body.sheet-open #sheet{transform:none}
 #sheet h3{font-size:26px;font-weight:700;letter-spacing:-.04em;margin:0 0 6px}
+#sheet-head{position:sticky;top:-16px;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:-16px -16px 0;padding:16px 16px 0;background:var(--bg)}
+#sheet-x{flex:none;width:36px;height:36px;margin:-2px -6px 0 0;padding:0;border:2px solid var(--fg);border-radius:50%;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;line-height:1;cursor:pointer}
 .swatches{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
 .swatches button{background:none;border:0;padding:0;cursor:pointer;border-radius:50%}
 .switch{display:flex;align-items:center;gap:12px}

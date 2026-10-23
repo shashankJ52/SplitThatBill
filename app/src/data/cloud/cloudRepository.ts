@@ -43,7 +43,7 @@ const PAGE = 1000
  * one used in tests, so the tests run the very same queries.
  */
 export const LOAD_SPECS = {
-  groups: { cols: ['id', 'kind', 'name', 'color', 'simplify', 'currency', 'owner_id', 'invite_code', 'created_at'], order: ['id'] },
+  groups: { cols: ['id', 'kind', 'name', 'color', 'icon', 'simplify', 'currency', 'owner_id', 'invite_code', 'created_at'], order: ['id'] },
   members: { cols: ['group_id', 'person_id', 'user_id', 'display_name', 'role', 'status', 'created_at', 'joined_at'], order: ['group_id', 'person_id'] },
   profiles: { cols: ['id', 'name', 'tag'], order: ['id'] },
   join_requests: { cols: ['group_id', 'user_id', 'created_at'], order: ['group_id', 'user_id'], where: { status: 'pending' } },

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { ledgerById, realGroups, letterOf } from '../domain/selectors'
+import { ledgerById, realGroups, groupGlyph } from '../domain/selectors'
 import type { ListItem, NoteList } from '../domain/types'
 import { ME } from '../domain/types'
 import { uid } from '../domain/util'
@@ -25,7 +25,7 @@ export function NoteSheet({ ctx, gid, id, title: startTitle, close }: { ctx: 'n'
 
   const options: Option<string>[] = [
     { value: 'n', label: 'Just me', sub: '· personal note', icon: <Avatar pid={ME} size={28} /> },
-    ...realGroups(s).map((g) => ({ value: `g:${g.id}`, label: g.name ?? '', sub: '· group list', icon: <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={28} /> })),
+    ...realGroups(s).map((g) => ({ value: `g:${g.id}`, label: g.name ?? '', sub: '· group list', icon: <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={28} /> })),
   ]
 
   const addItem = () => {

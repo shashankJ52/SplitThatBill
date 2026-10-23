@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { allNoteEntries, isDone, letterOf, noteEntries, noteKey, type NoteEntry, type NoteFilter } from '../domain/selectors'
+import { allNoteEntries, isDone, letterOf, groupGlyph, noteEntries, noteKey, type NoteEntry, type NoteFilter } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { COLORS, ago, ink } from '../domain/util'
 import { NoteSheet } from '../sheets/NoteSheet'
@@ -159,7 +159,7 @@ export function NoteCards({ ctx, gid, q, filter = 'all' }: { ctx: 'n' | 'g'; gid
             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') toggle(); if ((ev.key === 'm' || ev.key === 'M') && ctx === 'n') { ev.preventDefault(); openManage(noteKey(e)) } }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <b>{n.title}</b>
-              {e.tag && e.ledger && <span className="gtag"><Bullet letter={letterOf(e.ledger.name ?? '?')} color={e.ledger.color ?? '#A7A9AC'} size={16} />{e.ledger.name}</span>}
+              {e.tag && e.ledger && <span className="gtag"><Bullet letter={groupGlyph(e.ledger)} color={e.ledger.color ?? '#A7A9AC'} size={16} />{e.ledger.name}</span>}
             </div>
             <div className="mute">{n.items.length ? `${dn} of ${n.items.length} ticked · ` : ''}{ago(n.ts)}</div>
           </div>
@@ -228,7 +228,7 @@ export function NoteCards({ ctx, gid, q, filter = 'all' }: { ctx: 'n' | 'g'; gid
               <div className="card row" key={noteKey(e)} style={{ borderLeft: `6px solid ${noteColor(e)}` }}>
                 <div className="grow">
                   <b>{e.n.title}</b>{' '}
-                  {e.tag && e.ledger && <span className="gtag"><Bullet letter={letterOf(e.ledger.name ?? '?')} color={e.ledger.color ?? '#A7A9AC'} size={16} />{e.ledger.name}</span>}
+                  {e.tag && e.ledger && <span className="gtag"><Bullet letter={groupGlyph(e.ledger)} color={e.ledger.color ?? '#A7A9AC'} size={16} />{e.ledger.name}</span>}
                 </div>
                 <button className="linkbtn" onClick={() => { store.update((st) => A.toggleNoteHidden(st, noteKey(e))); toast('Back in your Short notes') }}>Unhide</button>
               </div>

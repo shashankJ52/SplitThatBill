@@ -4,7 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
-import { letterOf, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
@@ -116,7 +116,7 @@ export function Capture() {
         <div className="mute" style={{ marginBottom: 6 }}>
           {selGroup ? (
             <div className="row">
-              <Bullet letter={letterOf(selGroup.name ?? '?')} color={selGroup.color ?? '#A7A9AC'} size={30} />
+              <Bullet letter={groupGlyph(selGroup)} color={selGroup.color ?? '#A7A9AC'} size={30} />
               <b style={{ color: 'var(--fg)' }}>{selGroup.name}</b>
               <span>· {selGroup.members.length} people</span>
             </div>
@@ -133,7 +133,7 @@ export function Capture() {
         <div>
           {rg.map((g) => (
             <button key={g.id} className={`fchip${sel === `g:${g.id}` ? ' on' : ''}`} onClick={() => pick(`g:${g.id}`)}>
-              <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={28} />
+              <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={28} />
               {g.name}
             </button>
           ))}

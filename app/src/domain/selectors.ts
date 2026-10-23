@@ -16,6 +16,8 @@ export function personName(s: AppState, id: PersonId, forOthers = false): string
 }
 export const ledgerName = (s: AppState, l: AppLedger) => (l.kind === 'one' ? `1-1 with ${personName(s, l.with as PersonId)}` : (l.name ?? 'Group'))
 export const letterOf = (name: string) => name.charAt(0).toUpperCase()
+/** What a group's bullet shows: its chosen emoji, else the first letter of its name. */
+export const groupGlyph = (l: { name?: string; icon?: string }) => l.icon || letterOf(l.name ?? '?')
 
 export function findBill(s: AppState, id: string): { bill: AppBill; ledger: AppLedger } | null {
   for (const ledger of s.ledgers) {

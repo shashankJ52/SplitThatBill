@@ -1,7 +1,7 @@
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { defaultCurrency, filterActivity, ledgerName, letterOf, otherPairBalances, pairBalance, pairCurrencies, personActivity, type ActivityKind } from '../domain/selectors'
+import { defaultCurrency, filterActivity, ledgerName, groupGlyph, otherPairBalances, pairBalance, pairCurrencies, personActivity, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { fmt as fmtIn } from '../domain/util'
 import { RemindSheet } from '../sheets/RemindSheet'
@@ -72,7 +72,7 @@ export function PersonPage() {
           const l = x.ledger as unknown as (typeof s.ledgers)[number]
           const inner = (
             <>
-              {l.kind === 'group' ? <Bullet letter={letterOf(l.name ?? '?')} color={l.color ?? '#A7A9AC'} size={36} /> : <Avatar pid={pid} size={36} />}
+              {l.kind === 'group' ? <Bullet letter={groupGlyph(l)} color={l.color ?? '#A7A9AC'} size={36} /> : <Avatar pid={pid} size={36} />}
               <div className="grow"><b>{ledgerName(s, l)}</b></div>
               <span className={`stat ${x.amt > 0 ? 'g' : 'r'}`}>{x.amt > 0 ? 'owes you ' : 'you owe '}{fmtIn(Math.abs(x.amt), x.code)}</span>
             </>

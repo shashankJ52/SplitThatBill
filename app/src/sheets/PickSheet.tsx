@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppState } from '../data/store'
-import { others, realGroups, letterOf } from '../domain/selectors'
+import { others, realGroups, groupGlyph } from '../domain/selectors'
 import { Avatar, Bullet, Empty } from '../ui/bits'
 import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
@@ -21,7 +21,7 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
     mode === 'g'
       ? realGroups(s)
           .filter((g) => (g.name ?? '').toLowerCase().includes(t))
-          .map((g) => ({ key: `g:${g.id}`, icon: <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={38} />, label: g.name ?? '', sub: `${g.members.length} people` }))
+          .map((g) => ({ key: `g:${g.id}`, icon: <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={38} />, label: g.name ?? '', sub: `${g.members.length} people` }))
       : others(s)
           .filter((p) => s.people[p].name.toLowerCase().includes(t) || (t.startsWith('@') && t.length > 1 && (s.people[p].tag ?? '').toLowerCase().includes(t.slice(1))))
           .map((p) => ({ key: `p:${p}`, icon: <Avatar pid={p} size={38} />, label: s.people[p].name, sub: s.people[p].user ? `@${s.people[p].tag ?? ''}` : 'Not on the app' }))

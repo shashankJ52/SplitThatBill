@@ -45,16 +45,18 @@ export interface GroupInput {
   id: string
   name: string
   color: string
+  /** an emoji for the bullet; missing or empty means the first letter */
+  icon?: string
   simplify: boolean
   members: PersonId[]
   /** currency code, or missing to follow the account default */
   currency?: string
 }
 export function createGroup(s: S, g: GroupInput): S {
-  const l: AppLedger = { id: g.id, kind: 'group', name: g.name, color: g.color, simplify: g.simplify, currency: g.currency ?? defaultCurrency(s), members: g.members, bills: [], payments: [], lists: [] }
+  const l: AppLedger = { id: g.id, kind: 'group', name: g.name, color: g.color, ...(g.icon ? { icon: g.icon } : {}), simplify: g.simplify, currency: g.currency ?? defaultCurrency(s), members: g.members, bills: [], payments: [], lists: [] }
   return { ...s, ledgers: [...s.ledgers, l] }
 }
-export function updateGroup(s: S, id: string, patch: Partial<Pick<GroupInput, 'name' | 'color' | 'simplify' | 'members' | 'currency'>>): S {
+export function updateGroup(s: S, id: string, patch: Partial<Pick<GroupInput, 'name' | 'color' | 'icon' | 'simplify' | 'members' | 'currency'>>): S {
   return mapLedger(s, id, (l) => ({ ...l, ...patch }))
 }
 export function deleteGroup(s: S, id: string): S {

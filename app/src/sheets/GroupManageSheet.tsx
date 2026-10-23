@@ -130,7 +130,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
   return (
     <>
       <div className="row" style={{ marginBottom: 6 }}>
-        <Bullet letter={letterOf(name)} color={l.color ?? '#A7A9AC'} size={44} />
+        <Bullet letter={l.icon || letterOf(name)} color={l.color ?? '#A7A9AC'} size={44} />
         <div className="grow">
           <div className="gname">{name}</div>
           <div className="mute">You are {myRole(l) === 'admin' ? 'an admin' : myRole(l) === 'owner' ? 'the owner' : 'a member'}</div>

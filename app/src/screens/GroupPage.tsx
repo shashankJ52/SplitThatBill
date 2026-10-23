@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { filterActivity, groupTotals, ledgerActivity, ledgerById, letterOf, monthStats, monthsAsc, openCount, pairInGroup, personName, type ActivityKind } from '../domain/selectors'
+import { filterActivity, groupTotals, ledgerActivity, ledgerById, groupGlyph, monthStats, monthsAsc, openCount, pairInGroup, personName, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { mAdd, mLabel, nowKey } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
@@ -46,7 +46,7 @@ export function GroupPage() {
     <Screen id="v-group">
       <div className="vhead">
         <div className="row" style={{ margin: '2px 0 8px' }}>
-          <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={50} />
+          <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={50} />
           <div className="grow">
             <div className="gname" style={{ fontSize: 26, lineHeight: 1.05 }}>{g.name}</div>
             <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.members.map((m) => personName(s, m)).join(', ')}</div>

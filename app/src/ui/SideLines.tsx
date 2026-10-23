@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { currencyOf, defaultCurrency, letterOf, orderBy, otherPairBalances, pairBalance, personName, realGroups, sideCandidates, sideHiddenCount, sidePeople } from '../domain/selectors'
+import { currencyOf, defaultCurrency, groupGlyph, orderBy, otherPairBalances, pairBalance, personName, realGroups, sideCandidates, sideHiddenCount, sidePeople } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { fmt } from '../domain/util'
 import { myNet } from '../money'
@@ -81,7 +81,7 @@ function Lines() {
                   node: (
                     <div className={`side-line ncf${here ? ' on' : ''}`}>
                       <Link to={`/groups/${g.id}`} className="sl-main" aria-current={here ? 'page' : undefined}>
-                        <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={28} />
+                        <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={28} />
                         <span className="sl-text">
                           <b>{g.name}</b>
                           <small className={n < 0 ? 'r' : n > 0 ? 'g' : ''}>{n < 0 ? `you owe ${fmt(-n, currencyOf(s, g))}` : n > 0 ? `owed ${fmt(n, currencyOf(s, g))}` : 'settled up'}</small>

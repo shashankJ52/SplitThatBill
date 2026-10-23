@@ -83,6 +83,8 @@ export interface JoinRequest {
 export interface AppLedger extends Omit<Ledger, 'bills' | 'payments'> {
   name?: string
   color?: string
+  /** an emoji shown in the line bullet instead of the first letter */
+  icon?: string
   /** the other person in a 1-1 ledger */
   with?: PersonId
   /** the owner, once the group is shared; missing on a group only you have */

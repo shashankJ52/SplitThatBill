@@ -4,7 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAppState } from '../../data/store'
 import { CATEGORIES } from '../../domain/bills'
 import * as D from '../../domain/draft'
-import { letterOf, ledgerById, personName } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName } from '../../domain/selectors'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
 import { Avatar, Bullet } from '../../ui/bits'
@@ -29,7 +29,7 @@ export const Details = withDraft(function Details({ d }: { d: D.Draft }) {
         <label className="f" style={{ marginTop: 0 }}>Split with</label>
         <div className="card">
           {g ? (
-            <div className="row"><Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={34} /><b>{g.name}</b></div>
+            <div className="row"><Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={34} /><b>{g.name}</b></div>
           ) : (
             <div className="row"><Avatar pid={d.withP ?? 'me'} size={34} /><b>1-1 with {personName(s, d.withP ?? 'me')}</b></div>
           )}

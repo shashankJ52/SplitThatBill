@@ -6,6 +6,7 @@ import { useAppState, useStore } from '../data/store'
 import { isShared } from '../domain/membership'
 import { currencyOf, defaultCurrency, ledgerById, personName, realGroups } from '../domain/selectors'
 import { ME } from '../domain/types'
+import { GROUP_ICONS } from '../domain/groupIcons'
 import { COLORS, uid } from '../domain/util'
 import { Avatar, Bullet } from '../ui/bits'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
@@ -25,6 +26,7 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
   const shared = !!existing && isShared(existing)
   const [name, setName] = useState(existing?.name ?? '')
   const [color, setColor] = useState(() => existing?.color ?? COLORS[Math.floor(Math.random() * COLORS.length)])
+  const [icon, setIcon] = useState(existing?.icon ?? '')
   const [simplify, setSimplify] = useState(existing?.simplify ?? true)
   const [currency, setCurrency] = useState(existing ? currencyOf(s, existing) : defaultCurrency(s))
   const [members, setMembers] = useState<string[]>(existing?.members ?? [ME])
@@ -50,11 +52,11 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
     }
     if (realGroups(s).some((g) => g.id !== gid && (g.name ?? '').toLowerCase() === n.toLowerCase())) return toast('You already have a group with that name')
     if (existing) {
-      store.update((st) => A.updateGroup(st, existing.id, { name: n, color, simplify, members, currency }))
+      store.update((st) => A.updateGroup(st, existing.id, { name: n, color, icon, simplify, members, currency }))
       toast('Group updated')
     } else {
       const id = uid('g')
-      store.update((st) => A.createGroup(st, { id, name: n, color, simplify, members, currency }))
+      store.update((st) => A.createGroup(st, { id, name: n, color, icon, simplify, members, currency }))
       toast('Group created')
       onCreated?.(id)
     }
@@ -76,8 +78,26 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
       <div className="swatches">
         {COLORS.map((c) => (
           <button key={c} onClick={() => setColor(c)} aria-label={`Color ${c}`} aria-pressed={c === color}>
-            <Bullet letter={(name || '?').charAt(0).toUpperCase()} color={c} size={34} ring={c === color} />
+            <Bullet letter={icon || (name || '?').charAt(0).toUpperCase()} color={c} size={34} ring={c === color} />
           </button>
+        ))}
+      </div>
+      <label className="f">Icon</label>
+      <div className="icons">
+        <button type="button" className="icon-pick letter" onClick={() => setIcon('')} aria-pressed={!icon} aria-label="First letter of the name">
+          <Bullet letter={(name || 'A').charAt(0).toUpperCase()} color={color} size={34} ring={!icon} />
+        </button>
+        {GROUP_ICONS.map((t) => (
+          <div key={t.theme} className="icon-theme">
+            <span className="mute">{t.theme}</span>
+            <div className="icon-row">
+              {t.icons.map((e) => (
+                <button key={e} type="button" className="icon-pick" onClick={() => setIcon(e)} aria-pressed={icon === e} aria-label={`Icon ${e}`}>
+                  <Bullet letter={e} color={color} size={34} ring={icon === e} />
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
       <label className="f">Debts</label>

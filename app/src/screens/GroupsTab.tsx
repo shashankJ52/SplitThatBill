@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { activeCurrencies, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, letterOf, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
+import { activeCurrencies, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, groupGlyph, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
 import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
@@ -140,7 +140,7 @@ export function GroupsTab() {
                     key: g.id,
                     node: (
                       <Link className="card tap row ncf" to={`/groups/${g.id}`}>
-                        <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={46} />
+                        <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={46} />
                         <div className="grow">
                           <div className="gname">{g.name}</div>
                           <div className="mute">{g.members.length} {g.members.length === 1 ? 'person' : 'people'}</div>

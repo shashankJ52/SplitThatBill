@@ -4,7 +4,7 @@ import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
-import { alertTarget, findBill, ledgerById, letterOf, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
+import { alertTarget, findBill, ledgerById, groupGlyph, pairInGroup, personName, realGroups, unreadCount, type NoteFilter } from '../domain/selectors'
 import type { Notif } from '../domain/types'
 import { ago } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
@@ -21,7 +21,7 @@ function metaOf(s: ReturnType<typeof useAppState>, n: Notif): { c: string; lette
   const f = n.billId ? findBill(s, n.billId) : null
   const g = f?.ledger ?? (n.gid ? ledgerById(s, n.gid) : undefined)
   if (/ paid |payment/.test(n.text)) return { c: '#00933C', letter: '$' }
-  if (g?.kind === 'group') return { c: g.color ?? '#A7A9AC', letter: letterOf(g.name ?? '?') }
+  if (g?.kind === 'group') return { c: g.color ?? '#A7A9AC', letter: groupGlyph(g) }
   return { c: '#A7A9AC', letter: '•' }
 }
 
@@ -314,7 +314,7 @@ export function AlertsTab({ only }: { only?: 'splits' | 'notes' }) {
               </button>
               {groups.map((g) => (
                 <button key={g.id} className={`fchip${f === `g:${g.id}` ? ' on' : ''}`} aria-pressed={f === `g:${g.id}`} onClick={() => setFilter(`g:${g.id}`)}>
-                  <Bullet letter={letterOf(g.name ?? '?')} color={g.color ?? '#A7A9AC'} size={26} />
+                  <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={26} />
                   {g.name}
                 </button>
               ))}
