@@ -134,6 +134,8 @@ export interface SentReminder {
 export interface Layout {
   /** people hidden from the laptop sidebar's recent 1-1s (they stay in the Groups tab) */
   sideHidden?: PersonId[]
+  /** people taken off the 1-1 suggestions when scanning a receipt (they stay everywhere else) */
+  scanHidden?: PersonId[]
   /** paper size for PDFs; missing means Letter in the USA, Canada and Mexico and A4 elsewhere */
   paper?: 'Letter' | 'A4'
   /** your default currency, used by every group and split that has not chosen its own */

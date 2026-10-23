@@ -4,11 +4,12 @@ import { Screen } from '../../app/Screen'
 import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
-import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, scanHiddenCount, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
 import { GroupSheet } from '../../sheets/GroupSheet'
+import * as A from '../../data/actions'
 import { PERSONAL_COLOR } from '../../data/actions'
 import { PickSheet } from '../../sheets/PickSheet'
 import { Avatar, Bullet } from '../../ui/bits'
@@ -158,15 +159,23 @@ export function Capture() {
         <h2 style={{ margin: '6px 0 8px' }}>Just two of you (1-1)</h2>
         <div>
           {rp.map((p) => (
-            <button key={p} className={`fchip${sel === `p:${p}` ? ' on' : ''}`} onClick={() => pick(`p:${p}`)}>
-              <Avatar pid={p} size={28} />
-              {personName(s, p)}
-            </button>
+            <span className="chipx" key={p}>
+              <button className={`fchip${sel === `p:${p}` ? ' on' : ''}`} onClick={() => pick(`p:${p}`)}>
+                <Avatar pid={p} size={28} />
+                {personName(s, p)}
+              </button>
+              {sel !== `p:${p}` && (
+                <button className="chipx-x" aria-label={`Remove ${personName(s, p)} from these suggestions`} title="Remove from suggestions" onClick={() => store.update((st) => A.hideScanPerson(st, p))}>✕</button>
+              )}
+            </span>
           ))}
-          {others(s).length > 5 && (
+          {others(s).length > rp.length && (
             <button className="fchip plain" onClick={() => sheet.open('All people', (close) => <PickSheet mode="p" onPick={pick} close={close} />)}>All people…</button>
           )}
           <button className={`fchip plain${sel === 'new' ? ' on' : ''}`} onClick={() => pick('new')}>+ Someone new</button>
+          {scanHiddenCount(s) > 0 && (
+            <button className="fchip plain" onClick={() => store.update(A.showScanPeople)}>Show {scanHiddenCount(s)} removed</button>
+          )}
         </div>
         {sel === 'new' && (
           <div>

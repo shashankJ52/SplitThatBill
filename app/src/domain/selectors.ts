@@ -201,12 +201,17 @@ export function recentGroups(s: AppState, n: number) {
     .map((x) => x.g)
 }
 export function recentPeople(s: AppState, n: number) {
+  const hidden = new Set(s.layout?.scanHidden ?? [])
   return others(s)
+    .filter((p) => !hidden.has(p))
     .map((p, i) => ({ p, d: oneLedger(s, p) ? lastActivity(oneLedger(s, p) as AppLedger) : '', i }))
     .sort((a, b) => (b.d < a.d ? -1 : b.d > a.d ? 1 : a.i - b.i))
     .slice(0, n)
     .map((x) => x.p)
 }
+
+/** How many people are hidden from the scan screen's suggestions (only counting people who still exist). */
+export const scanHiddenCount = (s: AppState): number => (s.layout?.scanHidden ?? []).filter((p) => s.people[p] && p !== ME).length
 
 // ---------- group activity feed and months ----------
 export type FeedItem = { k: 'b'; d: string; o: AppBill } | { k: 'p'; d: string; o: AppLedger['payments'][number] }
