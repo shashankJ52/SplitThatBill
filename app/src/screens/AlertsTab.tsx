@@ -303,7 +303,7 @@ export function AlertsTab({ only }: { only?: 'splits' | 'notes' }) {
         ) : (
           <section className="sect">
             <div className="row" style={{ margin: '2px 0 8px' }}>
-              <input placeholder="Search notes, or type a title and tap + New" maxLength={40} aria-label="Search notes" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input placeholder="Search, or name a new note" maxLength={40} aria-label="Search notes" value={q} onChange={(e) => setQ(e.target.value)} />
               <button className="primary" style={{ width: 'auto', padding: '12px 18px', whiteSpace: 'nowrap' }} onClick={() => sheet.open('New note', (close) => <NoteSheet ctx="n" gid={null} title={q.trim()} close={close} />)}>+ New</button>
             </div>
             <div className="chiprow" role="group" aria-label="Filter notes by group">

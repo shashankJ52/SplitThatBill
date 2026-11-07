@@ -8,7 +8,7 @@ import { currencyOf, findBill, ledgerName, personName } from '../domain/selector
 import { buildExportModel } from '../share/exportModel'
 import { ShareImageSheet } from '../sheets/ShareImageSheet'
 import { ME } from '../domain/types'
-import { ago, uid, whenLabel } from '../domain/util'
+import { ago, dayLabel, uid, whenLabel } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
 import { BillBreakdown, receiptNote } from '../ui/BillBreakdown'
 import { paidText } from '../ui/BillCards'
@@ -58,7 +58,7 @@ export function BillPage() {
     <Screen id="v-bill">
       <div className="vhead">
         <div className="gname" style={{ fontSize: 30, lineHeight: 1.05, marginTop: 4 }}>{b.title}</div>
-        <div className="mute">{b.date}{b.loc ? ` · 📍 ${b.loc}` : ''}</div>
+        <div className="mute">{dayLabel(b.date)}{b.loc ? ` · 📍 ${b.loc}` : ''}</div>
         <div className="mute">{L.kind === 'me' ? 'Personal' : `${paidText(s, b)} · added by ${personName(s, b.by)}`}{b.ts ? ` · ${whenLabel(b.ts, b.date, { exact: true })}` : ''}</div>
         <div className="row" style={{ margin: '8px 0', flexWrap: 'wrap', gap: 8 }}>
           <Link className="pill tap" to={L.kind === 'group' ? `/groups/${L.id}` : L.kind === 'me' ? '/personal' : `/person/${L.with}`}>{ledgerName(s, L)} ›</Link>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ago, dateIn, fmt, mAdd, mLabel, parseMoney, pf, nowKey, whenLabel, clockIn } from './util'
+import { ago, dateIn, dayLabel, fmt, mAdd, mLabel, parseMoney, pf, nowKey, whenLabel, clockIn } from './util'
 
 const GAP = '\u00a0'
 
@@ -123,5 +123,17 @@ describe('fmt in other currencies', () => {
   it('accepts typed amounts with other symbols', () => {
     expect(parseMoney('€12.50')).toBe(1250)
     expect(parseMoney('£1,000')).toBe(100000)
+  })
+})
+
+describe('dayLabel', () => {
+  it('writes a calendar date in words, whatever the time zone', () => {
+    expect(dayLabel('2026-11-07', 'en-US')).toBe('Nov 7, 2026')
+    expect(dayLabel('2026-01-01', 'en-US')).toBe('Jan 1, 2026')
+    expect(dayLabel('2026-12-31', 'en-US')).toBe('Dec 31, 2026')
+  })
+  it('leaves anything that is not a date as it is', () => {
+    expect(dayLabel('soon')).toBe('soon')
+    expect(dayLabel('')).toBe('')
   })
 })

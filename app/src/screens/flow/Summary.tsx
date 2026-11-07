@@ -4,6 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAppState } from '../../data/store'
 import * as D from '../../domain/draft'
 import { personName } from '../../domain/selectors'
+import { dayLabel } from '../../domain/util'
 import { ME } from '../../domain/types'
 import { discCents, extrasSum, itemWeights, paidMap } from '../../money'
 import { useSave } from '../../flow/useSave'
@@ -29,7 +30,7 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
       <div className="vhead">
         <h1 className="display">Summary</h1>
         <div className="sign">
-          <div className="mute">{d.title} · {d.date}{d.loc ? ` · 📍 ${d.loc}` : ''} · paid by {payers}</div>
+          <div className="mute">{d.title} · {dayLabel(d.date)}{d.loc ? ` · 📍 ${d.loc}` : ''} · paid by {payers}</div>
           <div className="num" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.05em' }}>{fmt(c.total)}</div>
           <div className="mute">{ex || dc ? `Receipt ${fmt(d.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}` : ''}</div>
         </div>

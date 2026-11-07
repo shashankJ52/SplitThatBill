@@ -30,6 +30,12 @@ export const today = () => localISODate()
 export const nowKey = () => today().slice(0, 7)
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+/** "Nov 7, 2026" from a calendar date like 2026-11-07, without the time zone shifting the day. */
+export const dayLabel = (iso: string, locale?: string): string => {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+}
 export const mLabel = (k: string) => `${MONTHS[+k.slice(5) - 1]} ${k.slice(0, 4)}`
 export const mShort = (k: string) => MONTHS[+k.slice(5) - 1]
 export function mAdd(k: string, n: number): string {

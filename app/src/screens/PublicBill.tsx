@@ -2,6 +2,7 @@ import { Navigate, useParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
 import { findBill } from '../domain/selectors'
+import { dayLabel } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
 import { calc } from '../money'
 import { Bullet } from '../ui/bits'
@@ -31,7 +32,7 @@ export function PublicBill({ bill: given, onGet }: { bill?: AppBill; onGet?: () 
         </div>
         <div className="pub" style={{ marginBottom: 8 }}>
           <div className="gname" style={{ fontSize: 28, lineHeight: 1.05 }}>{b.title}</div>
-          <div className="mute">{b.date}{b.loc ? ` · 📍 ${b.loc}` : ''} · {paidText(s, b, true)}</div>
+          <div className="mute">{dayLabel(b.date)}{b.loc ? ` · 📍 ${b.loc}` : ''} · {paidText(s, b, true)}</div>
           <div className="row" style={{ marginTop: 8 }}>
             <div className="grow mute">Total</div>
             <b style={{ fontSize: 26, letterSpacing: '-.04em' }}>{fmt(c.total)}</b>
