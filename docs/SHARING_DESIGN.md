@@ -15,7 +15,8 @@ Status: design agreed with the owner on 2026-10-20. Migration `0004_sharing.sql`
 | Group link | Anyone in the group can share it. Opening it shows only the group name and who runs it. The visitor taps **Request to join**; an admin approves or denies. Every group gets one automatically and it is permanent; there is no off switch or reset in the app. |
 | Removing someone | The app only allows it when their balance is zero. Old bills stay exactly as they were and the person is listed as a former member. If someone will not settle, an admin can **Remove and write off**, which records a visible adjustment so the others' balances stay correct. The removed person loses all access. |
 | Editing bills | Only the person who added a bill can edit or delete it. Everyone else comments. |
-| Contacts | A friend without the app is a named member of the group (no account). Linking a contact to a real account later is not built yet. |
+| Contacts | A friend without the app is a named member of the group (no account). Once they sign up, an admin can **Link to an account** (migration 0017, `link_contact`): the name becomes that person's invited membership and every bill and payment that mentions the name is rewritten to their account, so nothing is re-entered. They still have to accept the invite. It works per group or 1-1, and the app applies it to every group the admin runs that the name is in. |
+| Friends by tag | Someone found by `@tag` is remembered in your synced settings (`layout.friends`) even before they are in a group or 1-1, so they do not turn into "Someone" after a refresh. A friend's invite link is `/u/<tag>`: signed out it is remembered through sign-up, then offers to add them. |
 
 ## Data model
 
