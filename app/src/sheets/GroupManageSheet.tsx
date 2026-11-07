@@ -14,8 +14,9 @@ import { useMoney } from '../ui/useMoney'
 import { Avatar, Bullet } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
-import { useAddPerson } from '../ui/useAddPerson'
 import { GroupSheet } from './GroupSheet'
+import { FindFriend } from '../ui/FindFriend'
+import { LinkContactSheet } from './LinkContactSheet'
 import { PaySheet } from './PaySheet'
 
 const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member' } as const
@@ -34,10 +35,8 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
   const sheet = useSheet()
   const toast = useToast()
   const nav = useNavigate()
-  const addByInput = useAddPerson()
   const l = ledgerById(s, gid)
   const fmt = useMoney(l)
-  const [add, setAdd] = useState('')
   const [busy, setBusy] = useState(false)
   const [panel, setPanel] = useState<Panel>(null)
 
@@ -58,16 +57,13 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
     return !r.err
   }
 
-  const invite = async () => {
-    const r = await addByInput(add, l.members)
-    if (r.err || !r.id) return toast(r.err ?? 'Could not add')
-    const id = r.id
-    if (s.people[id]?.user || store.get().people[id]?.user) {
-      if (await act(() => account.invite(gid, id), `Invite sent to ${personName(store.get(), id)}`)) setAdd('')
+  /** Someone chosen in the finder: a person with an account is invited, a name without one is added straight away. */
+  const addPicked = async (id: string) => {
+    if (store.get().people[id]?.user) {
+      await act(() => account.invite(gid, id), `Invite sent to ${personName(store.get(), id)}`)
     } else {
       store.update((st) => A.updateGroup(st, gid, { members: [...(ledgerById(st, gid)?.members ?? []), id] }))
       toast(`${personName(store.get(), id)} added`)
-      setAdd('')
     }
   }
   const copy = async (text: string, ok: string) => {
@@ -154,6 +150,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
                 {m.role !== 'member' && <span className="pill">{ROLE_LABEL[m.role]}</span>}
                 <div className="mute">{m.net > 0 ? `is owed ${fmt(m.net)}` : m.net < 0 ? `owes ${fmt(-m.net)}` : 'settled up'}</div>
               </div>
+              {admin && m.contact && <button className="linkbtn" disabled={busy} onClick={() => sheet.open('Link to an account', (c) => <LinkContactSheet pid={m.pid} close={c} />)}>Link to account</button>}
               {a.promote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'admin'), `${m.name} is now an admin`)}>Make admin</button>}
               {a.demote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'member'), `${m.name} is a member again`)}>Remove admin</button>}
               {a.remove && <button className="del" aria-label={`Remove ${m.name}`} onClick={() => setPanel({ kind: 'remove', m })}>✕</button>}
@@ -176,10 +173,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
       {admin && (
         <>
           <label className="f">Add someone</label>
-          <div className="row">
-            <input placeholder="@tag to invite, or a name" maxLength={30} value={add} onChange={(e) => setAdd(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void invite()} aria-label="Add someone by tag or name" />
-            <button className="secondary" style={{ width: 92, padding: 11 }} disabled={busy} onClick={() => void invite()}>Add</button>
-          </div>
+          <FindFriend current={[...l.members, ...(l.invited ?? [])]} inButton="" onPick={(id) => void addPicked(id)} />
           <div className="mute" style={{ marginTop: 4 }}>A friend with an account gets an invite and joins once they accept.</div>
         </>
       )}

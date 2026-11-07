@@ -12,6 +12,7 @@ import { ProfileSheet, profileTitle, type ProfileField } from '../sheets/Profile
 import { Bullet, Seg } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
+import { shareMyTag } from '../ui/shareTag'
 import { resetUiState, useUiState } from '../ui/uiState'
 import { useTheme } from '../ui/useTheme'
 import { uid } from '../domain/util'
@@ -37,16 +38,7 @@ export function AccountTab() {
     open(f)
   }
   const open = (f: ProfileField) => sheet.open(profileTitle(f), (close) => <ProfileSheet field={f} close={close} />)
-  const share = async () => {
-    const t = `Add me on SplitThatBill: @${p.tag} ${window.location.origin}/u/${p.tag}`
-    try {
-      if (navigator.share) return void (await navigator.share({ text: t }).catch(() => undefined))
-      await navigator.clipboard.writeText(t)
-      toast('Invite copied')
-    } catch {
-      toast('Copy blocked. Share your tag manually.')
-    }
-  }
+  const share = () => shareMyTag(p.tag, toast)
   const logout = () =>
     sheet.open('Log out?', (close) => (
       <>

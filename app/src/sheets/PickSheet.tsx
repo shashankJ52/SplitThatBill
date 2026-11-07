@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useAppState } from '../data/store'
 import { others, realGroups, groupGlyph } from '../domain/selectors'
 import { Avatar, Bullet, Empty } from '../ui/bits'
+import { useAccountMode } from '../data/account'
+import { FindFriend } from '../ui/FindFriend'
 import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
 import { ME } from '../domain/types'
@@ -13,6 +15,7 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
   const s = useAppState()
   const toast = useToast()
   const addByInput = useAddPerson()
+  const live = useAccountMode() === 'cloud'
   const [q, setQ] = useState('')
   const [add, setAdd] = useState('')
   const t = q.trim().toLowerCase()
@@ -51,7 +54,13 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
           <Empty title="No matches" small>{mode === 'g' ? 'Try another name or create a group.' : 'Add them by name or @usertag below.'}</Empty>
         )}
       </div>
-      {mode !== 'g' && (
+      {mode !== 'g' && live && (
+        <>
+          <label className="f">Not listed?</label>
+          <FindFriend current={[ME]} onPick={(id) => { close(); onPick(`p:${id}`) }} />
+        </>
+      )}
+      {mode !== 'g' && !live && (
         <>
           <label className="f">Not listed?</label>
           <div className="row">

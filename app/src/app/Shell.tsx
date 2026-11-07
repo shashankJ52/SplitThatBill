@@ -4,7 +4,7 @@ import { useAppState } from '../data/store'
 import { unreadCount } from '../domain/selectors'
 import { useFlow } from '../flow/FlowProvider'
 import { useSheet } from '../ui/Sheet'
-import { pendingJoin, rememberJoin } from './pendingJoin'
+import { pendingFriendTag, pendingJoin, rememberFriendTag, rememberJoin } from './pendingJoin'
 import { Bullet } from '../ui/bits'
 import { SideGrip } from '../ui/SideGrip'
 import { SideLines } from '../ui/SideLines'
@@ -40,11 +40,15 @@ export function Shell() {
   const isPublic = path.startsWith('/preview') || isPublicLink
   if (!s.signedIn && !isAuth && !isPublicLink) {
     if (path.startsWith('/join/')) rememberJoin(path.slice('/join/'.length))
+    if (path.startsWith('/u/')) rememberFriendTag(path.slice('/u/'.length))
     return <Navigate to="/welcome" replace />
   }
   // a group link opened before logging in is followed once there is an account to use it with
   const waiting = pendingJoin()
   if (s.signedIn && waiting && !path.startsWith('/join/') && !isAuth && !isPublicLink) return <Navigate to={`/join/${waiting}`} replace />
+  // a friend's invite link opened before signing up is followed too, once there is an account
+  const friendWaiting = pendingFriendTag()
+  if (s.signedIn && friendWaiting && !waiting && !path.startsWith('/u/') && !isAuth && !isPublicLink) return <Navigate to={`/u/${friendWaiting}`} replace />
   if (s.signedIn && path === '/') return <Navigate to="/groups" replace />
 
   const isFlow = FLOW_STEPS.includes(path)

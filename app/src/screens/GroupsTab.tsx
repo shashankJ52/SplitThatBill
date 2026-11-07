@@ -9,6 +9,7 @@ import { ME } from '../domain/types'
 import { myNet } from '../money'
 import { fmt as fmtIn, nowKey, today } from '../domain/util'
 import { useWide } from '../ui/useWide'
+import { shareMyTag } from '../ui/shareTag'
 import { GroupSheet } from '../sheets/GroupSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { PickSheet } from '../sheets/PickSheet'
@@ -130,6 +131,28 @@ export function GroupsTab() {
           )}
         </div>
         <button className="secondary" style={{ marginTop: 10 }} onClick={recordPayment}>Record payment</button>
+        {allGroups === 0 && Object.keys(s.people).every((p) => p === ME) && (
+          <div className="card" style={{ display: 'block', marginTop: 10 }}>
+            <b>{s.profile.name.split(' ')[0] ? `Welcome, ${s.profile.name.split(' ')[0]}!` : 'Welcome!'} Start here</b>
+            <div className="mute" style={{ margin: '2px 0 8px' }}>Three steps to your first split.</div>
+            <div className="row" style={{ padding: '6px 0' }}>
+              <Bullet letter="1" color="#0039A6" size={30} />
+              <div className="grow"><b>Find a friend</b><div className="mute">Search by their @usertag</div></div>
+              <button className="secondary pillb" onClick={() => sheet.open('Find someone', (close) => <PickSheet mode="f" close={close} onPick={(v) => nav(`/person/${v.slice(2)}`)} />)}>Find</button>
+            </div>
+            <div className="row" style={{ padding: '6px 0' }}>
+              <Bullet letter="2" color="#FF6319" size={30} />
+              <div className="grow"><b>Make a group</b><div className="mute">For your flat, a trip or a friend crew</div></div>
+              <button className="secondary pillb" onClick={() => sheet.open('New group', (close) => <GroupSheet close={close} onCreated={(id) => nav(`/groups/${id}`)} />)}>+ New</button>
+            </div>
+            <div className="row" style={{ padding: '6px 0' }}>
+              <Bullet letter="3" color="#00933C" size={30} />
+              <div className="grow"><b>Scan a receipt</b><div className="mute">Or type the items in yourself</div></div>
+              <button className="secondary pillb" onClick={() => nav('/scan')}>Scan</button>
+            </div>
+            <button className="linkbtn" style={{ marginTop: 6 }} onClick={() => void shareMyTag(s.profile.tag, toast)}>Invite a friend: share my tag @{s.profile.tag}</button>
+          </div>
+        )}
         {!wide && (
           <Link className="card row tap" style={{ marginTop: 10 }} to="/personal">
             <Bullet letter="👤" color={A.PERSONAL_COLOR} size={34} />
