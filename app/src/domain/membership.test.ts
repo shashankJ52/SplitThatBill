@@ -3,6 +3,7 @@ import { makeBill } from './bills'
 import { emptyState } from './seed'
 import type { AppLedger, AppState } from './types'
 import { ME } from './types'
+import { shownPeople } from './selectors'
 import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, linkTargets, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
 import { balanceOf } from './membership'
 import { nets } from '../money'
@@ -201,5 +202,18 @@ describe('where a placeholder name can be linked to a real account', () => {
     expect(linkTargets(setup().s, 'nobody')).toEqual([])
     const unsaved = setup({ roles: undefined })
     expect(linkTargets(unsaved.s, SAM)).toEqual([])
+  })
+})
+
+describe('people shown for a group', () => {
+  it('are its members, and also anyone only invited who already has bills in it (a name just linked to an account)', () => {
+    const linked = '99999999-9999-4999-8999-999999999999'
+    const { l } = setup({ members: [ME, A], invited: [linked], bills: [bill(ME, [ME, A, linked])] })
+    expect(shownPeople(l)).toEqual([ME, A, linked])
+  })
+  it('leave out someone invited who is in none of its bills yet, and never list anyone twice', () => {
+    const fresh = '88888888-8888-4888-8888-888888888888'
+    const { l } = setup({ members: [ME, A], invited: [fresh, A], bills: [bill(ME, [ME, A])] })
+    expect(shownPeople(l)).toEqual([ME, A])
   })
 })

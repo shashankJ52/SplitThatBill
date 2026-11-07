@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import { useAppState } from '../data/store'
-import { filterActivity, groupTotals, ledgerActivity, ledgerById, groupGlyph, monthStats, monthsAsc, openCount, pairInGroup, personName, type ActivityKind } from '../domain/selectors'
+import { filterActivity, groupTotals, ledgerActivity, ledgerById, groupGlyph, monthStats, monthsAsc, openCount, pairInGroup, personName, shownPeople, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { mAdd, mLabel, nowKey } from '../domain/util'
 import { useMoney } from '../ui/useMoney'
@@ -49,7 +49,7 @@ export function GroupPage() {
           <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={50} />
           <div className="grow">
             <div className="gname" style={{ fontSize: 26, lineHeight: 1.05 }}>{g.name}</div>
-            <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.members.map((m) => personName(s, m)).join(', ')}</div>
+            <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shownPeople(g).map((m) => personName(s, m)).join(', ')}</div>
           </div>
           <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}>⚙</button>
         </div>
@@ -180,12 +180,12 @@ function BalancesTab({ gid }: { gid: string }) {
     <>
       <h2 style={{ marginTop: 4 }}>Stations</h2>
       <div className="line" style={{ ['--lc' as string]: g.color }}>
-        {g.members.map((m) => {
+        {shownPeople(g).map((m) => {
           const v = n[m] ?? 0
           const body = (
             <>
               <Avatar pid={m} size={30} />
-              <div className="grow"><b>{personName(s, m)}</b></div>
+              <div className="grow"><b>{personName(s, m)}</b>{!g.members.includes(m) && <> <span className="pill">invited</span></>}</div>
               <span className={`stat ${v < 0 ? 'r' : v > 0 ? 'g' : ''}`}>{v < 0 ? `owes ${fmt(-v)}` : v > 0 ? `is owed ${fmt(v)}` : 'settled'}</span>
               {m !== ME && <span className="mute">›</span>}
             </>

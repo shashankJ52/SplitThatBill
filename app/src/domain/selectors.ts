@@ -5,6 +5,15 @@ import { ME } from './types'
 import { mAdd, nowKey } from './util'
 
 export const realGroups = (s: AppState) => s.ledgers.filter((l) => l.kind === 'group')
+/**
+ * Everyone to show for a group: its members, plus anyone who is only invited so far but already has bills or payments in
+ * it (a name that was just linked to an account). Without them their station and their share would vanish until they accept.
+ */
+export function shownPeople(l: AppLedger): PersonId[] {
+  const out = l.members.slice()
+  for (const p of l.invited ?? []) if (!out.includes(p) && involves(l, p)) out.push(p)
+  return out
+}
 export const ledgerById = (s: AppState, id: string) => s.ledgers.find((l) => l.id === id)
 export const oneLedger = (s: AppState, pid: PersonId) => s.ledgers.find((l) => l.kind === 'one' && l.with === pid)
 export const others = (s: AppState) => Object.keys(s.people).filter((p) => p !== ME)

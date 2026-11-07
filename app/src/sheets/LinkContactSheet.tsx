@@ -65,7 +65,7 @@ export function LinkContactSheet({ pid, close }: { pid: string; close: () => voi
       <p className="mute">When {person.name} has signed up, link this name to their account. Every bill and payment with {person.name} stays, and becomes theirs. Nothing needs to be entered again.</p>
       <label className="f" htmlFor="lk-tag">Their usertag</label>
       <div className="row">
-        <input id="lk-tag" placeholder="@sumitgamer" maxLength={21} autoCapitalize="none" autoCorrect="off" value={tag} onChange={(e) => { setTag(e.target.value); setFound(null); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && void find()} />
+        <input id="lk-tag" placeholder="@usertag" maxLength={21} autoCapitalize="none" autoCorrect="off" value={tag} onChange={(e) => { setTag(e.target.value); setFound(null); setErr('') }} onKeyDown={(e) => e.key === 'Enter' && void find()} />
         <button className="secondary" style={{ width: 92, padding: 11 }} disabled={busy || !tag.trim()} onClick={() => void find()}>Find</button>
       </div>
       {err && <div className="bar bad" role="alert" style={{ marginTop: 8 }}>{err}</div>}

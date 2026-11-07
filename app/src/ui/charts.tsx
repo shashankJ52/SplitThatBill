@@ -4,7 +4,7 @@ import { mLabel, mShort } from '../domain/util'
 import { useMoney } from './useMoney'
 import { Avatar, Bullet, personColor } from './bits'
 import { useAppState } from '../data/store'
-import { personName } from '../domain/selectors'
+import { personName, shownPeople } from '../domain/selectors'
 import type { AppLedger } from '../domain/types'
 import { monthStats } from '../domain/selectors'
 import { mAdd } from '../domain/util'
@@ -52,7 +52,7 @@ export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; s
   const fmt = useMoney(ledger)
   const sg: Seg[] = []
   const pg: Seg[] = []
-  for (const p of ledger.members) {
+  for (const p of shownPeople(ledger)) {
     if (st.share[p] > 0) sg.push({ k: p, v: st.share[p], c: personColor(s.people, p) })
     if (st.paid[p] > 0) pg.push({ k: p, v: st.paid[p], c: personColor(s.people, p) })
   }
@@ -73,7 +73,7 @@ export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; s
     <>
       <Donut outer={{ segs: sg, total: st.tot }} inner={{ segs: pg, total: st.tot }} sel={sel} kind="p" center={center} onPick={onPick} fmt={fmt} />
       <div className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '6px 0' }}>Outer ring: each person's share. Inner ring: what each person paid.</div>
-      {ledger.members.filter((p) => st.share[p] > 0 || st.paid[p] > 0).map((p) => (
+      {shownPeople(ledger).filter((p) => st.share[p] > 0 || st.paid[p] > 0).map((p) => (
         <button key={p} className={`lg${sel === p ? ' on' : ''}`} onClick={() => onPick(p)} aria-pressed={sel === p}>
           <Avatar pid={p} size={30} />
           <span className="grow"><b>{personName(s, p)}</b><span className="mute" style={{ display: 'block', fontSize: 12 }}>paid {fmt(st.paid[p] ?? 0)}</span></span>
@@ -130,7 +130,7 @@ export function TrendChart({ ledger, monthKey, state, onChange, solo }: { ledger
   const ss = ms.map((m) => monthStats(ledger, m))
   const series = [
     { k: '__all', l: 'Whole group', c: ledger.color ?? '#0039A6', v: ss.map((x) => x.tot) },
-    ...ledger.members.map((p: PersonId) => ({ k: p, l: personName(s, p), c: personColor(s.people, p), v: ss.map((x) => x.share[p] ?? 0) })),
+    ...shownPeople(ledger).map((p: PersonId) => ({ k: p, l: personName(s, p), c: personColor(s.people, p), v: ss.map((x) => x.share[p] ?? 0) })),
   ]
   const vis = series.filter((x) => (x.k === '__all' ? state.all : state.people && !state.off.includes(x.k)))
   const max = Math.max(1, ...vis.flatMap((x) => x.v))
@@ -180,7 +180,7 @@ export function TrendChart({ ledger, monthKey, state, onChange, solo }: { ledger
       <div style={{ marginTop: 10 }}>
         {chip('__all', state.all, <Bullet letter={solo ? '$' : 'G'} color={ledger.color ?? '#0039A6'} size={24} />, solo ? 'All spending' : 'Whole group')}
         {!solo && chip('__people', state.people, <Bullet letter="P" color="#A7A9AC" size={24} />, 'People lines')}
-        {state.people && ledger.members.map((p) => chip(p, !state.off.includes(p), <Avatar pid={p} size={24} />, personName(s, p)))}
+        {state.people && shownPeople(ledger).map((p) => chip(p, !state.off.includes(p), <Avatar pid={p} size={24} />, personName(s, p)))}
       </div>
     </>
   )

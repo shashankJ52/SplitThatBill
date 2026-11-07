@@ -10,6 +10,7 @@ import { CurrencyPicker } from '../ui/CurrencyPicker'
 import { TypeToConfirm } from '../ui/TypeToConfirm'
 import { ME } from '../domain/types'
 import { today, uid } from '../domain/util'
+import { nets } from '../money'
 import { useMoney } from '../ui/useMoney'
 import { Avatar, Bullet } from '../ui/bits'
 import { useSheet } from '../ui/Sheet'
@@ -164,7 +165,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
           <Avatar pid={p} size={32} />
           <div className="grow">
             <b>{personName(s, p)}</b> <span className="pill">invited</span>
-            <div className="mute">Waiting to accept</div>
+            <div className="mute">Waiting to accept{(nets(l)[p] ?? 0) !== 0 && ` · ${(nets(l)[p] ?? 0) < 0 ? 'owes' : 'is owed'} ${fmt(Math.abs(nets(l)[p] ?? 0))}`}</div>
           </div>
           {admin && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.removeMember(gid, p), 'Invite cancelled')}>Cancel</button>}
         </div>

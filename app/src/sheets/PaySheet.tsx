@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { currencyOf, defaultCurrency, ledgerById, ledgerName, pairBalance, payableCurrencies, personName } from '../domain/selectors'
+import { currencyOf, defaultCurrency, ledgerById, ledgerName, pairBalance, payableCurrencies, personName, shownPeople } from '../domain/selectors'
 import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { fmt as fmtIn, parseMoney, today, uid } from '../domain/util'
@@ -36,7 +36,7 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
   const [img, setImg] = useState<string | null>(null)
   const [err, setErr] = useState('')
 
-  const people: Option<string>[] = (g?.members ?? []).map((m) => ({ value: m, label: personName(s, m), sub: s.people[m]?.user ? '' : '· local', icon: <Avatar pid={m} size={28} /> }))
+  const people: Option<string>[] = (g ? shownPeople(g) : []).map((m) => ({ value: m, label: personName(s, m), sub: s.people[m]?.user ? '' : '· local', icon: <Avatar pid={m} size={28} /> }))
   const cents = parseMoney(amt)
   const plan = pid && cents && cents > 0 ? A.planPersonPayment(s, pid, dir, cents, cur).plan : null
   const pickCurrency = (code: string) => {
