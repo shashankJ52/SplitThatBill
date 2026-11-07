@@ -277,8 +277,9 @@ export const hideSidePerson = (s: S, pid: PersonId): S => ({ ...s, layout: { ...
 export const showSidePeople = (s: S): S => ({ ...s, layout: { ...s.layout, sideHidden: [] } })
 /** Take someone off the 1-1 suggestions on the scan screen. They are still found under "All people". */
 export const hideScanPerson = (s: S, pid: PersonId): S => ({ ...s, layout: { ...s.layout, scanHidden: [...(s.layout?.scanHidden ?? []).filter((x) => x !== pid), pid] } })
-/** Bring back everyone hidden from the scan screen's suggestions. */
-export const showScanPeople = (s: S): S => ({ ...s, layout: { ...s.layout, scanHidden: [] } })
+/** Put someone back on the scan screen's suggestions (done when they are picked from "All people"). */
+export const showScanPerson = (s: S, pid: PersonId): S =>
+  (s.layout?.scanHidden ?? []).includes(pid) ? { ...s, layout: { ...s.layout, scanHidden: (s.layout?.scanHidden ?? []).filter((x) => x !== pid) } } : s
 /** Remember someone found by @tag, so they stay in your people list even before they are in a group or 1-1. */
 export const rememberFriend = (s: S, f: { id: PersonId; name: string; tag?: string }): S => ({
   ...s,

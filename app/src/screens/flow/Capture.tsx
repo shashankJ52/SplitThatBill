@@ -4,7 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
-import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, scanHiddenCount, others } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
@@ -31,6 +31,7 @@ export function Capture() {
   const [newName, setNewName] = useState('')
   const [bad, setBad] = useState(false)
   const [reading, setReading] = useState(false)
+  const [stage, setStage] = useState<'prep' | 'read'>('prep')
   const busy = useRef(false)
   const account = useAccount()
   // only a signed-in account can read real receipts; the demo keeps the sample receipt
@@ -40,6 +41,10 @@ export function Capture() {
   useEffect(() => {
     if (!d) begin(want)
   }, [d, begin, want])
+  // wake the scanning function while you choose the photo, so the first scan does not wait for it to start
+  useEffect(() => {
+    if (real) void fetch('/api/scan', { cache: 'no-store' }).catch(() => undefined)
+  }, [real])
   if (!d) return null
 
   const sel = d.target
@@ -51,7 +56,11 @@ export function Capture() {
   }
   if (sel.startsWith('p:') && !rp.includes(sel.slice(2))) rp.unshift(sel.slice(2))
 
-  const pick = (t: string) => set((x) => D.setTarget(store.get(), x, t))
+  const pick = (t: string) => {
+    // someone chosen from "All people" is wanted again, so they come back as a suggestion
+    if (t.startsWith('p:')) store.update((st) => A.showScanPerson(st, t.slice(2)))
+    set((x) => D.setTarget(store.get(), x, t))
+  }
   const selGroup = sel.startsWith('g:') ? ledgerById(s, sel.slice(2)) : null
 
   /** Turn "Someone new" into a real person before moving on. Returns the draft to continue with. */
@@ -88,12 +97,18 @@ export function Capture() {
     if (!real) return void proceed()
     busy.current = true
     setReading(true)
+    setStage('prep')
+    // shrinking the photo starts straight away, while the rest is checked, instead of after it
+    const prepared = prepareFile(f)
+    prepared.catch(() => undefined)
     try {
       const cur = await settle()
       if (!cur) return
       const token = await account?.accessToken()
       if (!token) return toast('Sign in again to scan receipts.')
-      const { scan } = await scanReceipt(await prepareFile(f), token)
+      const photo = await prepared
+      setStage('read')
+      const { scan } = await scanReceipt(photo, token)
       const next = D.loadScan(cur, scan)
       set(() => next)
       nav('/scan/privacy')
@@ -173,9 +188,6 @@ export function Capture() {
             <button className="fchip plain" onClick={() => sheet.open('All people', (close) => <PickSheet mode="p" onPick={pick} close={close} />)}>All people…</button>
           )}
           <button className={`fchip plain${sel === 'new' ? ' on' : ''}`} onClick={() => pick('new')}>+ Someone new</button>
-          {scanHiddenCount(s) > 0 && (
-            <button className="fchip plain" onClick={() => store.update(A.showScanPeople)}>Show {scanHiddenCount(s)} removed</button>
-          )}
         </div>
         {sel === 'new' && (
           <div>
@@ -185,7 +197,11 @@ export function Capture() {
         )}
         <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
           {reading ? (
-            <><b>Reading your receipt…</b>This usually takes a few seconds.</>
+            stage === 'prep' ? (
+              <><b>Preparing your photo…</b>Step 1 of 2</>
+            ) : (
+              <><b>Reading your receipt…</b>Step 2 of 2. This usually takes a few seconds.</>
+            )
           ) : real ? (
             <><b>Photograph the whole receipt</b>Lay it flat in good light so every line is readable.</>
           ) : (

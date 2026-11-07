@@ -17,7 +17,8 @@ export type ScanReply =
   | { ok: true; scan: ScanResult; used: number; limit: number }
   | { ok: false; error: 'signin' | 'limit' | 'bad_request' | 'unreadable' | 'unavailable'; message: string; resetsAt?: string }
 
-const json = (status: number, body: ScanReply) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } })
+const json = (status: number, body: ScanReply, timing?: string) =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...(timing ? { 'server-timing': timing } : {}) } })
 const fail = (status: number, error: Exclude<ScanReply, { ok: true }>['error'], message: string, resetsAt?: string) =>
   json(status, { ok: false, error, message, ...(resetsAt ? { resetsAt } : {}) })
 
@@ -48,6 +49,8 @@ export async function handleScan(req: Request, deps: ScanDeps): Promise<Response
       body: '{}',
     })
 
+  // how long each step took, sent back as a Server-Timing header so a slow scan can be traced to its step
+  const t0 = Date.now()
   // use one of today's scans first; the database counts them, so this cannot be skipped
   let credit: { ok: boolean; used: number; limit: number; resets_at: string }
   try {
@@ -59,6 +62,7 @@ export async function handleScan(req: Request, deps: ScanDeps): Promise<Response
     return fail(503, 'unavailable', 'Scanning is not available right now. You can enter the items yourself.')
   }
   if (!credit.ok) return fail(429, 'limit', `You have used all ${credit.limit} scans for today.`, credit.resets_at)
+  const t1 = Date.now()
 
   let answer: unknown
   try {
@@ -70,5 +74,6 @@ export async function handleScan(req: Request, deps: ScanDeps): Promise<Response
   }
   const scan = parseScan(answer)
   if (!scan) return fail(422, 'unreadable', 'That does not look like a readable receipt. Try a clearer, well-lit photo of the whole receipt.')
-  return json(200, { ok: true, scan, used: credit.used, limit: credit.limit })
+  const t2 = Date.now()
+  return json(200, { ok: true, scan, used: credit.used, limit: credit.limit }, `credit;dur=${t1 - t0}, read;dur=${t2 - t1}`)
 }

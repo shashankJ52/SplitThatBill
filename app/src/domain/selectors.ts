@@ -219,9 +219,6 @@ export function recentPeople(s: AppState, n: number) {
     .map((x) => x.p)
 }
 
-/** How many people are hidden from the scan screen's suggestions (only counting people who still exist). */
-export const scanHiddenCount = (s: AppState): number => (s.layout?.scanHidden ?? []).filter((p) => s.people[p] && p !== ME).length
-
 // ---------- group activity feed and months ----------
 export type FeedItem = { k: 'b'; d: string; o: AppBill } | { k: 'p'; d: string; o: AppLedger['payments'][number] }
 export function feed(l: AppLedger): FeedItem[] {

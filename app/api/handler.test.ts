@@ -34,6 +34,12 @@ describe('POST /api/scan', () => {
     expect(read).toHaveBeenCalledWith({ mime: 'image/jpeg', data })
   })
 
+  it('says how long the credit check and the reading took, so a slow scan can be traced', async () => {
+    const { deps } = setup()
+    const r = await handleScan(req({ mime: 'image/jpeg', data }), deps)
+    expect(r.headers.get('server-timing')).toMatch(/^credit;dur=\d+, read;dur=\d+$/)
+  })
+
   it("sends the person's own token to the database, never the service key", async () => {
     const { deps, fetchMock } = setup()
     await handleScan(req({ mime: 'image/png', data }), deps)
