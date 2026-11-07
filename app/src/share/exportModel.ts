@@ -1,4 +1,4 @@
-import { calc, discCents, itemWeights, paidMap, type Cents } from '../money'
+import { calc, creditLines, discCents, itemWeights, paidMap, type Cents } from '../money'
 import type { ShareBill } from '../domain/share'
 import { personName } from '../domain/selectors'
 import type { AppState } from '../domain/types'
@@ -88,6 +88,7 @@ export function buildExportModel(s: AppState, b: ShareBill, opts: { groupName: s
   const dc = discCents(b)
   if (dc > 0) extras.push({ label: 'Discount', amt: dc, minus: true })
   for (const e of b.extras) extras.push({ label: e.name, amt: e.amt })
+  for (const l of creditLines(b)) if (l.amt > 0) extras.push({ label: l.credit.name, amt: l.amt, minus: true })
   const settle = c.rows
     .map((r) => ({ person: people[at.get(r.p) as number], net: r.total - (pm[r.p] ?? 0) }))
     .filter((x) => x.person && x.net !== 0)

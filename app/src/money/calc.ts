@@ -1,5 +1,5 @@
 import { allocCents, splitEven, splitProp } from './alloc'
-import type { BillInput, Cents, CalcResult, Item, PersonId } from './types'
+import type { BillInput, Cents, CalcResult, Credit, Item, PersonId } from './types'
 
 const EPS = 1e-6
 
@@ -15,6 +15,21 @@ export function discCents(b: Pick<BillInput, 'disc' | 'items' | 'tax' | 'tip'>):
   const c = d.m === 'pct' ? Math.round((base * d.v) / 100) : d.v
   return Math.max(0, Math.min(c, base))
 }
+
+/**
+ * Each extra discount in cents, in order. A percent is worked out on the receipt total, and together they never take off
+ * more than the receipt total, so a bill can never owe less than nothing.
+ */
+export function creditLines(b: Pick<BillInput, 'credits' | 'rt'>): { credit: Credit; amt: Cents }[] {
+  let left = Math.max(0, b.rt)
+  return (b.credits ?? []).map((credit) => {
+    const raw = credit.m === 'pct' ? Math.round((b.rt * credit.v) / 100) : credit.v
+    const amt = Math.max(0, Math.min(raw, left))
+    left -= amt
+    return { credit, amt }
+  })
+}
+export const creditsSum = (b: Pick<BillInput, 'credits' | 'rt'>): Cents => creditLines(b).reduce((a, l) => a + l.amt, 0)
 
 /** Who shares an item and how much weight each has. Null when not fully assigned. */
 export function itemWeights(
@@ -76,6 +91,9 @@ export function calc(b: BillInput): CalcResult {
     }
   }
 
+  // extra discounts come off in proportion to what each person had of the receipt (items, tax and tip, less the receipt's own discount)
+  const cr = splitProp(creditsSum(b), ids.map((_, i) => Math.max(0, sub[i] + fee[i] - dcs[i])))
+
   return {
     rows: ids.map((p, i) => ({
       p,
@@ -83,9 +101,10 @@ export function calc(b: BillInput): CalcResult {
       fee: fee[i],
       dc: dcs[i],
       ex: ex[i],
-      total: sub[i] + fee[i] - dcs[i] + ex[i],
+      cr: cr[i],
+      total: sub[i] + fee[i] - dcs[i] + ex[i] - cr[i],
     })),
-    total: b.rt + extrasSum(b),
+    total: b.rt + extrasSum(b) - creditsSum(b),
     complete,
   }
 }

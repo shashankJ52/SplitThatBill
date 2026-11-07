@@ -39,6 +39,19 @@ export interface Discount {
   v: number
 }
 
+/**
+ * An extra discount taken off after the receipt was printed: a coupon, cashback, a refund from the restaurant. It comes
+ * off what people owe, in proportion to what each had, and never changes the receipt total. A percent is a percent of
+ * the receipt total.
+ */
+export interface Credit {
+  id: number
+  name: string
+  m: 'amt' | 'pct'
+  /** cents for "amt", or a percent such as 10 or 12.5 */
+  v: number
+}
+
 export interface BillInput {
   /** who is in this split */
   people: PersonId[]
@@ -49,6 +62,8 @@ export interface BillInput {
   /** receipt total in cents, after discount */
   rt: Cents
   extras: Extra[]
+  /** extra discounts added after the receipt (cashback, a coupon); missing on older bills */
+  credits?: Credit[]
   /** extra guests per person ("+1s"), counted on evenly split items */
   guests: Record<PersonId, number>
   /** single payer when paid is empty */
@@ -65,6 +80,8 @@ export interface Row {
   fee: Cents
   dc: Cents
   ex: Cents
+  /** this person's part of the extra discounts */
+  cr: Cents
   total: Cents
 }
 

@@ -10,7 +10,7 @@ import { CurrencyChip } from '../../ui/CurrencyChip'
 import { useSheet } from '../../ui/Sheet'
 import * as D from '../../domain/draft'
 import { parseMoney } from '../../domain/util'
-import { discCents, extrasSum, itemsSum, type Extra } from '../../money'
+import { creditLines, discCents, itemsSum, type Extra } from '../../money'
 import { ItemPanel, PriceSeg } from '../../flow/ItemPanel'
 import { useFlow } from '../../flow/FlowProvider'
 import { withDraft } from '../../flow/withDraft'
@@ -250,9 +250,50 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
           )}
         </div>
         <button className="secondary" onClick={() => set(D.addExtra)}>+ Add extra (cab, parking…)</button>
+
+        <h2>Extra discounts</h2>
+        <div className="mute" style={{ marginBottom: 8 }}>
+          A coupon, cashback or refund that came on top of the receipt. It comes off what people owe, in proportion to what each had. The receipt total above stays as printed.
+        </div>
+        <div id="credits">
+          {creditLines(d).map(({ credit: c, amt }) => (
+            <div className="card" key={c.id}>
+              <div className="row">
+                <input className="grow" defaultValue={c.name} maxLength={24} aria-label="Discount name" onBlur={(ev) => set((x) => D.setCreditName(x, c.id, ev.target.value))} />
+                <button className="del" aria-label={`Remove ${c.name || 'discount'}`} onClick={() => set((x) => D.removeCredit(x, c.id))}>✕</button>
+              </div>
+              <div className="row" style={{ marginTop: 8 }}>
+                <Seg className="dm" label="Discount type" value={c.m} options={[{ value: 'amt', label: '$' }, { value: 'pct', label: '%' }]} onChange={(m) => set((x) => D.setCreditMode(x, c.id, m))} />
+                <input
+                  key={`${c.id}:${c.m}:${c.v}`}
+                  className="price"
+                  style={{ width: 90 }}
+                  inputMode="decimal"
+                  aria-label="Discount value"
+                  placeholder={c.m === 'pct' ? '%' : '0.00'}
+                  defaultValue={c.v ? (c.m === 'amt' ? (c.v / 100).toFixed(2) : c.v) : ''}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  onBlur={(e) => {
+                    const t = e.target.value.trim()
+                    if (!t) return
+                    const v = c.m === 'amt' ? parseMoney(t) : /^\d{1,3}(\.\d{1,2})?$/.test(t) ? parseFloat(t) : null
+                    const r = v === null ? { d, err: c.m === 'amt' ? 'Enter a valid amount' : 'Enter a percent between 0.01 and 100' } : D.setCreditValue(d, c.id, v)
+                    if (r.err) { e.target.classList.add('bad'); toast(r.err); return }
+                    e.target.classList.remove('bad')
+                    set(() => r.d)
+                    if (v !== null && v > amt && c.m === 'amt') toast('Discounts are capped at the receipt total')
+                  }}
+                />
+                <div className="grow" style={{ textAlign: 'right' }}><b>{amt ? `−${fmt(amt)}` : ''}</b></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="secondary" onClick={() => set(D.addCredit)}>+ Add another discount (cashback, coupon…)</button>
+
         <div className="sign" style={{ marginTop: 14 }}>
           <div className="lbl" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#bdbdbd' }}>Grand total</div>
-          <div className="num" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.04em' }}>{fmt(d.rt + extrasSum(d))}</div>
+          <div className="num" style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-.04em' }}>{fmt(D.grandTotal(d))}</div>
         </div>
       </div>
       <FlowFooter label="Continue" disabled={!D.canContinue(d, 'review')} onClick={() => nav(d.personal ? '/scan/details' : '/scan/assign')} />

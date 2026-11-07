@@ -6,6 +6,7 @@ import { useAppState, useStore } from '../data/store'
 import { billLink, whatsappText } from '../domain/share'
 import { currencyOf, findBill, ledgerName, personName } from '../domain/selectors'
 import { buildExportModel } from '../share/exportModel'
+import { CreditSheet } from '../sheets/CreditSheet'
 import { ShareImageSheet } from '../sheets/ShareImageSheet'
 import { ME } from '../domain/types'
 import { ago, dayLabel, uid, whenLabel } from '../domain/util'
@@ -92,6 +93,12 @@ export function BillPage() {
           </>
         )}
         <h2>Manage</h2>
+        {mine && (
+          <>
+            <button className="secondary" onClick={() => sheet.open('Add a discount', (close) => <CreditSheet billId={b.id} close={close} />)}>Add a discount or cashback</button>
+            <div style={{ height: 10 }} />
+          </>
+        )}
         {mine ? (
           <div className="btnrow">
             <button className="primary" onClick={() => { flow.edit(b, L); nav('/scan/review') }}>Edit bill</button>

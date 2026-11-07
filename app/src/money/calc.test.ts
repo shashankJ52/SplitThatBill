@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calc, computeShares, discCents, itemWeights, paidMap } from './calc'
+import { calc, computeShares, creditLines, creditsSum, discCents, itemWeights, paidMap } from './calc'
 import { bill, ev, item, por, rng } from './fixtures'
 import type { BillInput } from './types'
 
@@ -141,5 +141,74 @@ describe('bill helper', () => {
     const b = bill('x', { people: ['me'], items: [item(1, 'A', 500, ev(['me']))], payer: 'me', rt: 500 })
     expect(b.shares).toEqual({ me: 500 })
     expect(b.total).toBe(500)
+  })
+})
+
+describe('extra discounts (coupon, cashback)', () => {
+  const dinner = (credits: BillInput['credits'], o: Partial<BillInput> = {}) =>
+    base({
+      people: ['me', 'james', 'sam'],
+      items: [item(1, 'Steak', 6000, ev(['me'])), item(2, 'Pasta', 3000, ev(['james'])), item(3, 'Salad', 1000, ev(['sam']))],
+      tax: 800, tip: 1200, rt: 12000, credits, ...o,
+    })
+
+  it('change nothing when there are none', () => {
+    const a = calc(dinner(undefined))
+    const b = calc(dinner([]))
+    expect(a.rows).toEqual(b.rows)
+    expect(a.total).toBe(12000)
+    expect(a.rows.every((r) => r.cr === 0)).toBe(true)
+  })
+
+  it('a percent is taken off the receipt total and shared in proportion to what each person had', () => {
+    const r = calc(dinner([{ id: 1, name: 'Cashback', m: 'pct', v: 10 }]))
+    expect(r.total).toBe(10800)
+    expect(r.rows.map((x) => x.cr)).toEqual([720, 360, 120]) // 10% of 12000 = 1200, split 6:3:1 of the receipt shares
+    expect(r.rows.reduce((a, x) => a + x.total, 0)).toBe(10800)
+  })
+
+  it('an amount works the same way, and several add up', () => {
+    const b = dinner([{ id: 1, name: 'Voucher', m: 'amt', v: 500 }, { id: 2, name: 'Cashback', m: 'pct', v: 5 }])
+    expect(creditLines(b).map((l) => l.amt)).toEqual([500, 600])
+    expect(creditsSum(b)).toBe(1100)
+    expect(calc(b).total).toBe(10900)
+    expect(calc(b).rows.reduce((a, x) => a + x.total, 0)).toBe(10900)
+  })
+
+  it('the cents always add up, however awkward the split', () => {
+    const r = calc(dinner([{ id: 1, name: 'Odd', m: 'amt', v: 101 }], { items: [item(1, 'A', 3333, ev(['me'])), item(2, 'B', 3333, ev(['james'])), item(3, 'C', 3334, ev(['sam']))], tax: 0, tip: 0, rt: 10000 }))
+    expect(r.rows.reduce((a, x) => a + x.cr, 0)).toBe(101)
+    expect(r.rows.reduce((a, x) => a + x.total, 0)).toBe(r.total)
+  })
+
+  it('never take off more than the receipt total, so nobody owes less than nothing', () => {
+    const b = dinner([{ id: 1, name: 'Huge', m: 'amt', v: 99999 }, { id: 2, name: 'More', m: 'pct', v: 50 }])
+    expect(creditLines(b).map((l) => l.amt)).toEqual([12000, 0])
+    const r = calc(b)
+    expect(r.total).toBe(0)
+    expect(r.rows.every((x) => x.total >= 0)).toBe(true)
+  })
+
+  it('leave the receipt total and the bill discount alone, and sit on top of extras', () => {
+    const b = dinner([{ id: 1, name: 'Cashback', m: 'amt', v: 1000 }], { extras: [{ id: 1, name: 'Cab', amt: 600, split: 'even', people: [] }], disc: { m: 'amt', v: 200 }, rt: 11800 })
+    const r = calc(b)
+    expect(b.rt).toBe(11800)
+    expect(r.total).toBe(11800 + 600 - 1000)
+    expect(r.rows.reduce((a, x) => a + x.total, 0)).toBe(r.total)
+    // the extra discount is worked out on the receipt total after the bill's own discount
+    expect(creditLines({ credits: [{ id: 1, name: 'x', m: 'pct', v: 10 }], rt: b.rt })[0].amt).toBe(1180)
+  })
+
+  it('work with custom amounts for the whole bill', () => {
+    const b = base({ people: ['me', 'james'], items: [], fixed: { me: 6000, james: 4000 }, rt: 10000, credits: [{ id: 1, name: 'Cashback', m: 'pct', v: 10 }] })
+    const r = calc(b)
+    expect(r.rows.map((x) => x.total)).toEqual([5400, 3600])
+    expect(r.total).toBe(9000)
+  })
+
+  it('shares and payers still balance: the bill total is what is owed', () => {
+    const b = bill('b', { people: ['me', 'james', 'sam'], items: [item(1, 'x', 9000, ev(['me', 'james', 'sam']))], payer: 'me', rt: 9000, credits: [{ id: 1, name: 'Cashback', m: 'pct', v: 20 }] })
+    expect(b.total).toBe(7200)
+    expect(Object.values(b.shares).reduce((a, v) => a + v, 0)).toBe(7200)
   })
 })

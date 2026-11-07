@@ -1,4 +1,4 @@
-import { allocCents, calc, discCents, extrasSum, itemWeights, paidMap, type Extra } from '../money'
+import { allocCents, calc, creditLines, creditsSum, discCents, extrasSum, itemWeights, paidMap, type Extra } from '../money'
 import { useAppState } from '../data/store'
 import { personName } from '../domain/selectors'
 import type { AppBill } from '../domain/types'
@@ -19,6 +19,7 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
   const c = calc(b)
   const pm = paidMap(b, c.total)
   const dc = discCents(b)
+  const credits = creditLines(b).filter((l) => l.amt > 0)
   return (
     <>
       <h2>Items</h2>
@@ -53,15 +54,18 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
         )
       })}
       {b.fixed && <div className="bar info">The whole bill was split by custom amounts, not item by item.</div>}
-      {(b.tax > 0 || b.tip > 0 || dc > 0 || b.extras.length > 0) && (
+      {(b.tax > 0 || b.tip > 0 || dc > 0 || b.extras.length > 0 || credits.length > 0) && (
         <>
-          <h2>Tax, tip, discount and extras</h2>
+          <h2>Tax, tip, discounts and extras</h2>
           <div className="card lines" style={{ display: 'block' }}>
             {b.tax > 0 && <div><span>Tax <span className="mute">· in proportion</span></span><span>{fmt(b.tax)}</span></div>}
             {b.tip > 0 && <div><span>Tip <span className="mute">· in proportion</span></span><span>{fmt(b.tip)}</span></div>}
             {dc > 0 && <div><span>Discount <span className="mute">· in proportion</span></span><span>−{fmt(dc)}</span></div>}
             {b.extras.map((e) => (
               <div key={e.id}><span>{e.name} <span className="mute">· {extraLabel(e, name)}</span></span><span>{fmt(e.amt)}</span></div>
+            ))}
+            {credits.map((l) => (
+              <div key={l.credit.id}><span>{l.credit.name} <span className="mute">· {l.credit.m === 'pct' ? `${l.credit.v}% off the receipt, ` : ''}in proportion</span></span><span>−{fmt(l.amt)}</span></div>
             ))}
           </div>
         </>
@@ -78,6 +82,7 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
               <div className="mute">
                 {b.fixed ? `Custom amount ${fmt(r.sub)}` : `Items ${fmt(r.sub)}${r.fee ? ` · tax & tip ${fmt(r.fee)}` : ''}${r.dc ? ` · discount −${fmt(r.dc)}` : ''}`}
                 {r.ex ? ` · extras ${fmt(r.ex)}` : ''}
+                {r.cr ? ` · extra discounts −${fmt(r.cr)}` : ''}
               </div>
             </div>
             <b>{fmt(r.total)}</b>
@@ -91,5 +96,6 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
 export const receiptNote = (b: AppBill, fmt: (cents: number) => string) => {
   const dc = discCents(b)
   const ex = extrasSum(b)
-  return dc || ex ? `Receipt ${fmt(b.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}` : ''
+  const cr = creditsSum(b)
+  return dc || ex || cr ? `Receipt ${fmt(b.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}${cr ? ` − extra discounts ${fmt(cr)}` : ''}` : ''
 }

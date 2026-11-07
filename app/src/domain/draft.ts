@@ -1,4 +1,4 @@
-import { calc, discCents, extrasSum, itemsSum, itemWeights, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
+import { calc, creditsSum, splitProp, discCents, extrasSum, itemsSum, itemWeights, type Credit, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
 import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups } from './selectors'
 import type { ScanResult } from '../scan/receipt'
@@ -38,6 +38,9 @@ export interface Draft {
   nextId: number
   extras: Extra[]
   nextE: number
+  /** extra discounts taken off after the receipt (cashback, a coupon) */
+  credits: Credit[]
+  nextC: number
   tax: number
   tip: number
   disc: Discount | null
@@ -114,6 +117,7 @@ export function loadSample(d: Draft): Draft {
     tax: r.tax,
     tip: r.tip,
     disc: null,
+    credits: [],
     fixed: null,
     title: r.title,
     loc: r.loc,
@@ -134,6 +138,7 @@ export function loadScan(d: Draft, r: ScanResult): Draft {
     tax: r.tax,
     tip: r.tip,
     disc: r.discount > 0 ? { m: 'amt', v: r.discount } : null,
+    credits: [],
     fixed: null,
     title: r.merchant || 'Receipt',
     loc: r.location,
@@ -146,14 +151,14 @@ export function loadScan(d: Draft, r: ScanResult): Draft {
 }
 
 export function startManual(d: Draft): Draft {
-  return { ...d, manual: true, scanned: false, hidden: [], items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, fixed: null, title: 'New bill', loc: '', cat: 'Other' }
+  return { ...d, manual: true, scanned: false, hidden: [], items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, credits: [], fixed: null, title: 'New bill', loc: '', cat: 'Other' }
 }
 
 export function newDraft(s: AppState, ids: NewDraftIds, want?: string | null): Draft {
   const blank: Draft = {
     id: ids.id, editingId: null, ledgerId: null, kind: 'group', gid: null, withP: null, target: '', people: [ME],
     title: '', loc: '', cat: 'Other', date: ids.date, notes: '', token: ids.token, by: ME, comments: [],
-    items: [], nextId: 1, extras: [], nextE: 1, tax: 0, tip: 0, disc: null, rt: 0, guests: {},
+    items: [], nextId: 1, extras: [], nextE: 1, credits: [], nextC: 1, tax: 0, tip: 0, disc: null, rt: 0, guests: {},
     payer: ME, paid: {}, multi: false, fixed: null, manual: false, qm: 'total',
   }
   return setTarget(s, loadSample(blank), defaultTarget(s, want))
@@ -205,6 +210,8 @@ export function draftFromBill(b: AppBill, ledger: AppLedger): Draft {
     nextId: b.items.reduce((m, i) => Math.max(m, i.id), 0) + 1,
     extras: structuredClone(b.extras),
     nextE: b.extras.reduce((m, e) => Math.max(m, e.id), 0) + 1,
+    credits: structuredClone(b.credits ?? []),
+    nextC: (b.credits ?? []).reduce((m, c) => Math.max(m, c.id), 0) + 1,
     tax: b.tax, tip: b.tip, disc: b.disc ? { ...b.disc } : null, rt: b.rt,
     guests: { ...b.guests }, payer: b.payer, paid: { ...paid }, multi: Object.keys(paid).length > 1,
     fixed: b.fixed ? { ...b.fixed } : null, manual: false, qm: 'total',
@@ -219,8 +226,8 @@ const keep = (d: Draft) => syncRt(d)
 /** Items + tax + tip − discount. */
 export const itemsPlusFees = (d: Draft) => itemsSum(d.items) + d.tax + d.tip - discCents(d)
 export const reconciles = (d: Draft) => itemsPlusFees(d) === d.rt
-/** Receipt total plus extras: what the payers must cover. */
-export const grandTotal = (d: Draft) => d.rt + extrasSum(d)
+/** Receipt total plus extras, less any extra discounts: what the payers must cover. */
+export const grandTotal = (d: Draft) => d.rt + extrasSum(d) - creditsSum(d)
 export const paidSum = (d: Draft) => Object.values(d.paid).reduce((a, v) => a + (v || 0), 0)
 export const extrasOk = (d: Draft) => d.extras.every((e) => e.amt > 0 && e.name.trim())
 export const isAssigned = (d: Draft, it: Item) => !!itemWeights(d, it)
@@ -353,6 +360,38 @@ export function setDiscountValue(d: Draft, v: number): Result {
   return ok(keep({ ...d, disc: { ...d.disc, v } }))
 }
 
+// ---------- extra discounts (coupon, cashback) ----------
+export const addCredit = (d: Draft): Draft => ({ ...d, credits: [...d.credits, { id: d.nextC, name: 'Cashback', m: 'pct', v: 0 }], nextC: d.nextC + 1 })
+export const removeCredit = (d: Draft, id: number): Draft => ({ ...d, credits: d.credits.filter((c) => c.id !== id) })
+export const setCreditName = (d: Draft, id: number, name: string): Draft => ({ ...d, credits: d.credits.map((c) => (c.id === id ? { ...c, name } : c)) })
+/** Switching between % and an amount starts the value again, as it does for the bill's own discount. */
+export const setCreditMode = (d: Draft, id: number, m: Credit['m']): Draft => ({ ...d, credits: d.credits.map((c) => (c.id === id ? { ...c, m, v: 0 } : c)) })
+/** Cents for an amount, a percent from 0.01 to 100 for a percent. */
+export function setCreditValue(d: Draft, id: number, v: number): Result {
+  const c = d.credits.find((x) => x.id === id)
+  if (!c) return ok(d)
+  if (!(v > 0) || (c.m === 'pct' && v > 100)) return bad(d, c.m === 'amt' ? 'Enter a valid amount' : 'Enter a percent between 0.01 and 100')
+  return ok({ ...d, credits: d.credits.map((x) => (x.id === id ? { ...x, v } : x)) })
+}
+/** Credits worth keeping when saving: empty ones (no value yet) are dropped and a missing name becomes "Discount". */
+const savedCredits = (d: Draft): Credit[] => d.credits.filter((c) => c.v > 0).map((c) => ({ ...c, name: c.name.trim().slice(0, 24) || 'Discount' }))
+
+/**
+ * A saved bill with one more discount on it, for a cashback or coupon that came after the bill was split. Everything else
+ * stays as it was; the shares and total are worked out again, and `note` is added to the bill's history.
+ */
+export function billWithCredit(b: AppBill, ledger: AppLedger, credit: Omit<Credit, 'id'>, note: Comment): AppBill {
+  const d = draftFromBill(b, ledger)
+  const next: Draft = { ...d, credits: [...d.credits, { ...credit, id: d.nextC }], nextC: d.nextC + 1, comments: [...d.comments, note] }
+  // when several people paid, what each paid comes down in proportion, so the payments still add up to the new total
+  if (next.multi) {
+    const who = Object.keys(next.paid).filter((k) => next.paid[k] > 0)
+    const cut = splitProp(Math.max(0, grandTotal(d) - grandTotal(next)), who.map((k) => next.paid[k]))
+    next.paid = { ...next.paid, ...Object.fromEntries(who.map((k, i) => [k, next.paid[k] - cut[i]])) }
+  }
+  return toBill(next)
+}
+
 // ---------- extras ----------
 export const addExtra = (d: Draft): Draft => ({ ...d, extras: [...d.extras, { id: d.nextE, name: 'Transport', amt: 0, split: 'even', people: [] }], nextE: d.nextE + 1 })
 export const removeExtra = (d: Draft, id: number): Draft => ({ ...d, extras: d.extras.filter((e) => e.id !== id) })
@@ -432,7 +471,7 @@ export function toBill(d: Draft): AppBill {
   return makeBill({
     id: d.id, title: d.title.trim() || 'Untitled bill', loc: d.loc.trim(), cat: d.cat, date: d.date, by: d.by, notes: d.notes.trim(),
     token: d.token, comments: d.comments, ts: d.ts ?? Date.now(), people: d.people, items: d.personal ? d.items.map((i) => ({ ...i, a: ev([ME]) })) : d.items, tax: d.tax, tip: d.tip, disc: d.disc, rt: d.rt,
-    extras: d.extras, guests: d.guests, payer, paid, fixed: d.fixed,
+    extras: d.extras, ...(savedCredits(d).length ? { credits: savedCredits(d) } : {}), guests: d.guests, payer, paid, fixed: d.fixed,
   })
 }
 

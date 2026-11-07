@@ -73,3 +73,17 @@ describe('bullet letters', () => {
     expect(bulletLetters(['', 'sam'])).toEqual(['?', 'S'])
   })
 })
+
+describe('extra discounts on a picture', () => {
+  it('appear as minus lines after the extras, and the total is what is owed', () => {
+    const s = emptyState({ name: 'Ann', email: 'a@b.co', tag: 'ann' }, '')
+    const b = makeBill({
+      id: 'b', title: 'Dinner', date: '2026-10-20', payer: ME, by: ME, rt: 10000, people: [ME],
+      items: [{ id: 1, name: 'Food', qty: 1, price: 10000, a: { mode: 'even', even: [ME], por: {} } }],
+      credits: [{ id: 1, name: 'Cashback', m: 'pct', v: 10 }, { id: 2, name: 'Voucher', m: 'amt', v: 500 }],
+    })
+    const m = buildExportModel(s, b, { groupName: null, currency: 'USD', link: null })
+    expect(m.extras).toEqual([{ label: 'Cashback', amt: 1000, minus: true }, { label: 'Voucher', amt: 500, minus: true }])
+    expect(m.total).toBe(8500)
+  })
+})

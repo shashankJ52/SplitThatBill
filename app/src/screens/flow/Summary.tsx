@@ -6,7 +6,7 @@ import * as D from '../../domain/draft'
 import { personName } from '../../domain/selectors'
 import { dayLabel } from '../../domain/util'
 import { ME } from '../../domain/types'
-import { discCents, extrasSum, itemWeights, paidMap } from '../../money'
+import { creditsSum, discCents, extrasSum, itemWeights, paidMap } from '../../money'
 import { useSave } from '../../flow/useSave'
 import { withDraft } from '../../flow/withDraft'
 import { Avatar, Empty } from '../../ui/bits'
@@ -22,6 +22,7 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
   const rows = c.rows.filter((r) => r.total > 0 || pm[r.p])
   const ex = extrasSum(d)
   const dc = discCents(d)
+  const cr = creditsSum(d)
   const name = (p: string) => personName(s, p)
   const payers = Object.keys(pm).map(name).join(' & ')
 
@@ -32,7 +33,7 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
         <div className="sign">
           <div className="mute">{d.title} · {dayLabel(d.date)}{d.loc ? ` · 📍 ${d.loc}` : ''} · paid by {payers}</div>
           <div className="num" style={{ fontSize: 34, fontWeight: 700, letterSpacing: '-.05em' }}>{fmt(c.total)}</div>
-          <div className="mute">{ex || dc ? `Receipt ${fmt(d.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}` : ''}</div>
+          <div className="mute">{ex || dc || cr ? `Receipt ${fmt(d.rt)}${dc ? ` (after −${fmt(dc)} discount)` : ''}${ex ? ` + extras ${fmt(ex)}` : ''}${cr ? ` − extra discounts ${fmt(cr)}` : ''}` : ''}</div>
         </div>
       </div>
       <div className="vbody">
@@ -55,8 +56,8 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
                 <div className="mute" style={{ marginTop: 6 }}>{items}</div>
                 <div className="mute">
                   Total share {fmt(r.total)}
-                  {r.fee || r.dc || r.ex ? (
-                    <span style={{ fontSize: 12 }}> ({d.fixed ? 'custom amount ' : 'items '}{fmt(r.sub)}{r.fee ? ` + tax & tip ${fmt(r.fee)}` : ''}{r.dc ? ` − discount ${fmt(r.dc)}` : ''}{r.ex ? ` + extras ${fmt(r.ex)}` : ''})</span>
+                  {r.fee || r.dc || r.ex || r.cr ? (
+                    <span style={{ fontSize: 12 }}> ({d.fixed ? 'custom amount ' : 'items '}{fmt(r.sub)}{r.fee ? ` + tax & tip ${fmt(r.fee)}` : ''}{r.dc ? ` − discount ${fmt(r.dc)}` : ''}{r.ex ? ` + extras ${fmt(r.ex)}` : ''}{r.cr ? ` − extra discounts ${fmt(r.cr)}` : ''})</span>
                   ) : null}
                 </div>
               </div>
