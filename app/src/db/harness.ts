@@ -28,6 +28,8 @@ export interface TestDb {
   signUp(name: string, tag: string): Promise<string>
   /** Run as one signed-in person, as Supabase does for the API. Always returns to admin afterwards. */
   as<T>(uid: string, fn: () => Promise<T>): Promise<T>
+  /** Run with full rights (as the project owner), taking turns with everyone else so nobody's role is switched mid-way. */
+  admin<T>(fn: () => Promise<T>): Promise<T>
   /** Run as a signed-out visitor holding only the public key. */
   anon<T>(fn: () => Promise<T>): Promise<T>
   sql(text: string, params?: unknown[]): Promise<Record<string, unknown>[]>
@@ -68,6 +70,11 @@ export async function createTestDb(): Promise<TestDb> {
         } finally {
           await reset()
         }
+      }),
+    admin: (fn) =>
+      exclusive(async () => {
+        await reset()
+        return fn()
       }),
     anon: (fn) =>
       exclusive(async () => {

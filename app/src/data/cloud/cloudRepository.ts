@@ -85,8 +85,10 @@ export function supabaseDb(c: SupabaseClient, userId: string): Db {
   return {
     userId,
     async loadAll() {
-      const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
-        c.from('profiles').select('name, email, tag').eq('id', userId).single(),
+      const [profile, session, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
+        c.from('profiles').select('name, tag').eq('id', userId).single(),
+        // the email lives with the sign-in account, not in the profile table that other people can read
+        c.auth.getSession(),
         c.from('prefs').select('note_order, hidden, layout').eq('user_id', userId).maybeSingle(),
         all<Loaded['groups'][number]>('groups'),
         all<Loaded['members'][number]>('members'),
@@ -105,7 +107,7 @@ export function supabaseDb(c: SupabaseClient, userId: string): Db {
       fail(prefs.error)
       return {
         userId,
-        profile: profile.data as Profile,
+        profile: { ...(profile.data as Omit<Profile, 'email'>), email: session.data.session?.user?.email ?? '' },
         prefs: (prefs.data as Prefs | null) ?? null,
         groups, members, profiles, requests, bills, comments, payments, lists, listItems,
         notes: notes as unknown as Loaded['notes'], notifs: notifs as unknown as Loaded['notifs'], sent: sent as unknown as Loaded['sent'],

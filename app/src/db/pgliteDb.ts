@@ -42,14 +42,14 @@ export function pgliteDb(t: TestDb, userId: string): Db {
         return q(`select ${spec.cols.map(col).join(', ')} from ${table}${where ? ` where ${where}` : ''} order by ${spec.order.join(', ')}`)
       }
       const [profile, prefs, groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent] = await Promise.all([
-        q(`select name, email, tag from profiles where id = '${userId}'`),
+        q(`select name, tag from profiles where id = '${userId}'`),
         q(`select note_order, hidden, layout from prefs`),
         read('groups'), read('members'), read('profiles'), read('join_requests'), read('bills'), read('comments'), read('payments'),
         read('lists'), read('list_items'), read('notes'), read('notifs'), read('sent_reminders'),
       ])
       return {
         userId,
-        profile: profile[0] as unknown as Loaded['profile'],
+        profile: { ...(profile[0] as object), email: (await t.admin(() => t.sql('select email from auth.users where id = $1', [userId])))[0]?.email ?? '' } as unknown as Loaded['profile'],
         prefs: (prefs[0] as unknown as Loaded['prefs']) ?? null,
         groups, members, profiles, requests, bills, comments, payments, lists, listItems, notes, notifs, sent,
       } as unknown as Loaded

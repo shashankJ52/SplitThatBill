@@ -6,7 +6,7 @@ Status: design agreed with the owner on 2026-10-20. Migration `0004_sharing.sql`
 
 | Topic | Decision |
 |---|---|
-| Finding people | Exact search by user tag. Returns name and tag only. |
+| Finding people | Exact search by user tag. Returns name and tag only. Email addresses are never readable by other people: signed-in users can read only id, name and tag from profiles (migration 0018). An invited person cannot read the inviter's profile until they accept. |
 | Invites | The invited person must accept. Until then they can see nothing about the group. |
 | Roles | **Owner** (creator, the "super admin"), **Admin** (made by the owner), **Member**. |
 | Owner | Renames or deletes the group, makes and removes admins, can transfer ownership. Cannot leave without transferring. |
