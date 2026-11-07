@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /b/
+Disallow: /join/
+Disallow: /u/
+Disallow: /preview/
+Disallow: /groups
+Disallow: /personal
+Disallow: /alerts
+Disallow: /notes
+Disallow: /account
+Disallow: /scan
