@@ -14,6 +14,10 @@ const settle = (s: typeof s0, p: string) => {
   return A.applyPersonPayment(s, { id: `pay-${p}`, newLedgerId: `o-${p}`, pid: p, direction: t > 0 ? 'in' : 'out', amt: Math.abs(t), date: '2026-10-20' }).state
 }
 
+/** Swipe someone away on the day of their latest activity. (Sample bills are dated from today, so fixed dates would go stale.) */
+const dismissNow = (s: typeof s0, p: string) => A.dismissPerson(s, p, S.lastActivity(S.oneLedger(s, p)!))
+const dayAfter = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+
 describe('ordering by your own drag order', () => {
   const items = ['a', 'b', 'c', 'd']
   it('placed items first in your order, the rest keep their default order after them', () => {
@@ -72,13 +76,14 @@ describe('people who are settled up', () => {
     expect(S.arrangedPeople(s, 'owe').every((r) => !r.settled)).toBe(true)
   })
   it('swiped away, they stay gone', () => {
-    const s = A.dismissPerson(settle(s0, 'james'), 'james', '2026-10-21')
+    const s = dismissNow(settle(s0, 'james'), 'james')
     expect(S.arrangedPeople(s, 'net').some((r) => r.p === 'james')).toBe(false)
   })
   it('come back when something new happens with them, even after being dismissed', () => {
-    let s = A.dismissPerson(settle(s0, 'james'), 'james', '2026-10-21')
+    let s = dismissNow(settle(s0, 'james'), 'james')
+    const dismissedOn = s.layout!.dismissed!.james
     // a new payment later than the dismissal: they are settled still, but there is new activity
-    s = A.applyPersonPayment(s, { id: 'later', newLedgerId: 'o9', pid: 'james', direction: 'in', amt: 100, date: '2026-10-25' }).state
+    s = A.applyPersonPayment(s, { id: 'later', newLedgerId: 'o9', pid: 'james', direction: 'in', amt: 100, date: dayAfter(dismissedOn) }).state
     const row = S.arrangedPeople(s, 'net').find((r) => r.p === 'james')
     expect(row).toBeDefined()
     // and a balance always shows, whatever was dismissed before
@@ -86,7 +91,7 @@ describe('people who are settled up', () => {
     expect(S.arrangedPeople(owing, 'net').some((r) => r.p === 'james' && !r.settled)).toBe(true)
   })
   it('can be restored after an undo', () => {
-    const s = A.undismissPerson(A.dismissPerson(settle(s0, 'james'), 'james', '2026-10-21'), 'james')
+    const s = A.undismissPerson(dismissNow(settle(s0, 'james'), 'james'), 'james')
     expect(S.arrangedPeople(s, 'net').some((r) => r.p === 'james')).toBe(true)
     expect(s.layout?.dismissed).toEqual({})
   })
