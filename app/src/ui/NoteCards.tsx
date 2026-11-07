@@ -8,6 +8,7 @@ import { NoteSheet } from '../sheets/NoteSheet'
 import { Bullet, Empty } from './bits'
 import { useSheet } from './Sheet'
 import { useToast } from './Toast'
+import { ChevronIcon } from './icons'
 
 function noteColor(e: NoteEntry): string {
   if (e.ctx === 'g' && e.ledger?.color) return e.ledger.color
@@ -179,7 +180,7 @@ export function NoteCards({ ctx, gid, q, filter = 'all' }: { ctx: 'n' | 'g'; gid
             ))}
           </div>
         )}
-        {hidden > 0 && <button className="linkbtn" onClick={toggle}>Show all {n.items.length} ⌄</button>}
+        {hidden > 0 && <button className="linkbtn" onClick={toggle}>Show all {n.items.length} <ChevronIcon /></button>}
         {hidden <= 0 && isOpen && n.items.length > 3 && <button className="linkbtn" onClick={toggle}>Show less ⌃</button>}
       </div>
     )

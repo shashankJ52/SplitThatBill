@@ -17,6 +17,7 @@ import { resetUiState, useUiState } from '../ui/uiState'
 import { useTheme } from '../ui/useTheme'
 import { uid } from '../domain/util'
 import { useNavigate } from 'react-router-dom'
+import { ChevronIcon } from '../ui/icons'
 
 export function AccountTab() {
   const s = useAppState()
@@ -172,7 +173,7 @@ function Fold({ id, title, summary, open, onToggle, children }: { id: string; ti
       <button type="button" className="fold-h" aria-expanded={open} aria-controls={`fold-${id}`} onClick={() => onToggle(id)}>
         <span className="fold-t">{title}</span>
         <span className="fold-s mute">{summary}</span>
-        <span className="chev" aria-hidden="true">⌄</span>
+        <span className="chev" aria-hidden="true"><ChevronIcon /></span>
       </button>
       <div className={`fold-b${open ? ' open' : ''}${open && settled ? ' settled' : ''}`} id={`fold-${id}`} inert={!open}>
         <div className="fold-i">{children}</div>

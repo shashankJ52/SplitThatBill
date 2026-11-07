@@ -7,6 +7,7 @@ import { useAccount, useAccountMode } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { TAG_RE } from '../domain/util'
 import { Bullet, Empty } from '../ui/bits'
+import { Loading } from '../ui/Loading'
 
 type Found = { id: string; name: string; tag: string }
 
@@ -50,7 +51,7 @@ export function FriendPage() {
         ) : mine ? (
           <Empty title="That's you">This is your own invite link. Send it to a friend so they can add you.</Empty>
         ) : found === undefined ? (
-          <p className="mute">Looking for @{tag}…</p>
+          <Loading>Looking for @{tag}…</Loading>
         ) : found === null ? (
           <Empty title={`No one is using @${tag}`}>The link may have a typo. Ask your friend to share their tag again.</Empty>
         ) : (

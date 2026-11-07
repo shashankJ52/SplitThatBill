@@ -7,6 +7,7 @@ import { ME } from '../domain/types'
 import { uid } from '../domain/util'
 import { Avatar, Bullet } from '../ui/bits'
 import { Dropdown, type Option } from '../ui/Dropdown'
+import { CloseIcon } from '../ui/icons'
 import { useToast } from '../ui/Toast'
 
 /** Create or edit a note or list: a name, where it lives, a checklist and an optional memo. */
@@ -61,7 +62,7 @@ export function NoteSheet({ ctx, gid, id, title: startTitle, close }: { ctx: 'n'
         <div className="row" style={{ padding: '4px 0' }} key={x.id}>
           <button className={`chk${x.done ? ' on' : ''}`} aria-label={`${x.done ? 'Untick' : 'Tick'} ${x.t}`} aria-pressed={x.done} onClick={() => setItems(items.map((i) => (i.id === x.id ? { ...i, done: !i.done } : i)))}>{x.done ? '✓' : ''}</button>
           <span className={`grow${x.done ? ' done' : ''}`}>{x.t}</span>
-          <button className="del" aria-label={`Remove ${x.t}`} onClick={() => setItems(items.filter((i) => i.id !== x.id))}>✕</button>
+          <button className="del" aria-label={`Remove ${x.t}`} onClick={() => setItems(items.filter((i) => i.id !== x.id))}><CloseIcon /></button>
         </div>
       ))}
       <div className="row" style={{ marginTop: 6 }}>

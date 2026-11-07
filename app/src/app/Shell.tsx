@@ -9,6 +9,7 @@ import { Bullet } from '../ui/bits'
 import { SideGrip } from '../ui/SideGrip'
 import { SideLines } from '../ui/SideLines'
 import { useTheme } from '../ui/useTheme'
+import { ThemeIcon } from '../ui/icons'
 
 const TAB_ROOTS = ['/groups', '/alerts', '/notes', '/account']
 const AUTH_ROUTES = ['/welcome', '/signup', '/login', '/forgot', '/verify', '/reset']
@@ -107,7 +108,7 @@ export function Shell() {
             </button>
           )}
           <button id="theme" onClick={toggle} aria-label="Toggle light or dark mode">
-            ◐
+            <ThemeIcon />
           </button>
         </div>
         <main id="main" style={{ '--bb': bb } as CSSProperties}>

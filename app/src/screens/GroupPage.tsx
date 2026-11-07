@@ -22,6 +22,7 @@ import { MonthBar } from '../ui/MonthBar'
 import { NoteCards } from '../ui/NoteCards'
 import { useSheet } from '../ui/Sheet'
 import { useUiState } from '../ui/uiState'
+import { GearIcon } from '../ui/icons'
 
 type Tab = 'bills' | 'overview' | 'balances' | 'lists'
 const TABS: Tab[] = ['bills', 'overview', 'balances', 'lists']
@@ -51,7 +52,7 @@ export function GroupPage() {
             <div className="gname" style={{ fontSize: 26, lineHeight: 1.05 }}>{g.name}</div>
             <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shownPeople(g).map((m) => personName(s, m)).join(', ')}</div>
           </div>
-          <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}>⚙</button>
+          <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}><GearIcon /></button>
         </div>
         <div className="sign" style={{ marginBottom: 8 }}>
           <div className="cols" style={{ gridTemplateColumns: '1fr 1fr' }}>
@@ -87,8 +88,8 @@ export function BillsTab({ gid, personal }: { gid: string; personal?: boolean })
   // a personal ledger has no payments, so there is nothing to filter
   const kind = personal ? 'all' : picked
   const items = filterActivity(ledgerActivity(g), kind)
-  const one = (x: ReturnType<typeof ledgerActivity>[number], i: number) =>
-    x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />
+  const one = (x: ReturnType<typeof ledgerActivity>[number]) =>
+    x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} /> : <BillCard key={x.o.id} bill={x.o} />
   const filter = personal ? null : <ActivityFilter value={kind} onChange={setKind} />
   const none = kind === 'bills' ? 'No bills here' : kind === 'payments' ? 'No settle-ups here' : ''
 
@@ -203,7 +204,7 @@ function BalancesTab({ gid }: { gid: string }) {
       </div>
       <h2>{g.simplify ? 'Simplified payments' : 'Direct balances'}</h2>
       {tr.length ? tr.map((x) => (
-        <div className="card row rise" key={`${x.from}-${x.to}`}>
+        <div className="card row" key={`${x.from}-${x.to}`}>
           <Avatar pid={x.from} size={32} />
           <div className="grow"><b>{personName(s, x.from)}</b> {x.from === ME ? 'owe' : 'owes'} <b>{personName(s, x.to)}</b></div>
           <b>{fmt(x.amt)}</b>

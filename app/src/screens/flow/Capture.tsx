@@ -16,6 +16,7 @@ import { Avatar, Bullet } from '../../ui/bits'
 import { useSheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
 import { limitMessage, prepareFile, scanReceipt, ScanError } from '../../scan/client'
+import { CloseIcon } from '../../ui/icons'
 
 const MAX_UPLOAD = 15 * 1024 * 1024
 
@@ -180,7 +181,7 @@ export function Capture() {
                 {personName(s, p)}
               </button>
               {sel !== `p:${p}` && (
-                <button className="chipx-x" aria-label={`Remove ${personName(s, p)} from these suggestions`} title="Remove from suggestions" onClick={() => store.update((st) => A.hideScanPerson(st, p))}>✕</button>
+                <button className="chipx-x" aria-label={`Remove ${personName(s, p)} from these suggestions`} title="Remove from suggestions" onClick={() => store.update((st) => A.hideScanPerson(st, p))}><CloseIcon /></button>
               )}
             </span>
           ))}

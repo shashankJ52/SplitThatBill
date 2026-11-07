@@ -17,6 +17,7 @@ import { withDraft } from '../../flow/withDraft'
 import { ledgerById, ledgerName, oneLedger, personName } from '../../domain/selectors'
 import { Bullet, Empty, Seg } from '../../ui/bits'
 import { Dropdown } from '../../ui/Dropdown'
+import { ChevronIcon, CloseIcon } from '../../ui/icons'
 import { FlowFooter } from '../../ui/FlowFooter'
 import { IntField, MoneyField } from '../../ui/MoneyField'
 import { useToast } from '../../ui/Toast'
@@ -139,7 +140,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
                       {i.qty > 1 && <div className="mute">{fmt(Math.round(i.price / i.qty))} each</div>}
                     </div>
                     <b>{fmt(i.price)}</b>
-                    <span className="mute">{isOpen ? '⌃' : '⌄'}</span>
+                    <span className="mute"><ChevronIcon up={isOpen} /></span>
                   </div>
                   {isOpen && (
                     <>
@@ -148,7 +149,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
                           <IntField value={i.qty} label="Quantity" message="Quantity must be 1–99" onCommit={(n) => { const r = D.setItemQty(d, i.id, n); if (r.err) toast(r.err); else set(() => r.d) }} />
                           <input className="grow" key={`${i.id}:${i.name}`} defaultValue={i.name} maxLength={60} aria-label="Item name" onBlur={(e) => e.target.value.trim() !== i.name && set((x) => D.setItemName(x, i.id, e.target.value))} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
                           <MoneyField cents={i.pe === 'each' ? (i.unit as number) : i.price} label={i.pe === 'each' ? 'Price each' : 'Total price'} onCommit={(c) => set((x) => D.setItemPrice(x, i.id, c))} />
-                          <button className="del" aria-label="Delete item" onClick={() => { set((x) => D.removeItem(x, i.id)); setOpen(null) }}>✕</button>
+                          <button className="del" aria-label="Delete item" onClick={() => { set((x) => D.removeItem(x, i.id)); setOpen(null) }}><CloseIcon /></button>
                         </div>
                         {i.qty > 1 && (
                           <PriceSeg fmt={fmt} it={i} onChange={(m) => { const r = D.setItemPe(d, i.id, m); set(() => r.d); if (r.rounded !== undefined) toast(`Rounded to ${fmt(r.rounded)} each`) }} />
@@ -202,7 +203,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
                   if (m === 'amt' && (v as number) > itemsSum(d.items) + d.tax + d.tip) toast('Discount capped at the bill total')
                 }}
               />
-              <button className="del" aria-label="Remove discount" onClick={() => set(D.removeDiscount)}>✕</button>
+              <button className="del" aria-label="Remove discount" onClick={() => set(D.removeDiscount)}><CloseIcon /></button>
             </div>
           ) : (
             <button className="linkbtn" onClick={() => set(D.addDiscount)}>% Apply discount</button>
@@ -221,7 +222,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
                 <div className="row">
                   <input className="grow" defaultValue={e.name} maxLength={40} aria-label="Extra name" onBlur={(ev) => set((x) => D.patchExtra(x, e.id, { name: ev.target.value }))} />
                   <MoneyField cents={e.amt} label="Extra amount" onCommit={(c) => set((x) => D.patchExtra(x, e.id, { amt: c }))} />
-                  <button className="del" aria-label="Delete extra" onClick={() => set((x) => D.removeExtra(x, e.id))}>✕</button>
+                  <button className="del" aria-label="Delete extra" onClick={() => set((x) => D.removeExtra(x, e.id))}><CloseIcon /></button>
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <Dropdown
@@ -260,7 +261,7 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
             <div className="card" key={c.id}>
               <div className="row">
                 <input className="grow" defaultValue={c.name} maxLength={24} aria-label="Discount name" onBlur={(ev) => set((x) => D.setCreditName(x, c.id, ev.target.value))} />
-                <button className="del" aria-label={`Remove ${c.name || 'discount'}`} onClick={() => set((x) => D.removeCredit(x, c.id))}>✕</button>
+                <button className="del" aria-label={`Remove ${c.name || 'discount'}`} onClick={() => set((x) => D.removeCredit(x, c.id))}><CloseIcon /></button>
               </div>
               <div className="row" style={{ marginTop: 8 }}>
                 <Seg className="dm" label="Discount type" value={c.m} options={[{ value: 'amt', label: '$' }, { value: 'pct', label: '%' }]} onChange={(m) => set((x) => D.setCreditMode(x, c.id, m))} />

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronIcon } from './icons'
 
 export interface Option<T extends string> {
   value: T
@@ -34,7 +35,7 @@ export function Dropdown<T extends string>({
       <button type="button" className="ddb" aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}: ${cur.label}`} onClick={() => setOpen((o) => !o)}>
         {cur.icon}
         <span className="grow">{cur.label}</span>
-        <span className="mute">⌄</span>
+        <span className="mute"><ChevronIcon /></span>
       </button>
       {open && (
         <div className="ddm" role="listbox" aria-label={label}>

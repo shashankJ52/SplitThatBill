@@ -7,6 +7,7 @@ import { Bullet } from './bits'
 import { shareMyTag } from './shareTag'
 import { useAddPerson } from './useAddPerson'
 import { useToast } from './Toast'
+import { Loading } from './Loading'
 
 type Status = 'idle' | 'checking' | 'invalid' | 'self' | 'none' | 'found'
 interface Found { id: string; name: string; tag: string }
@@ -75,7 +76,7 @@ export function FindFriend({ current, onPick, inButton = 'Open' }: { current: st
         {status === 'idle' && isTag && tag.length > 0 && <div className="mute">Keep typing, usertags are at least 3 characters.</div>}
         {status === 'invalid' && <div className="bar bad">A usertag is 3–20 letters, numbers or _</div>}
         {status === 'self' && <div className="bar info">That's your own tag.</div>}
-        {status === 'checking' && <div className="mute">Looking for @{tag}…</div>}
+        {status === 'checking' && <Loading>Looking for @{tag}…</Loading>}
         {status === 'found' && found && (
           <div className="card">
             <div className="row">

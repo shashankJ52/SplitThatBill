@@ -9,6 +9,7 @@ import { transfers } from '../money'
 import { Avatar } from '../ui/bits'
 import { Dropdown, type Option } from '../ui/Dropdown'
 import { useToast } from '../ui/Toast'
+import { CloseIcon } from '../ui/icons'
 
 const MAX_IMAGE = 3 * 1024 * 1024
 
@@ -112,7 +113,7 @@ export function PaySheet({ gid, pid, close }: { gid?: string; pid?: string; clos
         <div className="row">
           <img className="thumb" src={img} alt="Attached proof" />
           <div className="grow mute">Attached</div>
-          <button className="del" aria-label="Remove image" onClick={() => setImg(null)}>✕</button>
+          <button className="del" aria-label="Remove image" onClick={() => setImg(null)}><CloseIcon /></button>
         </div>
       )}
       <label className="secondary" style={{ display: 'block', textAlign: 'center', padding: 12, border: '2px solid var(--fg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer', marginTop: 6 }}>

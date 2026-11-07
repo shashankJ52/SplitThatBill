@@ -17,6 +17,7 @@ import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
 import { GroupSheet } from './GroupSheet'
 import { FindFriend } from '../ui/FindFriend'
+import { CloseIcon } from '../ui/icons'
 import { LinkContactSheet } from './LinkContactSheet'
 import { PaySheet } from './PaySheet'
 
@@ -154,7 +155,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
               {admin && m.contact && <button className="linkbtn" disabled={busy} onClick={() => sheet.open('Link to an account', (c) => <LinkContactSheet pid={m.pid} close={c} />)}>Link to account</button>}
               {a.promote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'admin'), `${m.name} is now an admin`)}>Make admin</button>}
               {a.demote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'member'), `${m.name} is a member again`)}>Remove admin</button>}
-              {a.remove && <button className="del" aria-label={`Remove ${m.name}`} onClick={() => setPanel({ kind: 'remove', m })}>✕</button>}
+              {a.remove && <button className="del" aria-label={`Remove ${m.name}`} onClick={() => setPanel({ kind: 'remove', m })}><CloseIcon /></button>}
             </div>
             {panel?.kind === 'remove' && panel.m.pid === m.pid && removePanel(m)}
           </div>

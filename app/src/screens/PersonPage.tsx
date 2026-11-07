@@ -86,14 +86,14 @@ export function PersonPage() {
               <span className={`stat ${x.amt > 0 ? 'g' : 'r'}`}>{x.amt > 0 ? 'owes you ' : 'you owe '}{fmtIn(Math.abs(x.amt), x.code)}</span>
             </>
           )
-          return l.kind === 'group' ? <Link className="card row tap rise" to={`/groups/${l.id}`} key={l.id}>{inner}</Link> : <div className="card row rise" key={l.id}>{inner}</div>
+          return l.kind === 'group' ? <Link className="card row tap" to={`/groups/${l.id}`} key={l.id}>{inner}</Link> : <div className="card row rise" key={l.id}>{inner}</div>
         }) : <Empty small title="Nothing outstanding">You two are even.</Empty>}
         <div className="row" style={{ margin: '14px 0 8px' }}>
           <h2 style={{ margin: 0, flex: 1 }}>Activity</h2>
           <ActivityFilter value={kind} onChange={setKind} />
         </div>
         {activity.length ? (
-          activity.map((x, i) => (x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} index={i} /> : <BillCard key={x.o.id} bill={x.o} index={i} />))
+          activity.map((x) => (x.k === 'p' ? <PayCard key={x.o.id} payment={x.o} /> : <BillCard key={x.o.id} bill={x.o} />))
         ) : (
           <Empty small title={all.length ? (kind === 'bills' ? 'No bills' : 'No settle-ups') : 'No activity'}>{all.length ? 'Change the filter to see everything.' : undefined}</Empty>
         )}

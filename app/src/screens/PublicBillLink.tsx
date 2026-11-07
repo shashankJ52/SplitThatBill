@@ -6,6 +6,7 @@ import { toPublicView, type PublicBillData } from '../domain/publicBill'
 import { Empty } from '../ui/bits'
 import { Screen } from '../app/Screen'
 import { PublicBill } from './PublicBill'
+import { Loading } from '../ui/Loading'
 
 /** A bill opened from a share link. Works without an account and shows only this bill and first names. */
 export function PublicBillLink() {
@@ -31,7 +32,7 @@ export function PublicBillLink() {
   if (shown === undefined)
     return (
       <Screen id="v-public">
-        <div className="vbody"><p className="mute">Opening the bill…</p></div>
+        <div className="vbody"><Loading>Opening the bill…</Loading></div>
       </Screen>
     )
   if (!view || !store)

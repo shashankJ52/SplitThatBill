@@ -11,6 +11,7 @@ import { Avatar, Bullet } from './bits'
 import { ReorderList } from './ReorderList'
 import { reorderSubset } from './reorder'
 import { useSheet } from './Sheet'
+import { ChevronIcon, CloseIcon } from './icons'
 
 /** Whether a section of the sidebar is shown. Kept on this device, so it is the same next time. */
 function useShown(key: string): [boolean, (v: boolean) => void] {
@@ -38,7 +39,7 @@ function Section({ id, title, children }: { id: string; title: string; children:
     <div className="sidelines">
       <button type="button" className="sl-head" aria-expanded={shown} onClick={() => setShown(!shown)}>
         <span>{title}</span>
-        <span className="chev" aria-hidden="true">⌄</span>
+        <span className="chev" aria-hidden="true"><ChevronIcon /></span>
       </button>
       {shown && children(shown)}
     </div>
@@ -162,7 +163,7 @@ function People() {
                         </span>
                       </Link>
                       <button type="button" className="sl-pay" aria-label={`Record a payment with ${name}`} title="Record a payment" onClick={() => sheet.open('Record payment', (close) => <PaySheet pid={p} close={close} />)}>$</button>
-                      <button type="button" className="sl-x" aria-label={`Hide ${name} from the sidebar`} title="Hide from the sidebar" onClick={() => store.update((st) => A.hideSidePerson(st, p))}>✕</button>
+                      <button type="button" className="sl-x" aria-label={`Hide ${name} from the sidebar`} title="Hide from the sidebar" onClick={() => store.update((st) => A.hideSidePerson(st, p))}><CloseIcon /></button>
                     </div>
                   ),
                 }
@@ -174,7 +175,7 @@ function People() {
               Show {hidden} hidden
             </button>
           )}
-          {people.length > 0 && <div className="sl-hint">Hold a name, then drag, to reorder. ✕ hides it here only.</div>}
+          {people.length > 0 && <div className="sl-hint">Hold a name, then drag, to reorder. The x button hides it here only.</div>}
         </>
       )}
     </Section>

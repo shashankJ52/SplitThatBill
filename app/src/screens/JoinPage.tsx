@@ -5,6 +5,7 @@ import { useAccount, useAccountMode } from '../data/account'
 import { clearPendingJoin } from '../app/pendingJoin'
 import { Empty } from '../ui/bits'
 import { useToast } from '../ui/Toast'
+import { Loading } from '../ui/Loading'
 
 /** Where a group link lands. Shows only the group name and who runs it; joining needs an admin's approval. */
 export function JoinPage() {
@@ -47,7 +48,7 @@ export function JoinPage() {
         {mode !== 'cloud' ? (
           <Empty title="Log in to use this link">Group links work with a real account. Log out of the demo, log in, then open the link again.</Empty>
         ) : info === undefined ? (
-          <p className="mute">Checking the link…</p>
+          <Loading>Checking the link…</Loading>
         ) : info === null ? (
           <Empty title="This link is not valid any more">Ask the person who sent it for a new one.</Empty>
         ) : sent ? (

@@ -7,6 +7,7 @@ import { billLink, whatsappText } from '../domain/share'
 import { currencyOf, findBill, ledgerName, personName } from '../domain/selectors'
 import { buildExportModel } from '../share/exportModel'
 import { CreditSheet } from '../sheets/CreditSheet'
+import { CloseIcon } from '../ui/icons'
 import { ShareImageSheet } from '../sheets/ShareImageSheet'
 import { ME } from '../domain/types'
 import { ago, dayLabel, uid, whenLabel } from '../domain/util'
@@ -114,7 +115,7 @@ export function BillPage() {
               <div className={`cmt${c.sys ? ' sys' : ''}`} key={c.id}>
                 <div className="row">
                   <div className="grow">{!c.sys && <b>{personName(s, c.by)} </b>}<span className="mute">{ago(c.ts)}</span></div>
-                  {!c.sys && c.by === ME && <button className="del" aria-label="Delete comment" onClick={() => store.update((st) => A.deleteComment(st, b.id, c.id))}>✕</button>}
+                  {!c.sys && c.by === ME && <button className="del" aria-label="Delete comment" onClick={() => store.update((st) => A.deleteComment(st, b.id, c.id))}><CloseIcon /></button>}
                 </div>
                 {c.sys ? c.text : <div>{c.text}</div>}
               </div>

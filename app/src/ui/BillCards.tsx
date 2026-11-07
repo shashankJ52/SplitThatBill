@@ -15,14 +15,14 @@ export function paidText(s: Parameters<typeof personName>[0], b: AppBill, forOth
   return `paid by ${k.length > 1 ? k.map((p) => personName(s, p, forOthers)).join(' & ') : personName(s, k[0], forOthers)}`
 }
 
-export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number }) {
+export function BillCard({ bill: b }: { bill: AppBill }) {
   const s = useAppState()
   const home = findBill(s, b.id)?.ledger
   const fmt = useMoney(home)
   const mine = home?.kind === 'me' ? 0 : b.shares[ME]
   const n = b.comments.filter((c) => !c.sys).length
   return (
-    <Link className="card tap rise" style={{ display: 'block', ['--i' as string]: index }} to={`/bill/${b.id}`}>
+    <Link className="card tap" style={{ display: 'block' }} to={`/bill/${b.id}`}>
       <div className="row">
         <div className="grow">
           <b>{b.title}</b>
@@ -38,14 +38,14 @@ export function BillCard({ bill: b, index = 0 }: { bill: AppBill; index?: number
   )
 }
 
-export function PayCard({ payment: p, index = 0 }: { payment: MergedPayment; index?: number }) {
+export function PayCard({ payment: p }: { payment: MergedPayment }) {
   const s = useAppState()
   const fmt = useMoney(p.parts[0]?.ledgerId)
   const sheet = useSheet()
   const open = () => sheet.open('Payment', (close) => <PaymentSheet p={p} close={close} />)
   const places = p.parts.length > 1 ? p.parts.map((x) => `${fmt(x.amt)} ${ledgerName(s, ledgerById(s, x.ledgerId) ?? ({ kind: 'group', name: 'a split' } as never))}`).join(' · ') : ''
   return (
-    <div className="card row tap rise" style={{ ['--i' as string]: index }} role="button" tabIndex={0} onClick={open} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}>
+    <div className="card row tap" role="button" tabIndex={0} onClick={open} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}>
       <Bullet letter="$" color="#00933C" size={36} />
       <div className="grow">
         <b>{personName(s, p.from)} paid {personName(s, p.to)}</b>

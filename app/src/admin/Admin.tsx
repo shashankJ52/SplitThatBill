@@ -5,6 +5,7 @@ import { Bullet } from '../ui/bits'
 import { useTheme } from '../ui/useTheme'
 import { feedbackShare, isAdmin, loadAdmin, NOT_ADMIN, setDisabled, since, type AdminClient, type AdminData, type FeedbackRow, type UserRow } from './api'
 import './admin.css'
+import { ThemeIcon } from '../ui/icons'
 
 type Stage = 'checking' | 'signin' | 'denied' | 'ready'
 const rating = (r: FeedbackRow['rating']) => RATINGS.find((x) => x.value === r) ?? RATINGS[1]
@@ -78,7 +79,7 @@ export default function Admin() {
         <Bullet letter="S" color="#FCCC0A" size={34} />
         <b>SplitThatBill admin</b>
         <span className="grow" />
-        <button className="ad-icon" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
+        <button className="ad-icon" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}><ThemeIcon /></button>
         {stage === 'ready' && (
           <>
             <button className="ad-btn" onClick={() => void load()} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>

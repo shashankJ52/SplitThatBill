@@ -20,6 +20,7 @@ import { useSheet } from '../ui/Sheet'
 import { useToast } from '../ui/Toast'
 import { useUiState } from '../ui/uiState'
 import { pairBalance } from '../domain/selectors'
+import { ChevronIcon } from '../ui/icons'
 
 const CAPTION: Record<BalanceFilter, string> = {
   net: '',
@@ -106,7 +107,7 @@ export function GroupsTab() {
     >
       <h2>{title}</h2>
       <button className="secondary pillb" aria-label={aria} onClick={onBtn}>{btn}</button>
-      <span className="chev" aria-hidden="true">⌄</span>
+      <span className="chev" aria-hidden="true"><ChevronIcon /></span>
     </div>
   )
 

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { CloseIcon } from './icons'
 
 interface Entry {
   title: string
@@ -39,7 +40,7 @@ export function SheetProvider({ children }: { children: ReactNode }) {
           <>
             <div id="sheet-head">
               <h3 id="sheet-title">{entry.title}</h3>
-              <button type="button" id="sheet-x" aria-label="Close" onClick={close}>✕</button>
+              <button type="button" id="sheet-x" aria-label="Close" onClick={close}><CloseIcon /></button>
             </div>
             <div id="sheet-body">{entry.render(close)}</div>
           </>

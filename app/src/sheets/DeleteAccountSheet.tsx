@@ -11,6 +11,7 @@ import { Avatar } from '../ui/bits'
 import { Dropdown, type Option } from '../ui/Dropdown'
 import { PwField } from '../screens/auth/parts'
 import { useToast } from '../ui/Toast'
+import { CloseIcon } from '../ui/icons'
 
 const DELETE_WORD = 'DELETE'
 
@@ -87,7 +88,7 @@ export function DeleteAccountSheet({ close }: { close: () => void }) {
 
   const options = (h: (typeof plan.handover)[number]): Option<string>[] => [
     ...h.candidates.map((p) => ({ value: p, label: `Hand over to ${personName(s, p)}`, icon: <Avatar pid={p} size={28} /> })),
-    { value: 'delete', label: 'Delete it for everyone', icon: <span className="bullet" style={{ ['--c' as string]: '#EE352E', ['--t' as string]: '#fff', ['--s' as string]: '28px' }}>✕</span> },
+    { value: 'delete', label: 'Delete it for everyone', icon: <span className="bullet" style={{ ['--c' as string]: '#EE352E', ['--t' as string]: '#fff', ['--s' as string]: '28px' }}><CloseIcon /></span> },
   ]
 
   return (

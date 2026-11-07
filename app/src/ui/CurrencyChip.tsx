@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { currencyLabel } from '../domain/currency'
+import { ChevronIcon } from './icons'
 
 /**
- * A small "USD ⌄" button that opens a short menu of currencies right under it. It is a menu, not a sheet, so it also works
+ * A small "USD" button with a chevron that opens a short menu of currencies right under it. It is a menu, not a sheet, so it also works
  * inside a sheet without closing it.
  */
 export function CurrencyChip({ value, options, onPick, label = 'Change currency' }: { value: string; options: string[]; onPick: (code: string) => void; label?: string }) {
@@ -24,7 +25,7 @@ export function CurrencyChip({ value, options, onPick, label = 'Change currency'
   return (
     <div className="chipw" ref={ref}>
       <button type="button" className="secondary pillb chipb" aria-haspopup="listbox" aria-expanded={open} aria-label={`${label}. Showing ${value}`} onClick={() => setOpen((o) => !o)}>
-        {value} <span aria-hidden="true">⌄</span>
+        {value} <ChevronIcon />
       </button>
       {open && (
         <div className="chipm" role="listbox" aria-label={label}>

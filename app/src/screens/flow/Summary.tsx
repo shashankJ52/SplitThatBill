@@ -38,14 +38,14 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
       </div>
       <div className="vbody">
         {rows.length ? (
-          rows.map((r, i) => {
+          rows.map((r) => {
             const items = d.fixed ? 'Custom amount' : d.items.filter((it) => itemWeights(d, it)?.[r.p]).map((it) => it.name).join(', ')
             const g = d.guests[r.p] || 0
             const paid = pm[r.p] || 0
             const net = r.total - paid
             const verb = r.p === ME ? 'owe' : 'owes'
             return (
-              <div className="card rise" style={{ '--i': i } as React.CSSProperties} key={r.p}>
+              <div className="card" key={r.p}>
                 <div className="row">
                   <Avatar pid={r.p} size={34} />
                   <div className="grow">

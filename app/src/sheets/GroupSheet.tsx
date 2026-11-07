@@ -10,6 +10,7 @@ import { GROUP_ICONS } from '../domain/groupIcons'
 import { COLORS, uid } from '../domain/util'
 import { Avatar, Bullet } from '../ui/bits'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
+import { CloseIcon } from '../ui/icons'
 import { TypeToConfirm } from '../ui/TypeToConfirm'
 import { useAddPerson } from '../ui/useAddPerson'
 import { useToast } from '../ui/Toast'
@@ -121,7 +122,7 @@ export function GroupSheet({ gid, onCreated, close }: { gid?: string; onCreated?
           <div className="grow">
             <b>{personName(s, m)}</b> {s.people[m]?.user ? s.people[m]?.tag && <span className="pill">@{s.people[m].tag}</span> : <span className="pill">local</span>}
           </div>
-          {m !== ME && <button className="del" onClick={() => removeMember(m)} aria-label={`Remove ${personName(s, m)}`}>✕</button>}
+          {m !== ME && <button className="del" onClick={() => removeMember(m)} aria-label={`Remove ${personName(s, m)}`}><CloseIcon /></button>}
         </div>
       ))}
       {!shared && <div className="row" style={{ marginTop: 8 }}>
