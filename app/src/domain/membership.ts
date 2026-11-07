@@ -48,6 +48,11 @@ export function pendingInvites(s: AppState): { gid: string; pid: PersonId }[] {
   return out
 }
 
+/** The groups and 1-1s where you could link this placeholder name to a real account: you run them and the name is in them. */
+export function linkTargets(s: AppState, pid: PersonId): string[] {
+  return s.ledgers.filter((l) => isShared(l) && isAdmin(l) && l.members.includes(pid)).map((l) => l.id)
+}
+
 export interface MemberLine {
   pid: PersonId
   name: string

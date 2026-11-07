@@ -4,6 +4,9 @@ import { useAppState } from '../data/store'
 import { defaultCurrency, filterActivity, ledgerName, groupGlyph, otherPairBalances, pairBalance, pairCurrencies, personActivity, type ActivityKind } from '../domain/selectors'
 import { ME } from '../domain/types'
 import { fmt as fmtIn } from '../domain/util'
+import { useAccount } from '../data/account'
+import { linkTargets } from '../domain/membership'
+import { LinkContactSheet } from '../sheets/LinkContactSheet'
 import { RemindSheet } from '../sheets/RemindSheet'
 import { PaySheet } from '../sheets/PaySheet'
 import { Avatar, BellIcon, Bullet, Empty } from '../ui/bits'
@@ -17,6 +20,7 @@ export function PersonPage() {
   const s = useAppState()
   const nav = useNavigate()
   const sheet = useSheet()
+  const account = useAccount()
   const [kind, setKind] = useUiState<ActivityKind>(`person.${pid}.filter`, 'all')
   const p = s.people[pid]
   if (!p || pid === ME) return <Navigate to="/groups" replace />
@@ -39,7 +43,12 @@ export function PersonPage() {
           <Avatar pid={pid} size={56} />
           <div className="grow">
             <div className="gname" style={{ fontSize: 28, lineHeight: 1.05 }}>{p.name}</div>
-            <div className="mute">{p.user ? `@${p.tag ?? ''}` : 'Not on the app · tracked locally'}</div>
+            <div className="mute">
+              {p.user ? `@${p.tag ?? ''}` : 'Not on the app · tracked locally'}
+              {!p.user && account && linkTargets(s, pid).length > 0 && (
+                <> · <button className="linkbtn" onClick={() => sheet.open('Link to an account', (close) => <LinkContactSheet pid={pid} close={close} />)}>Link to an account</button></>
+              )}
+            </div>
           </div>
         </div>
         <div className="sign" style={{ marginBottom: 8 }}>

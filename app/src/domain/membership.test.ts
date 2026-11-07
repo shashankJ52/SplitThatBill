@@ -3,7 +3,7 @@ import { makeBill } from './bills'
 import { emptyState } from './seed'
 import type { AppLedger, AppState } from './types'
 import { ME } from './types'
-import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
+import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, linkTargets, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
 import { balanceOf } from './membership'
 import { nets } from '../money'
 
@@ -186,5 +186,20 @@ describe('deleting your account', () => {
     const { s } = setup()
     const plan = deletionPlan({ ...s, ledgers: [one] })
     expect(plan.handover.map((h) => [h.ledger.id, h.candidates])).toEqual([['o', [A]]])
+  })
+})
+
+describe('where a placeholder name can be linked to a real account', () => {
+  it('lists the groups you run that the name is in', () => {
+    const { s } = setup()
+    expect(linkTargets(s, SAM)).toEqual(['g'])
+  })
+  it('skips groups you do not run, groups the name is not in and groups not saved to the server yet', () => {
+    const { s } = setup({ roles: { [ME]: 'member', [A]: 'owner', [SAM]: 'member' } })
+    expect(linkTargets(s, SAM)).toEqual([])
+    expect(linkTargets(setup().s, A)).toEqual(['g']) // A is in it, so the list is by membership, not by account type
+    expect(linkTargets(setup().s, 'nobody')).toEqual([])
+    const unsaved = setup({ roles: undefined })
+    expect(linkTargets(unsaved.s, SAM)).toEqual([])
   })
 })

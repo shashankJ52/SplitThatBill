@@ -35,6 +35,8 @@ export interface Account {
   /** Find one person by exact tag. */
   findUser(tag: string): Promise<{ id: string; name: string; tag: string } | null>
   invite(groupId: string, userId: string): Promise<Result>
+  /** turn a placeholder name (no account) in one group into a real person: they are invited and the old bills become theirs */
+  linkContact(groupId: string, contactId: string, userId: string): Promise<Result>
   acceptInvite(groupId: string): Promise<Result>
   declineInvite(groupId: string): Promise<Result>
   /** Turn the group link on (a new code each time) or off. */
@@ -258,6 +260,7 @@ export function createAccount(store: Store, client: SupabaseClient): Account {
       return error || !row ? null : row
     },
     invite: (gid, uid) => rpc('invite_user', { gid, uid }),
+    linkContact: (gid, contact, uid) => rpc('link_contact', { gid, contact, uid }),
     acceptInvite: (gid) => rpc('accept_invite', { gid }),
     declineInvite: (gid) => rpc('decline_invite', { gid }),
     async setLink(gid, enabled) {
