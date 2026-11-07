@@ -6,12 +6,13 @@ import { mAdd, nowKey } from './util'
 
 export const realGroups = (s: AppState) => s.ledgers.filter((l) => l.kind === 'group')
 /**
- * Everyone to show for a group: its members, plus anyone who is only invited so far but already has bills or payments in
- * it (a name that was just linked to an account). Without them their station and their share would vanish until they accept.
+ * Everyone who counts as being in a group: its members, and anyone invited who has not accepted yet. An invited person is
+ * still part of the group for showing balances and for splitting new bills, so linking a name to an account (or inviting
+ * someone) never makes them disappear before they accept.
  */
 export function shownPeople(l: AppLedger): PersonId[] {
   const out = l.members.slice()
-  for (const p of l.invited ?? []) if (!out.includes(p) && involves(l, p)) out.push(p)
+  for (const p of l.invited ?? []) if (!out.includes(p)) out.push(p)
   return out
 }
 export const ledgerById = (s: AppState, id: string) => s.ledgers.find((l) => l.id === id)

@@ -4,7 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
-import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, others } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, shownPeople, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
@@ -135,7 +135,7 @@ export function Capture() {
             <div className="row">
               <Bullet letter={groupGlyph(selGroup)} color={selGroup.color ?? '#A7A9AC'} size={30} />
               <b style={{ color: 'var(--fg)' }}>{selGroup.name}</b>
-              <span>· {selGroup.members.length} people</span>
+              <span>· {shownPeople(selGroup).length} people</span>
             </div>
           ) : sel === 'me' ? (
             <div className="row">

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
 import { useAppState, useStore } from '../data/store'
-import { activeCurrencies, monthStats, personalLedger, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, groupGlyph, orderBy, otherTotals, overallTotals, personName, realGroups, type BalanceFilter } from '../domain/selectors'
+import { activeCurrencies, monthStats, personalLedger, arrangedGroups, arrangedPeople, currencyOf, defaultCurrency, groupGlyph, orderBy, otherTotals, overallTotals, personName, realGroups, shownPeople, type BalanceFilter } from '../domain/selectors'
 import { CurrencyChip } from '../ui/CurrencyChip'
 import { ME } from '../domain/types'
 import { myNet } from '../money'
@@ -177,7 +177,7 @@ export function GroupsTab() {
                         <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={46} />
                         <div className="grow">
                           <div className="gname">{g.name}</div>
-                          <div className="mute">{g.members.length} {g.members.length === 1 ? 'person' : 'people'}</div>
+                          <div className="mute">{shownPeople(g).length} {shownPeople(g).length === 1 ? 'person' : 'people'}</div>
                         </div>
                         {n < 0 ? <span className="stat r">owe {fmtIn(-n, currencyOf(s, g))}</span> : n > 0 ? <span className="stat g">owed {fmtIn(n, currencyOf(s, g))}</span> : <span className="stat mute">settled up</span>}
                       </Link>

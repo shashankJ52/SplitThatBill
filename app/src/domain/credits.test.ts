@@ -104,3 +104,14 @@ describe('adding a discount to a bill that is already saved', () => {
     expect(draftFromBill(out, ledgerOf(out)).credits).toHaveLength(1)
   })
 })
+
+describe('a new bill in a group with someone invited', () => {
+  it('includes them, so they are still part of the group until they accept', () => {
+    const s = seedState(Date.UTC(2026, 9, 19, 12))
+    const g = s.ledgers.find((l) => l.id === 'g1')!
+    const withInvite = { ...s, ledgers: s.ledgers.map((l) => (l.id === 'g1' ? { ...l, invited: ['sumit'] } : l)), people: { ...s.people, sumit: { id: 'sumit', name: 'Sumit', user: true, tag: 'sumit' } } }
+    const d = newDraft(withInvite, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1')
+    expect(d.people).toEqual([...g.members, 'sumit'])
+    expect(newDraft(s, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1').people).toEqual(g.members)
+  })
+})

@@ -1,6 +1,6 @@
 import { calc, creditsSum, splitProp, discCents, extrasSum, itemsSum, itemWeights, type Credit, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
-import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups } from './selectors'
+import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups, shownPeople } from './selectors'
 import type { ScanResult } from '../scan/receipt'
 import { ME, type AppBill, type AppLedger, type AppState, type Comment } from './types'
 
@@ -182,7 +182,7 @@ export function setTarget(s: AppState, d: Draft, target: string): Draft {
     if (g) {
       kind = 'group'
       gid = g.id
-      people = g.members.slice()
+      people = shownPeople(g)
     }
   } else if (target.startsWith('p:')) {
     withP = target.slice(2)

@@ -205,15 +205,16 @@ describe('where a placeholder name can be linked to a real account', () => {
   })
 })
 
-describe('people shown for a group', () => {
-  it('are its members, and also anyone only invited who already has bills in it (a name just linked to an account)', () => {
+describe('people who count as being in a group', () => {
+  it('are its members and anyone invited who has not accepted yet, so nobody drops out before they accept', () => {
     const linked = '99999999-9999-4999-8999-999999999999'
-    const { l } = setup({ members: [ME, A], invited: [linked], bills: [bill(ME, [ME, A, linked])] })
-    expect(shownPeople(l)).toEqual([ME, A, linked])
-  })
-  it('leave out someone invited who is in none of its bills yet, and never list anyone twice', () => {
     const fresh = '88888888-8888-4888-8888-888888888888'
-    const { l } = setup({ members: [ME, A], invited: [fresh, A], bills: [bill(ME, [ME, A])] })
+    const { l } = setup({ members: [ME, A], invited: [linked, fresh], bills: [bill(ME, [ME, A, linked])] })
+    expect(shownPeople(l)).toEqual([ME, A, linked, fresh])
+  })
+  it('never list anyone twice, and are just the members when nobody is invited', () => {
+    const { l } = setup({ members: [ME, A], invited: [A] })
     expect(shownPeople(l)).toEqual([ME, A])
+    expect(shownPeople(setup().l)).toEqual([ME, A, SAM])
   })
 })
