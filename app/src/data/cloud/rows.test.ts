@@ -4,7 +4,7 @@ import type { AppLedger, AppState } from '../../domain/types'
 import { ME } from '../../domain/types'
 import { emptyState } from '../../domain/seed'
 import { uid } from '../../domain/util'
-import { diff, emptySynced, markSynced, Positions, stable, swapId, toSnapshot } from './rows'
+import { diff, emptySynced, fromLoaded, markSynced, Positions, stable, swapId, toSnapshot, type Loaded } from './rows'
 
 const USER = '11111111-1111-4111-8111-111111111111'
 const OTHER = '22222222-2222-4222-8222-222222222222'
@@ -123,5 +123,33 @@ describe('finding changes', () => {
     const synced = markSynced(toSnapshot(s, USER, pos))
     expect(diff(synced, toSnapshot({ ...s, profile: { ...s.profile, email: 'new@x.co' } }, USER, pos)).profile).toBeNull()
     expect(diff(synced, toSnapshot({ ...s, profile: { ...s.profile, name: 'New' } }, USER, pos)).profile?.name).toBe('New')
+  })
+})
+
+describe('people you found by @tag', () => {
+  const loaded = (friends?: { id: string; name: string; tag?: string }[]): Loaded => ({
+    userId: USER, profile, prefs: friends ? { note_order: [], hidden: [], layout: { friends } } : null, groups: [], members: [], profiles: [], requests: [],
+    bills: [], comments: [], payments: [], lists: [], listItems: [], notes: [], notifs: [], sent: [],
+  })
+
+  it('are still known after a reload, even when they are in no group or 1-1 yet (they used to turn into "Someone")', () => {
+    const s = fromLoaded(loaded([{ id: OTHER, name: 'Sumit', tag: 'sumitgamer' }]), new Positions())
+    expect(s.people[OTHER]).toEqual({ id: OTHER, name: 'Sumit', user: true, tag: 'sumitgamer' })
+  })
+
+  it('nobody is invented when none were found, and you are never listed as a friend', () => {
+    expect(Object.keys(fromLoaded(loaded(), new Positions()).people)).toEqual([ME])
+    expect(Object.keys(fromLoaded(loaded([{ id: USER, name: 'Ann' }]), new Positions()).people)).toEqual([ME])
+  })
+
+  it('what a group says about someone wins over the remembered copy', () => {
+    const gid = uid()
+    const l: Loaded = {
+      ...loaded([{ id: OTHER, name: 'Old Name', tag: 'old' }]),
+      groups: [{ id: gid, kind: 'group', name: 'Flat', color: null, simplify: true, owner_id: USER, invite_code: null, created_at: '2026-10-20T00:00:00Z' }],
+      members: [{ group_id: gid, person_id: OTHER, user_id: OTHER, display_name: 'Sumit R', role: 'member', status: 'active', invited_by: null, created_at: '2026-10-20T00:00:01Z' } as never],
+      profiles: [{ id: OTHER, name: 'Sumit R', tag: 'sumitgamer' } as never],
+    }
+    expect(fromLoaded(l, new Positions()).people[OTHER]).toMatchObject({ name: 'Sumit R', tag: 'sumitgamer' })
   })
 })

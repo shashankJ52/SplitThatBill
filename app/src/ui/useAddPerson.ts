@@ -27,7 +27,7 @@ export function useAddPerson() {
       const found = await account.findUser(tag)
       if (!found) return { err: `No user @${tag}. Check the spelling, or add them by name instead.` }
       if (current.includes(found.id) || found.id === ME) return { err: `${found.name} is already here` }
-      store.update((s) => ({ ...s, people: { ...s.people, [found.id]: { id: found.id, name: found.name, user: true, tag: found.tag } } }))
+      store.update((s) => A.rememberFriend(s, found))
       return { id: found.id }
     }
     const r = A.addPersonFromInput(store.get(), t, current, uid('p'))

@@ -136,6 +136,8 @@ export interface Layout {
   sideHidden?: PersonId[]
   /** people taken off the 1-1 suggestions when scanning a receipt (they stay everywhere else) */
   scanHidden?: PersonId[]
+  /** people found by their @tag who are not in any group or 1-1 yet. Kept here so they survive a refresh instead of turning into "Someone" */
+  friends?: { id: PersonId; name: string; tag?: string }[]
   /** paper size for PDFs; missing means Letter in the USA, Canada and Mexico and A4 elsewhere */
   paper?: 'Letter' | 'A4'
   /** your default currency, used by every group and split that has not chosen its own */

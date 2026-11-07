@@ -99,6 +99,11 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
     const prof = m.user_id ? profileOf.get(m.user_id) : undefined
     people[pid] = { id: pid, name: prof?.name ?? m.display_name, user: m.user_id !== null, tag: prof?.tag }
   }
+  // people you found by @tag but have not put in a group or 1-1 yet: nothing in the database mentions them, so they live in your settings
+  for (const f of l.prefs?.layout?.friends ?? []) {
+    const pid = t(f.id)
+    if (pid !== ME && !people[pid]) people[pid] = { id: pid, name: f.name, user: true, tag: f.tag }
+  }
   for (const r of l.requests) {
     const prof = profileOf.get(r.user_id)
     if (prof && !people[r.user_id]) people[r.user_id] = { id: r.user_id, name: prof.name, user: true, tag: prof.tag }

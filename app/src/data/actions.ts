@@ -279,6 +279,12 @@ export const showSidePeople = (s: S): S => ({ ...s, layout: { ...s.layout, sideH
 export const hideScanPerson = (s: S, pid: PersonId): S => ({ ...s, layout: { ...s.layout, scanHidden: [...(s.layout?.scanHidden ?? []).filter((x) => x !== pid), pid] } })
 /** Bring back everyone hidden from the scan screen's suggestions. */
 export const showScanPeople = (s: S): S => ({ ...s, layout: { ...s.layout, scanHidden: [] } })
+/** Remember someone found by @tag, so they stay in your people list even before they are in a group or 1-1. */
+export const rememberFriend = (s: S, f: { id: PersonId; name: string; tag?: string }): S => ({
+  ...s,
+  people: { ...s.people, [f.id]: { id: f.id, name: f.name, user: true, tag: f.tag } },
+  layout: { ...s.layout, friends: [...(s.layout?.friends ?? []).filter((x) => x.id !== f.id), { id: f.id, name: f.name, ...(f.tag ? { tag: f.tag } : {}) }] },
+})
 export const setGroupOrder = (s: S, ids: string[]): S => ({ ...s, layout: { ...s.layout, groups: ids } })
 export const setPeopleOrder = (s: S, ids: PersonId[]): S => ({ ...s, layout: { ...s.layout, people: ids } })
 /** Swipe a settled-up person away. They return when there is new activity with them. */
