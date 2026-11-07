@@ -48,14 +48,32 @@ export interface ExportModel {
   link: string | null
 }
 
+/**
+ * The letter in each person's bullet. The first letter of the name, unless two people share it (Sam and Sumit): then the
+ * first two letters ("Sa", "Su"), and if even those match, the first letter and a number ("S1", "S2").
+ */
+export function bulletLetters(names: string[]): string[] {
+  const clean = names.map((n) => n.trim() || '?')
+  const cap = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+  const one = clean.map((n) => n.charAt(0).toUpperCase())
+  const two = clean.map((n) => cap(n.slice(0, 2)))
+  const count = (list: string[], v: string) => list.filter((x) => x === v).length
+  const seen: Record<string, number> = {}
+  return clean.map((_n, i) => {
+    if (count(one, one[i]) === 1) return one[i]
+    if (count(two, two[i]) === 1) return two[i]
+    seen[one[i]] = (seen[one[i]] ?? 0) + 1
+    return `${one[i]}${seen[one[i]]}`
+  })
+}
+
 /** Work out the picture's content for one bill. Names are the ones other people would see ("You" becomes your first name). */
 export function buildExportModel(s: AppState, b: ShareBill, opts: { groupName: string | null; currency: string; link: string | null }): ExportModel {
   const c = calc(b)
   const pm = paidMap(b, c.total)
-  const people: ExportPerson[] = b.people.map((p, i) => {
-    const name = personName(s, p, true)
-    return { name, letter: (name.trim().charAt(0) || '?').toUpperCase(), color: PERSON_COLORS[i % PERSON_COLORS.length] }
-  })
+  const names = b.people.map((p) => personName(s, p, true))
+  const letters = bulletLetters(names)
+  const people: ExportPerson[] = b.people.map((_p, i) => ({ name: names[i], letter: letters[i], color: PERSON_COLORS[i % PERSON_COLORS.length] }))
   const at = new Map(b.people.map((p, i) => [p, i]))
   const lines: ExportLine[] = b.fixed
     ? []

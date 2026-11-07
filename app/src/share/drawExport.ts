@@ -185,8 +185,13 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean, doc = false): 
   const pw = W - margin * 2
   const lines = m.lines
   // the PDF already says who owes what in the sign above, so its receipt leaves that out and sets its rows tighter
-  const settle = doc ? [] : m.settle.slice(0, MAX_ROWS)
-  const more = doc ? 0 : m.settle.length - settle.length
+  // everyone who shares an item gets a row below the total, with the same bullet as beside their items, so the letters can be told apart
+  const inSettle = new Set(m.settle.map((r) => r.person))
+  const sharing = new Set(m.lines.flatMap((l) => l.who.map((w) => m.people[w])))
+  const evens = m.people.filter((p) => !inSettle.has(p) && (sharing.has(p) || m.payers.some((x) => x.person === p)))
+  const legend = doc ? [] : [...m.settle.map((r) => ({ person: r.person, net: r.net as number | null })), ...evens.map((p) => ({ person: p, net: null as number | null }))]
+  const settle = legend.slice(0, MAX_ROWS)
+  const more = doc ? 0 : legend.length - settle.length
   const rowH = doc ? 40 : 54
   const extraH = doc ? 34 : 48
   const hd = doc ? 56 : 70
@@ -292,11 +297,14 @@ function drawReceipt(m: ExportModel, ink: Ink, showLink: boolean, doc = false): 
 
   const payer = m.settle.find((r) => r.net < 0)?.person.name ?? m.paidBy
   settle.forEach((r) => {
+    bullet(x, inner + 18, y + 24, 18, r.person.color, r.person.letter)
     font(x, 28, 400, MONO)
-    const label = r.net > 0 ? `${r.person.name} owes ${payer}` : `${r.person.name} is owed`
-    text(x, fit(x, label, innerR - inner - 240), inner, y + 34, TEXT)
-    font(x, 30, 700, MONO)
-    text(x, fmt(Math.abs(r.net), m.currency), innerR, y + 34, r.net > 0 ? RED : '#1b7f3b', 'right')
+    const label = r.net === null ? `${r.person.name} · even` : r.net > 0 ? `${r.person.name} owes ${payer}` : `${r.person.name} is owed`
+    text(x, fit(x, label, innerR - inner - 290), inner + 52, y + 34, TEXT)
+    if (r.net !== null) {
+      font(x, 30, 700, MONO)
+      text(x, fmt(Math.abs(r.net), m.currency), innerR, y + 34, r.net > 0 ? RED : '#1b7f3b', 'right')
+    }
     y += 52
     breaks.push(y)
   })

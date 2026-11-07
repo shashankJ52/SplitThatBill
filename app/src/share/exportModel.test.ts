@@ -3,7 +3,7 @@ import { makeBill } from '../domain/bills'
 import { emptyState } from '../domain/seed'
 import { ME } from '../domain/types'
 import type { AppState } from '../domain/types'
-import { buildExportModel } from './exportModel'
+import { buildExportModel, bulletLetters } from './exportModel'
 
 const s: AppState = {
   ...emptyState({ name: 'Alex Rivera', email: 'a@x.co', tag: 'alex' }, ''),
@@ -56,5 +56,20 @@ describe('buildExportModel', () => {
   it('shows a discount with a minus', () => {
     const d = makeBill({ id: 'd', title: 'D', date: '2026-10-20', payer: ME, by: ME, rt: 900, people: [ME, 'jamie'], disc: { m: 'amt', v: 100 }, items: [{ id: 1, name: 'x', qty: 1, price: 1000, a: { mode: 'even', even: [ME, 'jamie'], por: {} } }] })
     expect(buildExportModel(s, d, { groupName: null, currency: 'USD', link: null }).extras).toEqual([{ label: 'Discount', amt: 100, minus: true }])
+  })
+})
+
+describe('bullet letters', () => {
+  it('stay one letter when nobody shares an initial', () => {
+    expect(bulletLetters(['Ann', 'Ben', 'Cat'])).toEqual(['A', 'B', 'C'])
+  })
+  it('use two letters when people share an initial, so Sam and Sumit differ', () => {
+    expect(bulletLetters(['You', 'Sam', 'Sumit', 'Ben'])).toEqual(['Y', 'Sa', 'Su', 'B'])
+  })
+  it('fall back to a number when even two letters match, and keep the others as they were', () => {
+    expect(bulletLetters(['Sam', 'Sami', 'Sumit', 'Ben'])).toEqual(['S1', 'S2', 'Su', 'B'])
+  })
+  it('copes with empty names and different capital letters', () => {
+    expect(bulletLetters(['', 'sam'])).toEqual(['?', 'S'])
   })
 })
