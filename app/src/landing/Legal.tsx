@@ -9,7 +9,7 @@ import './landing.css'
 /** Where people can reach the person running the app. Fill this in before launch; until then the pages say so. */
 export const CONTACT_EMAIL = 'hello@splitthatbill.app'
 
-const UPDATED = 'October 2026'
+const UPDATED = 'November 2026'
 const YEAR = new Date().getFullYear()
 
 function Page({ title, children }: { title: string; children: ReactNode }) {
@@ -72,7 +72,8 @@ export function Privacy() {
         <li><b>Supabase</b> stores the database and sign-in (hosted in the United States).</li>
         <li><b>Vercel</b> serves the website and runs the scanning function.</li>
         <li><b>Anthropic</b> reads receipt photos, as above.</li>
-        <li><b>Gmail</b> sends the sign-in codes and password-reset emails.</li>
+        <li><b>Resend</b> sends the sign-in codes and password-reset emails.</li>
+        <li><b>Cloudflare</b> looks after our domain name and passes on messages sent to our contact address.</li>
       </ul>
       <p>We do not sell your data, show ads, or share it with advertisers.</p>
 
