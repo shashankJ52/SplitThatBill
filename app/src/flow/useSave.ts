@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import * as A from '../data/actions'
+import { useAccount } from '../data/account'
 import { useStore } from '../data/store'
 import { toBill, type Draft } from '../domain/draft'
 import { findBill, ledgerById, ledgerName } from '../domain/selectors'
@@ -12,6 +13,7 @@ export function useSave() {
   const store = useStore()
   const nav = useNavigate()
   const toast = useToast()
+  const account = useAccount()
   return (d: Draft) => {
     const st = store.get()
     if (d.editingId) {
@@ -27,7 +29,7 @@ export function useSave() {
         let state = s
         let lid = d.gid ?? ''
         if (d.personal) {
-          const r = A.ensurePersonal(state, uid('g'))
+          const r = A.ensurePersonal(state, account?.userId() || uid('g'))
           state = r.state
           lid = r.id
         } else if (d.kind === 'one' && d.withP) {

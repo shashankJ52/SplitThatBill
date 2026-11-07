@@ -80,7 +80,11 @@ export function ensureOneLedger(s: S, pid: PersonId, newId: string, currency?: s
   return { state: { ...s, ledgers: [...s.ledgers, l] }, id: newId }
 }
 
-/** Your own private ledger for spending that is not split with anyone. There is only ever one. */
+/**
+ * Your own private ledger for spending that is not split with anyone. There is only ever one. Signed in, pass your account
+ * id as `newId`: it is then the same on every device, so opening Personal on a phone and a laptop at the same moment cannot
+ * make two. (An older ledger with a different id keeps working; this only decides the id of a new one.)
+ */
 export const PERSONAL_COLOR = '#6CBE45'
 export function ensurePersonal(s: S, newId: string): { state: S; id: string } {
   const existing = personalLedger(s)

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Screen } from '../app/Screen'
 import * as A from '../data/actions'
+import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
 import { monthStats, personalLedger } from '../domain/selectors'
 import { mLabel, nowKey, uid } from '../domain/util'
@@ -19,6 +20,7 @@ const TABS: Tab[] = ['bills', 'overview', 'lists']
 export function PersonalPage() {
   const s = useAppState()
   const store = useStore()
+  const account = useAccount()
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
   const l = personalLedger(s)
@@ -26,8 +28,8 @@ export function PersonalPage() {
 
   // the ledger is made the first time the page opens
   useEffect(() => {
-    if (!personalLedger(store.get())) store.update((st) => A.ensurePersonal(st, uid('g')).state)
-  }, [store])
+    if (!personalLedger(store.get())) store.update((st) => A.ensurePersonal(st, account?.userId() || uid('g')).state)
+  }, [store, account])
   if (!l) return null
 
   const tab: Tab = TABS.includes(sp.get('tab') as Tab) ? (sp.get('tab') as Tab) : 'bills'
