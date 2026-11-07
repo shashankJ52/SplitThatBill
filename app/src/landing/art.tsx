@@ -24,8 +24,8 @@ export function ReceiptArt() {
       <div className="lp-receipt">
         <div className="lp-r-head">TRATTORIA ROMA</div>
         <div className="lp-r-dash" />
-        {rows.map((r, i) => (
-          <div className="lp-r-row" key={r.n} style={{ ['--i' as string]: i }}>
+        {rows.map((r) => (
+          <div className="lp-r-row" key={r.n}>
             <span className="lp-r-name">{r.n}</span>
             <span className="lp-r-who">{r.who.map((w) => person(w, 20))}</span>
             <span className="lp-r-price">{r.p}</span>
@@ -35,8 +35,8 @@ export function ReceiptArt() {
         <div className="lp-r-row lp-r-total"><span className="lp-r-name">Total</span><span /><span className="lp-r-price">$91.50</span></div>
       </div>
       <div className="lp-owes">
-        <div className="lp-owes-row" style={{ ['--i' as string]: 0 }}>{person(1, 26)}<span>Jamie owes <b>$31.25</b></span></div>
-        <div className="lp-owes-row" style={{ ['--i' as string]: 1 }}>{person(3, 26)}<span>Sam owes <b>$15.38</b></span></div>
+        <div className="lp-owes-row">{person(1, 26)}<span>Jamie owes <b>$31.25</b></span></div>
+        <div className="lp-owes-row">{person(3, 26)}<span>Sam owes <b>$15.38</b></span></div>
       </div>
     </div>
   )

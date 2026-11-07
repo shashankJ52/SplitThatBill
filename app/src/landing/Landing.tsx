@@ -10,6 +10,7 @@ import { Bullet } from '../ui/bits'
 import { useTheme } from '../ui/useTheme'
 import { AssignArt, OweArt, ReceiptArt, ScanArt, SettleArt, ShareArt } from './art'
 import './landing.css'
+import { ThemeIcon } from '../ui/icons'
 
 const YEAR = new Date().getFullYear()
 
@@ -30,10 +31,6 @@ const FEATURES = [
   { c: '#0039A6', l: '€', t: 'Any currency', d: 'Set a default and give any group its own. Each currency is kept separate and never mixed.' },
   { c: '#B933AD', l: 'P', t: 'Private by design', d: 'Your photo is never stored. It is sent once to an AI to read the items, and card numbers and names are left out.' },
 ]
-
-function Sign({ children, bullet }: { children: ReactNode; bullet?: ReactNode }) {
-  return <div className="lp-sign">{bullet}<span>{children}</span></div>
-}
 
 /** Fill the line and light up each stop as it scrolls past. Plain scroll math, no libraries. */
 function useJourney(scroller: React.RefObject<HTMLElement | null>, journey: React.RefObject<HTMLElement | null>) {
@@ -110,24 +107,20 @@ export default function Landing() {
           <span className="lp-brand-text"><b>SplitThatBill</b><small>{TAGLINE}</small></span>
         </Link>
         <span className="grow" />
-        <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
+        <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}><ThemeIcon /></button>
         <AccountLink />
       </header>
 
       <main>
         <section className="lp-hero">
           <div className="lp-hero-text">
-            <Sign bullet={<Bullet letter="S" color="#FCCC0A" size={26} />}>Receipts, split item by item</Sign>
-            <h1>Split that Bill.<br /><em>{TAGLINE}.</em></h1>
+            <h1>Split that Bill.<br /><span className="lp-accent">{TAGLINE}.</span></h1>
             <p className="lp-lead">Scan a receipt, say who had what, and see who owes whom, item by item. For groups, roommates, trips, or just the two of you.</p>
             <div className="lp-cta">
               {signedIn ? (
                 <Link to="/groups" className="lp-btn lp-primary">Open SplitThatBill</Link>
               ) : (
-                <>
-                  <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
-                  <Link to="/login" className="lp-btn lp-secondary">Log in</Link>
-                </>
+                <Link to="/signup" className="lp-btn lp-primary">Create account</Link>
               )}
             </div>
             <div className="lp-cta2">
@@ -140,16 +133,15 @@ export default function Landing() {
         </section>
 
         <section className="lp-section" aria-labelledby="how">
-          <Sign bullet={<Bullet letter="1" color="#FF6319" size={26} />}><span id="how">How it works</span></Sign>
-          <p className="lp-lead lp-narrow">Five stops from receipt to settled up. Every stop is its own line, like a transfer.</p>
+          <h2 id="how" className="lp-h2">From receipt to settled up in five stops</h2>
+          <p className="lp-lead lp-narrow">Every stop is its own line, like a transfer.</p>
           <div className="lp-journey" ref={journey}>
             <div className="lp-track" aria-hidden="true"><i className="lp-fill" /><b className="lp-train"><Bullet letter="S" color="#FCCC0A" size={30} /></b></div>
-            {STOPS.map((s, i) => (
+            {STOPS.map((s) => (
               <article className="lp-stop" key={s.t} style={{ ['--c' as string]: s.c }}>
                 <div className="lp-marker"><Bullet letter={s.l} color={s.c} size={44} /></div>
                 <div className="lp-stop-body">
                   <div className="lp-stop-text">
-                    <div className="lp-stop-label">Stop {i + 1}</div>
                     <h3>{s.t}</h3>
                     <p>{s.d}</p>
                   </div>
@@ -161,7 +153,7 @@ export default function Landing() {
         </section>
 
         <section className="lp-section" aria-labelledby="why">
-          <Sign bullet={<Bullet letter="2" color="#00933C" size={26} />}><span id="why">Made for real life</span></Sign>
+          <h2 id="why" className="lp-h2">Shared nachos, +1 guests, a trip abroad: all handled</h2>
           <div className="lp-grid">
             {FEATURES.map((f) => (
               <div className="lp-card" key={f.t}>
@@ -175,8 +167,8 @@ export default function Landing() {
 
         {!standalone && (
         <section className="lp-section" id="install" ref={installRef} aria-labelledby="inst">
-          <Sign bullet={<Bullet letter="3" color="#0039A6" size={26} />}><span id="inst">Take it with you</span></Sign>
-          <p className="lp-lead lp-narrow">SplitThatBill installs like an app, with its own icon and no browser bar. Nothing to download from a store.</p>
+          <h2 id="inst" className="lp-h2">Put it on your home screen. No app store.</h2>
+          <p className="lp-lead lp-narrow">It installs like an app, with its own icon and no browser bar.</p>
           <div className="lp-grid lp-install">
             <div className={`lp-card${ios ? ' lp-here' : ''}`}>
               <h3>iPhone and iPad</h3>
@@ -201,7 +193,7 @@ export default function Landing() {
         )}
 
         <section className="lp-final">
-          <Sign bullet={<Bullet letter="S" color="#FCCC0A" size={26} />}>Next stop: your first split</Sign>
+          <h2 className="lp-h2 lp-final-h">Next stop: your first split</h2>
           <div className="lp-cta lp-center">
             {signedIn ? (
               <Link to="/groups" className="lp-btn lp-primary">Open SplitThatBill</Link>

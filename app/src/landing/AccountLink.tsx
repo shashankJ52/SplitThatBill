@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppState } from '../data/store'
 import { unreadCount } from '../domain/selectors'
+import { ChevronIcon } from '../ui/icons'
 
 /**
  * The top-right button of the public pages. Signed out it says "Log in". Signed in it shows the person's name and opens a
@@ -30,7 +31,7 @@ export function AccountLink() {
   return (
     <div className="chipw" ref={ref}>
       <button type="button" className="lp-login lp-name" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className="lp-name-t">{name}</span> <span aria-hidden="true">⌄</span>
+        <span className="lp-name-t">{name}</span> <ChevronIcon />
         {unread > 0 && <span className="lp-dot" aria-label={`${unread} new alerts`} />}
       </button>
       {open && (

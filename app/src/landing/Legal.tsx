@@ -5,6 +5,7 @@ import { FeedbackButton } from '../feedback/FeedbackDialog'
 import { AccountLink } from './AccountLink'
 import { useTheme } from '../ui/useTheme'
 import './landing.css'
+import { ThemeIcon } from '../ui/icons'
 
 /** Where people can reach the person running the app. Fill this in before launch; until then the pages say so. */
 export const CONTACT_EMAIL = 'hello@splitthatbill.app'
@@ -27,7 +28,7 @@ function Page({ title, children }: { title: string; children: ReactNode }) {
           <span className="lp-brand-text"><b>SplitThatBill</b><small>The Right Way</small></span>
         </Link>
         <span className="grow" />
-        <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>◐</button>
+        <button className="lp-theme" onClick={toggle} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}><ThemeIcon /></button>
         <AccountLink />
       </header>
       <main className="lp-legal">
