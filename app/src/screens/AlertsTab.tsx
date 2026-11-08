@@ -309,7 +309,7 @@ export function AlertsTab({ only }: { only?: 'splits' | 'notes' }) {
             <div className="chiprow" role="group" aria-label="Filter notes by group">
               <button className={`fchip plain${f === 'all' ? ' on' : ''}`} aria-pressed={f === 'all'} onClick={() => setFilter('all')}>All</button>
               <button className={`fchip${f === 'n' ? ' on' : ''}`} aria-pressed={f === 'n'} onClick={() => setFilter('n')}>
-                <Avatar pid="me" size={26} />
+                <Avatar pid="me" size={28} />
                 Just me
               </button>
               {groups.map((g) => (

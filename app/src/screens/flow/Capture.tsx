@@ -146,7 +146,7 @@ export function Capture() {
             </div>
           ) : sel.startsWith('p:') ? (
             <div className="row">
-              <Avatar pid={sel.slice(2)} size={30} />
+              <Avatar pid={sel.slice(2)} size={32} />
               <b style={{ color: 'var(--fg)' }}>1-1 with {personName(s, sel.slice(2))}</b>
             </div>
           ) : (

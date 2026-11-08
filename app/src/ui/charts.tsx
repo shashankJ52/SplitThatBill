@@ -75,7 +75,7 @@ export function PeopleChart({ ledger, st, pick, onPick }: { ledger: AppLedger; s
       <div className="mute" style={{ textAlign: 'center', fontSize: 12, margin: '6px 0' }}>Outer ring: each person's share. Inner ring: what each person paid.</div>
       {shownPeople(ledger).filter((p) => st.share[p] > 0 || st.paid[p] > 0).map((p) => (
         <button key={p} className={`lg${sel === p ? ' on' : ''}`} onClick={() => onPick(p)} aria-pressed={sel === p}>
-          <Avatar pid={p} size={30} />
+          <Avatar pid={p} size={32} />
           <span className="grow"><b>{personName(s, p)}</b><span className="mute" style={{ display: 'block', fontSize: 12 }}>paid {fmt(st.paid[p] ?? 0)}</span></span>
           <span><b>{fmt(st.share[p] ?? 0)}</b> <span className="mute">{st.tot ? Math.round(((st.share[p] ?? 0) / st.tot) * 100) : 0}%</span></span>
         </button>
@@ -180,7 +180,7 @@ export function TrendChart({ ledger, monthKey, state, onChange, solo }: { ledger
       <div style={{ marginTop: 10 }}>
         {chip('__all', state.all, <Bullet letter={solo ? '$' : 'G'} color={ledger.color ?? '#0039A6'} size={24} />, solo ? 'All spending' : 'Whole group')}
         {!solo && chip('__people', state.people, <Bullet letter="P" color="#A7A9AC" size={24} />, 'People lines')}
-        {state.people && shownPeople(ledger).map((p) => chip(p, !state.off.includes(p), <Avatar pid={p} size={24} />, personName(s, p)))}
+        {state.people && shownPeople(ledger).map((p) => chip(p, !state.off.includes(p), <Avatar pid={p} size={28} />, personName(s, p)))}
       </div>
     </>
   )

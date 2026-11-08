@@ -36,7 +36,7 @@ export const Details = withDraft(function Details({ d }: { d: D.Draft }) {
           ) : g ? (
             <div className="row"><Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={34} /><b>{g.name}</b></div>
           ) : (
-            <div className="row"><Avatar pid={d.withP ?? 'me'} size={34} /><b>1-1 with {personName(s, d.withP ?? 'me')}</b></div>
+            <div className="row"><Avatar pid={d.withP ?? 'me'} size={32} /><b>1-1 with {personName(s, d.withP ?? 'me')}</b></div>
           )}
         </div>
         <label className="f" htmlFor="ttl">Title</label>
@@ -62,7 +62,7 @@ export const Details = withDraft(function Details({ d }: { d: D.Draft }) {
             <div className="mute" style={{ marginBottom: 6 }}>How much did each person pay? Total {fmt(total)}</div>
             {d.people.map((p) => (
               <div className="row" style={{ padding: '4px 0' }} key={p}>
-                <Avatar pid={p} size={30} />
+                <Avatar pid={p} size={32} />
                 <div className="grow"><b>{personName(s, p)}</b></div>
                 <button className="linkbtn" onClick={() => set((x) => D.paidRest(x, p))}>Rest</button>
                 <MoneyField cents={d.paid[p] || 0} label={`Amount ${personName(s, p)} paid`} message="Enter a valid amount" onCommit={(c) => set((x) => D.setPaid(x, p, c))} />

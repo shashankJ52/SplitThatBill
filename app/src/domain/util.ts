@@ -5,8 +5,8 @@ export const MAX_CENTS = 100_000_000
 export const COLORS = ['#0039A6', '#FF6319', '#6CBE45', '#996633', '#A7A9AC', '#FCCC0A', '#EE352E', '#00933C', '#B933AD']
 
 /** Readable text color on a route-bullet color. */
-/** Letter colour on a bullet: black where white would be too faint (yellow, light green, grey, orange). */
-export const ink = (c: string) => (c === '#FCCC0A' || c === '#6CBE45' || c === '#A7A9AC' || c === '#FF6319' ? '#000' : '#fff')
+/** Letter colour on a bullet: black on the light colours (yellow, light green, grey), white on the rest. */
+export const ink = (c: string) => (c === '#FCCC0A' || c === '#6CBE45' || c === '#A7A9AC' ? '#000' : '#fff')
 
 /** Cents as money in the given currency (dollars when none is given). */
 export const fmt = (c: number, currency?: string): string => formatMoney(c, currency)

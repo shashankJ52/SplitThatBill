@@ -68,7 +68,7 @@ function Portions({ d, it, set }: { d: D.Draft; it: Item; set: (fn: (d: D.Draft)
         const v = it.a.por[p] || 0
         return (
           <div key={p} className="row" style={{ padding: '5px 0' }}>
-            <Avatar pid={p} size={30} />
+            <Avatar pid={p} size={32} />
             <div className="grow">
               <b>{personName(s, p)}</b>
               <div className="mute">{v > 0 ? fmt(Math.round((it.price * v) / it.qty)) : '—'}</div>

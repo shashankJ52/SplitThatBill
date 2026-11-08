@@ -27,7 +27,7 @@ export function PickSheet({ mode, onPick, close }: { mode: PickMode; onPick: (va
           .map((g) => ({ key: `g:${g.id}`, icon: <Bullet letter={groupGlyph(g)} color={g.color ?? '#A7A9AC'} size={38} />, label: g.name ?? '', sub: `${shownPeople(g).length} people` }))
       : others(s)
           .filter((p) => s.people[p].name.toLowerCase().includes(t) || (t.startsWith('@') && t.length > 1 && (s.people[p].tag ?? '').toLowerCase().includes(t.slice(1))))
-          .map((p) => ({ key: `p:${p}`, icon: <Avatar pid={p} size={38} />, label: s.people[p].name, sub: s.people[p].user ? `@${s.people[p].tag ?? ''}` : 'Not on the app' }))
+          .map((p) => ({ key: `p:${p}`, icon: <Avatar pid={p} size={44} />, label: s.people[p].name, sub: s.people[p].user ? `@${s.people[p].tag ?? ''}` : 'Not on the app' }))
 
   const addPerson = async () => {
     const r = await addByInput(add, [ME])

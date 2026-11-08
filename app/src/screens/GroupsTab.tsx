@@ -214,7 +214,7 @@ export function GroupsTab() {
                     swipe: x.settled,
                     node: (
                       <Link className="card tap row ncf" to={`/person/${x.p}`}>
-                        <Avatar pid={x.p} size={46} />
+                        <Avatar pid={x.p} size={44} />
                         <div className="grow">
                           <div className="gname">{personName(s, x.p)}</div>
                           <div className="mute">1-1{parts > 1 ? ` + ${parts - 1} group${parts > 2 ? 's' : ''}` : ''}</div>

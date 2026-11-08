@@ -6,6 +6,8 @@
   --accent:var(--yellow);--focus:var(--yellow);--orange-t:#FF6319;--red-b:#C9261F;
   /* corners: small controls, cards, sheets. A box inside another takes the outer radius minus the gap between them. */
   --r-s:8px;--r-m:14px;--r-l:20px;
+  /* every round icon button (theme, home, settings, close, month arrows, filter) is the same size */
+  --icon-btn:40px;
   --ease:cubic-bezier(.2,.8,.2,1);
 }
 :root[data-theme="light"]{--bg:#fff;--fg:#000;--card:#f2f2f0;--line:#d9d9d5;--mute:#52565b;--btn-bg:#000;--btn-fg:#fff;--green-t:#00793a;--red-t:#c9201a;--focus:#0039A6;--orange-t:#B93A00}
@@ -23,8 +25,8 @@ html,body{height:100%;overflow:hidden}
 #back{background:none;border:0;font-weight:700;font-size:16px;padding:8px 0;cursor:pointer;display:flex;align-items:center;gap:6px}
 #back[hidden]{display:none}
 .spacer{flex:1}
-#home{width:40px;height:40px;border-radius:50%;border:2px solid var(--fg);background:none;cursor:pointer;display:grid;place-items:center;margin-right:8px;color:var(--fg);transition:transform .2s var(--ease)}#home[hidden]{display:none}#home:active{transform:scale(.9)}
-#theme{width:40px;height:40px;border-radius:50%;border:2px solid var(--fg);background:none;cursor:pointer;display:grid;place-items:center;font-size:18px;transition:transform .3s var(--ease)}
+#home{width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--fg);background:none;cursor:pointer;display:grid;place-items:center;margin-right:8px;color:var(--fg);transition:transform .2s var(--ease)}#home[hidden]{display:none}#home:active{transform:scale(.9)}
+#theme{width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--fg);background:none;cursor:pointer;display:grid;place-items:center;font-size:18px;transition:transform .3s var(--ease)}
 #theme:active{transform:scale(.9) rotate(30deg)}
 main{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 16px var(--bb,82px)}
 .view{display:none;flex:1;min-height:0;flex-direction:column}.view.on{display:flex}
@@ -95,7 +97,7 @@ label.f{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-t
 .line{position:relative;padding-left:34px;margin:6px 0}
 .line:before{content:"";position:absolute;left:11px;top:14px;bottom:14px;width:6px;background:var(--lc);border-radius:3px}
 .stn{position:relative;display:flex;align-items:center;gap:10px;padding:10px 0}
-.stn:before{content:"";position:absolute;left:-30px;width:18px;height:18px;border-radius:50%;background:var(--bg);border:4px solid var(--fg)}
+.stn:before{content:"";position:absolute;left:-33px;box-sizing:border-box;width:26px;height:26px;border-radius:50%;background:var(--bg);border:4px solid var(--fg)}
 .linkbox{display:flex;gap:8px}.linkbox input{flex:1;font-size:14px}.linkbox button{width:auto;padding:10px 16px}
 .pub{border:2px solid var(--fg);border-radius:var(--r-m);padding:16px;margin-bottom:14px}
 #tabbar,#footer{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;background:var(--bg);border-top:2px solid var(--fg);z-index:5;padding-bottom:env(safe-area-inset-bottom);transition:transform .3s var(--ease)}
@@ -118,7 +120,7 @@ label.f{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-t
 body.sheet-open #scrim{opacity:1;pointer-events:auto}body.sheet-open #sheet{transform:none}
 #sheet h3{font-size:26px;font-weight:700;letter-spacing:-.04em;margin:0 0 6px}
 #sheet-head{position:sticky;top:-16px;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:-16px -16px 0;padding:16px 16px 0;background:var(--bg)}
-#sheet-x{flex:none;width:36px;height:36px;margin:-2px -6px 0 0;padding:0;border:2px solid var(--fg);border-radius:50%;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
+#sheet-x{flex:none;width:var(--icon-btn);height:var(--icon-btn);margin:-4px -8px 0 0;padding:0;border:2px solid var(--fg);border-radius:50%;background:var(--bg);color:var(--fg);font:inherit;font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center}
 .swatches{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
 .swatches button{background:none;border:0;padding:0;cursor:pointer;border-radius:50%}
 .switch{display:flex;align-items:center;gap:12px}
@@ -164,7 +166,7 @@ body.sheet-open #scrim{opacity:1;pointer-events:auto}body.sheet-open #sheet{tran
 .ddo{width:100%;display:flex;align-items:center;gap:10px;padding:7px 8px;border:0;background:none;border-radius:var(--r-s);cursor:pointer;text-align:left;font-size:16px;font-weight:700}
 .ddo:hover,.ddo.on,.ddo:focus-visible{background:var(--card);outline:none}
 .mbar{margin:2px 0 10px}
-.mnav{width:36px;height:36px;border-radius:50%;border:2px solid var(--fg);background:none;font-size:20px;font-weight:700;cursor:pointer;line-height:1;flex:none}.mnav:disabled{opacity:.3;cursor:not-allowed}
+.mnav{width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--fg);background:none;font-size:20px;font-weight:700;cursor:pointer;line-height:1;flex:none}.mnav:disabled{opacity:.3;cursor:not-allowed}
 .msep{position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 0 6px;margin-bottom:8px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid var(--fg)}
 .seg.s4 button{padding:8px 2px;font-size:13px}
 .donut{position:relative;width:min(250px,68vw);margin:4px auto}.donut svg{width:100%;display:block}
@@ -238,7 +240,7 @@ a{color:inherit;text-decoration:none}
 /* activity filter: a small funnel button with a menu that opens under it, right-aligned */
 .afilter{width:auto;flex:none}
 .afilter .ddm{left:auto;right:0;min-width:190px}
-.iconbtn{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);background:none;color:var(--fg);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;position:relative}
+.iconbtn{width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--line);background:none;color:var(--fg);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;position:relative}
 .iconbtn.on{border-color:var(--fg)}
 .iconbtn.on:after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--yellow,#FCCC0A);border:2px solid var(--bg)}
 .iconbtn:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
@@ -423,3 +425,6 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 .boot .spin{width:28px;height:28px}
 /* text for screen readers only */
 .sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* a primary-looking button that is just an icon in a circle (group settings) */
+button.secondary.roundbtn{width:var(--icon-btn);height:var(--icon-btn);padding:0;flex:none;display:grid;place-items:center;font-size:18px}

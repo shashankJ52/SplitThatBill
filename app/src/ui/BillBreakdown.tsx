@@ -75,7 +75,7 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
         const g = b.guests[r.p] ?? 0
         return (
           <div className="card row" key={r.p}>
-            <Avatar pid={r.p} size={34} />
+            <Avatar pid={r.p} size={32} />
             <div className="grow">
               <b>{name(r.p)}{g > 0 && <span className="pill">+{g}</span>}</b>
               {pm[r.p] && <> <span className="pill">paid {fmt(pm[r.p])}</span></>}

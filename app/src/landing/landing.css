@@ -14,7 +14,7 @@
 .lp-top>*{position:relative}
 .lp-top{padding-left:max(20px,calc((100vw - 1040px)/2 + 20px));padding-right:max(20px,calc((100vw - 1040px)/2 + 20px))}
 .lp-brand{display:flex;align-items:center;gap:10px;font-size:19px;letter-spacing:-.03em}
-.lp-theme{width:40px;height:40px;border-radius:50%;border:2px solid var(--fg);background:none;color:var(--fg);cursor:pointer;display:grid;place-items:center;font-size:18px;transition:transform .3s var(--ease)}
+.lp-theme{width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--fg);background:none;color:var(--fg);cursor:pointer;display:grid;place-items:center;font-size:18px;transition:transform .3s var(--ease)}
 .lp-theme:active{transform:scale(.9) rotate(30deg)}
 .lp-login{font-weight:700;padding:9px 18px;border-radius:999px;border:2px solid var(--fg);transition:transform .15s var(--ease)}
 .lp-login:active{transform:scale(.96)}

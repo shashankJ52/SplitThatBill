@@ -59,7 +59,7 @@ export function LinkContactSheet({ pid, close }: { pid: string; close: () => voi
   return (
     <>
       <div className="row" style={{ marginBottom: 8 }}>
-        <Avatar pid={pid} size={40} />
+        <Avatar pid={pid} size={44} />
         <div className="grow"><b>{person.name}</b><div className="mute">A name without an account</div></div>
       </div>
       <p className="mute">When {person.name} has signed up, link this name to their account. Every bill and payment with {person.name} stays, and becomes theirs. Nothing needs to be entered again.</p>

@@ -47,7 +47,7 @@ export const Summary = withDraft(function Summary({ d }: { d: D.Draft }) {
             return (
               <div className="card" key={r.p}>
                 <div className="row">
-                  <Avatar pid={r.p} size={34} />
+                  <Avatar pid={r.p} size={32} />
                   <div className="grow">
                     <b>{name(r.p)}{g ? <> <span className="pill">+{g}</span></> : null}</b> {s.people[r.p]?.user ? null : <span className="pill">local</span>}
                   </div>

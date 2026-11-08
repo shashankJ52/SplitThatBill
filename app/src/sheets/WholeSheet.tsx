@@ -66,7 +66,7 @@ export function WholeSheet({ d, apply, close }: { d: D.Draft; apply: (next: D.Dr
               const g = w.g[p] || 0
               return (
                 <div className="row" style={{ padding: '5px 0' }} key={p}>
-                  <Avatar pid={p} size={30} />
+                  <Avatar pid={p} size={32} />
                   <div className="grow">
                     <b>{name(p)}</b>
                     <div className="mute">{g ? `counts as ${g + 1} people` : '1 person'} · pays {fmt(weights[p] || 0)}</div>
@@ -85,7 +85,7 @@ export function WholeSheet({ d, apply, close }: { d: D.Draft; apply: (next: D.Dr
         <>
           {w.sel.map((p) => (
             <div className="row" style={{ padding: '4px 0' }} key={p}>
-              <Avatar pid={p} size={30} />
+              <Avatar pid={p} size={32} />
               <div className="grow"><b>{name(p)}</b></div>
               <button className="linkbtn" onClick={() => setW((x) => ({ ...x, amt: { ...x.amt, [p]: Math.max(0, left + (x.amt[p] || 0)) } }))}>Rest</button>
               <MoneyField cents={w.amt[p] || 0} label={`Amount ${name(p)} pays`} onCommit={(c) => setW((x) => ({ ...x, amt: { ...x.amt, [p]: c } }))} message="Enter a valid amount" />

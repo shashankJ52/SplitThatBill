@@ -52,7 +52,7 @@ export function GroupPage() {
             <div className="gname" style={{ fontSize: 26, lineHeight: 1.05 }}>{g.name}</div>
             <div className="mute" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shownPeople(g).map((m) => personName(s, m)).join(', ')}</div>
           </div>
-          <button className="secondary" style={{ width: 44, padding: 9 }} aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}><GearIcon /></button>
+          <button className="secondary roundbtn" aria-label="Group settings" onClick={() => sheet.open('Group settings', (close) => (isShared(g) && account ? <GroupManageSheet gid={g.id} close={close} /> : <GroupSheet gid={g.id} close={close} />))}><GearIcon /></button>
         </div>
         <div className="sign" style={{ marginBottom: 8 }}>
           <div className="cols" style={{ gridTemplateColumns: '1fr 1fr' }}>
@@ -185,10 +185,11 @@ function BalancesTab({ gid }: { gid: string }) {
           const v = n[m] ?? 0
           const body = (
             <>
-              <Avatar pid={m} size={30} />
+              <Avatar pid={m} size={32} />
               <div className="grow"><b>{personName(s, m)}</b>{!g.members.includes(m) && <> <span className="pill">invited</span></>}</div>
               <span className={`stat ${v < 0 ? 'r' : v > 0 ? 'g' : ''}`}>{v < 0 ? `owes ${fmt(-v)}` : v > 0 ? `is owed ${fmt(v)}` : 'settled'}</span>
-              {m !== ME && <span className="mute">›</span>}
+              {/* your own row has no arrow, but keeps its space so every amount ends in the same place */}
+              <span className="mute" aria-hidden="true" style={m === ME ? { visibility: 'hidden' } : undefined}>›</span>
             </>
           )
           return m === ME ? (

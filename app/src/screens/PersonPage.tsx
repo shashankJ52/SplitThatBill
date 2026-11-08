@@ -81,7 +81,7 @@ export function PersonPage() {
           const l = x.ledger as unknown as (typeof s.ledgers)[number]
           const inner = (
             <>
-              {l.kind === 'group' ? <Bullet letter={groupGlyph(l)} color={l.color ?? '#A7A9AC'} size={36} /> : <Avatar pid={pid} size={36} />}
+              {l.kind === 'group' ? <Bullet letter={groupGlyph(l)} color={l.color ?? '#A7A9AC'} size={36} /> : <Avatar pid={pid} size={32} />}
               <div className="grow"><b>{ledgerName(s, l)}</b></div>
               <span className={`stat ${x.amt > 0 ? 'g' : 'r'}`}>{x.amt > 0 ? 'owes you ' : 'you owe '}{fmtIn(Math.abs(x.amt), x.code)}</span>
             </>

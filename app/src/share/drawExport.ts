@@ -71,7 +71,7 @@ function bullet(x: Ctx, cx: number, cy: number, r: number, color: string, letter
   x.arc(cx, cy, r, 0, Math.PI * 2)
   x.fill()
   font(x, Math.round(r * 1.05), 700)
-  const dark = color === YELLOW || color === '#6CBE45' || color === '#A7A9AC' || color === '#FF6319'
+  const dark = color === YELLOW || color === '#6CBE45' || color === '#A7A9AC'
   text(x, letter, cx, cy + r * 0.37, dark ? '#000' : ink, 'center')
 }
 
@@ -372,7 +372,7 @@ function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): Drawn {
     x.fillStyle = r.person.color
     roundRect(x, barX, y, bw, 72, 36)
     x.fill()
-    const dark = r.person.color === YELLOW || r.person.color === '#6CBE45' || r.person.color === '#A7A9AC' || r.person.color === '#FF6319'
+    const dark = r.person.color === YELLOW || r.person.color === '#6CBE45' || r.person.color === '#A7A9AC'
     font(x, 36, 700)
     text(x, fit(x, r.label, bw - 230), barX + 30, y + 48, dark ? '#000' : '#fff')
     text(x, fmt(r.amt, m.currency), barX + bw - 30, y + 48, dark ? '#000' : '#fff', 'right')
