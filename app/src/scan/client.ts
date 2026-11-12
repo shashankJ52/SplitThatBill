@@ -1,3 +1,4 @@
+import { isPdf, MAX_ATTEMPTS, MAX_PAGES, MAX_TOTAL_BASE64, qualityFor, sideFor } from './pages'
 import type { ScanResult } from './receipt'
 
 /** Why a scan did not produce a receipt. `limit` carries when scanning opens up again. */
@@ -29,34 +30,56 @@ const toBase64 = (blob: Blob) =>
     r.readAsDataURL(blob)
   })
 
-/** Shrink a photo to a JPEG (a PDF is sent as it is) and return it ready to upload. */
-export async function prepareFile(file: File): Promise<{ mime: string; data: string }> {
-  if (file.type === 'application/pdf') {
-    if (file.size > MAX_PDF) throw new ScanError('bad_request', 'That PDF is over 3 MB. Take a photo of the receipt instead.')
-    return { mime: 'application/pdf', data: await toBase64(file) }
-  }
+/** One photo or PDF, ready to upload. */
+export interface Page { mime: string; data: string }
+
+/** Draw one photo at the given size and return it as a JPEG. */
+async function encodeImage(file: File, side: number, quality: number): Promise<Page> {
   let bmp: ImageBitmap
   try {
     bmp = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
     throw new ScanError('bad_request', 'Could not open that photo. Try a JPEG or PNG.')
   }
-  const { w, h } = fitWithin(bmp.width, bmp.height, MAX_SIDE)
+  const { w, h } = fitWithin(bmp.width, bmp.height, side)
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
   canvas.getContext('2d')?.drawImage(bmp, 0, 0, w, h)
   bmp.close()
-  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', 0.85))
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', quality))
   if (!blob) throw new ScanError('bad_request', 'Could not prepare that photo. Try another one.')
   return { mime: 'image/jpeg', data: await toBase64(blob) }
 }
 
-/** Send a prepared photo to the scan function and return the receipt it read. */
-export async function scanReceipt(file: { mime: string; data: string }, token: string, doFetch: typeof fetch = fetch): Promise<{ scan: ScanResult; used: number; limit: number }> {
+/**
+ * Get the chosen photos (or the one PDF) ready to upload together. Photos are shrunk, a little more when there are more
+ * of them, and shrunk again if they still add up to too much for one request.
+ */
+export async function prepareFiles(files: File[]): Promise<Page[]> {
+  if (!files.length) throw new ScanError('bad_request', 'Add at least one photo of the receipt.')
+  if (files.length > MAX_PAGES) throw new ScanError('bad_request', `Use at most ${MAX_PAGES} photos for one receipt.`)
+  if (files.some(isPdf)) {
+    if (files.length > 1) throw new ScanError('bad_request', 'A PDF is read on its own, not together with photos.')
+    if (files[0].size > MAX_PDF) throw new ScanError('bad_request', 'That PDF is over 3 MB. Take a photo of the receipt instead.')
+    return [{ mime: 'application/pdf', data: await toBase64(files[0]) }]
+  }
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const pages: Page[] = []
+    for (const f of files) pages.push(await encodeImage(f, sideFor(files.length, attempt), qualityFor(attempt)))
+    if (pages.reduce((n, p) => n + p.data.length, 0) <= MAX_TOTAL_BASE64) return pages
+  }
+  throw new ScanError('bad_request', 'Those photos are too large together. Remove one, or take them a little further away.')
+}
+
+/** One photo or PDF on its own (the usual case). */
+export const prepareFile = async (file: File): Promise<Page> => (await prepareFiles([file]))[0]
+
+/** Send the prepared photos of one receipt to the scan function and return the receipt it read. */
+export async function scanReceipt(pages: Page | Page[], token: string, doFetch: typeof fetch = fetch): Promise<{ scan: ScanResult; used: number; limit: number }> {
   let res: Response
   try {
-    res = await doFetch('/api/scan', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(file) })
+    res = await doFetch('/api/scan', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ pages: Array.isArray(pages) ? pages : [pages] }) })
   } catch {
     throw new ScanError('unavailable', 'No connection. Check your internet and try again, or enter the items yourself.')
   }

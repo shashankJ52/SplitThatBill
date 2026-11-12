@@ -5,17 +5,38 @@ const MEDIA = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'applicatio
 /** The largest request body taken in. The app shrinks photos long before this; it keeps abuse cheap to refuse. */
 const MAX_BODY = 4_200_000
 
+/** One photo or PDF of a receipt, ready to send. */
+export interface ScanPage { mime: string; data: string }
+/** A long receipt may arrive as several photos, top to bottom. */
+export const MAX_PAGES = 6
+
 export interface ScanDeps {
   supabaseUrl: string
   supabaseKey: string
-  /** Send the photo to the reading service and return what it said, as parsed JSON. Throws when the service fails. */
-  read(file: { mime: string; data: string }): Promise<unknown>
+  /** Send the pages of one receipt to the reading service and return what it said, as parsed JSON. Throws when the service fails. */
+  read(pages: ScanPage[]): Promise<unknown>
   fetch: typeof fetch
 }
 
 export type ScanReply =
   | { ok: true; scan: ScanResult; used: number; limit: number }
   | { ok: false; error: 'signin' | 'limit' | 'bad_request' | 'unreadable' | 'unavailable'; message: string; resetsAt?: string }
+
+class PagesError extends Error {}
+const okPage = (x: unknown): x is ScanPage => {
+  const p = x as { mime?: unknown; data?: unknown } | null
+  return !!p && typeof p.mime === 'string' && MEDIA.includes(p.mime) && typeof p.data === 'string' && p.data.length >= 100 && /^[A-Za-z0-9+/]+={0,2}$/.test(p.data)
+}
+/** The request holds `pages` (one to six), or, from an older copy of the app, a single `{mime, data}`. */
+export function parsePages(body: unknown): ScanPage[] {
+  const b = (body ?? {}) as { pages?: unknown; mime?: unknown; data?: unknown }
+  const list = Array.isArray(b.pages) ? b.pages : [{ mime: b.mime, data: b.data }]
+  if (!list.length) throw new PagesError('Add at least one photo of the receipt.')
+  if (list.length > MAX_PAGES) throw new PagesError(`Use at most ${MAX_PAGES} photos for one receipt.`)
+  if (!list.every(okPage)) throw new PagesError('One of those files could not be read. Choose photos or a PDF.')
+  if (list.length > 1 && list.some((p) => p.mime === 'application/pdf')) throw new PagesError('A PDF has to be read on its own. Upload the PDF by itself, or use photos.')
+  return list as ScanPage[]
+}
 
 const json = (status: number, body: ScanReply, timing?: string) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...(timing ? { 'server-timing': timing } : {}) } })
@@ -33,13 +54,11 @@ export async function handleScan(req: Request, deps: ScanDeps): Promise<Response
 
   const raw = await req.text()
   if (raw.length > MAX_BODY) return fail(413, 'bad_request', 'That photo is too large. Try a smaller one.')
-  let file: { mime: string; data: string }
+  let pages: ScanPage[]
   try {
-    const b = JSON.parse(raw) as { mime?: unknown; data?: unknown }
-    if (typeof b.mime !== 'string' || !MEDIA.includes(b.mime) || typeof b.data !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(b.data) || b.data.length < 100) throw new Error('shape')
-    file = { mime: b.mime, data: b.data }
-  } catch {
-    return fail(400, 'bad_request', 'That file could not be read. Choose a photo or a PDF.')
+    pages = parsePages(JSON.parse(raw))
+  } catch (e) {
+    return fail(400, 'bad_request', e instanceof PagesError ? e.message : 'That file could not be read. Choose a photo or a PDF.')
   }
 
   const rpc = (name: string) =>
@@ -66,7 +85,7 @@ export async function handleScan(req: Request, deps: ScanDeps): Promise<Response
 
   let answer: unknown
   try {
-    answer = await deps.read(file)
+    answer = await deps.read(pages)
   } catch {
     // the service failed, not the person: give the scan back
     await rpc('refund_scan_credit').catch(() => undefined)

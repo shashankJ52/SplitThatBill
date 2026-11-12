@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { creditLines, myNet, nets } from '../money'
-import { addCredit, billWithCredit, canContinue, draftFromBill, grandTotal, newDraft, removeCredit, setCreditMode, setCreditName, setCreditValue, toBill } from './draft'
+import { loadScan, startManual, addCredit, billWithCredit, canContinue, draftFromBill, grandTotal, newDraft, removeCredit, setCreditMode, setCreditName, setCreditValue, toBill } from './draft'
 import { makeBill } from './bills'
 import { seedState } from './seed'
 import type { AppLedger, Comment } from './types'
@@ -113,5 +113,23 @@ describe('a new bill in a group with someone invited', () => {
     const d = newDraft(withInvite, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1')
     expect(d.people).toEqual([...g.members, 'sumit'])
     expect(newDraft(s, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1').people).toEqual(g.members)
+  })
+})
+
+describe('a receipt read from several photos', () => {
+  const scan = { merchant: 'Costco', location: '', category: 'Groceries', date: '', items: [{ name: 'Milk', qty: 1, cents: 399 }], tax: 0, tip: 0, discount: 0, total: 399, mergedLines: 2, hidden: [] }
+  const base = () => newDraft(s0, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1')
+
+  it('remembers how many photos it came from and how many repeated lines were counted once', () => {
+    const d = loadScan(base(), scan, 3)
+    expect(d.scanned).toBe(true)
+    expect(d.scanPages).toBe(3)
+    expect(d.scanMerged).toBe(2)
+  })
+  it('counts a single photo as one page, and forgets it when the items are typed in instead', () => {
+    expect(loadScan(base(), { ...scan, mergedLines: 0 }).scanPages).toBe(1)
+    const typed = startManual(loadScan(base(), scan, 3))
+    expect(typed.scanPages).toBeUndefined()
+    expect(typed.scanMerged).toBeUndefined()
   })
 })

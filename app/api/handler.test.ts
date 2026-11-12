@@ -31,7 +31,47 @@ describe('POST /api/scan', () => {
     expect(r.status).toBe(200)
     expect(await reply(r)).toMatchObject({ ok: true, used: 3, limit: 20, scan: { merchant: 'Corner Deli', total: 1500, hidden: ['card number'] } })
     expect(calls).toEqual(['take_scan_credit'])
-    expect(read).toHaveBeenCalledWith({ mime: 'image/jpeg', data })
+    expect(read).toHaveBeenCalledWith([{ mime: 'image/jpeg', data }])
+  })
+
+  it('reads several photos of one receipt in the order sent, for a single scan credit', async () => {
+    const { deps, calls, read } = setup()
+    const pages = [{ mime: 'image/jpeg', data: 'A'.repeat(400) }, { mime: 'image/png', data: 'B'.repeat(400) }, { mime: 'image/webp', data: 'C'.repeat(400) }]
+    const r = await handleScan(req({ pages }), deps)
+    expect(r.status).toBe(200)
+    expect(read).toHaveBeenCalledWith(pages)
+    expect(calls).toEqual(['take_scan_credit'])
+  })
+
+  it('still accepts the single {mime, data} shape an older copy of the app sends', async () => {
+    const { deps, read } = setup()
+    expect((await handleScan(req({ mime: 'image/png', data }), deps)).status).toBe(200)
+    expect(read).toHaveBeenCalledWith([{ mime: 'image/png', data }])
+  })
+
+  it('refuses no pages, too many pages, a bad page, and a PDF mixed with other pages, without using a scan', async () => {
+    const page = { mime: 'image/jpeg', data }
+    const cases: [object, RegExp][] = [
+      [{ pages: [] }, /at least one/],
+      [{ pages: Array.from({ length: 7 }, () => page) }, /at most 6/],
+      [{ pages: [page, { mime: 'image/jpeg', data: 'short' }] }, /could not be read/],
+      [{ pages: [page, { mime: 'text/plain', data }] }, /could not be read/],
+      [{ pages: [page, { mime: 'application/pdf', data }] }, /PDF has to be read on its own/],
+    ]
+    for (const [body, msg] of cases) {
+      const { deps, calls, read } = setup()
+      const r = await handleScan(req(body), deps)
+      expect(r.status).toBe(400)
+      expect(((await r.json()) as { message: string }).message).toMatch(msg)
+      expect(calls).toEqual([])
+      expect(read).not.toHaveBeenCalled()
+    }
+  })
+
+  it('accepts a single PDF on its own', async () => {
+    const { deps, read } = setup()
+    expect((await handleScan(req({ pages: [{ mime: 'application/pdf', data }] }), deps)).status).toBe(200)
+    expect(read).toHaveBeenCalledWith([{ mime: 'application/pdf', data }])
   })
 
   it('says how long the credit check and the reading took, so a slow scan can be traced', async () => {

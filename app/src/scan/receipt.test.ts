@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseScan } from './receipt'
+import { multiPageNote, parseScan, RECEIPT_SCHEMA, SCAN_PROMPT } from './receipt'
 
 const good = {
   is_receipt: true, merchant: 'Trattoria Roma', location: '12 Main St', category: 'Eating out', date: '2026-10-20',
@@ -12,8 +12,20 @@ describe('parseScan', () => {
     expect(parseScan(good)).toEqual({
       merchant: 'Trattoria Roma', location: '12 Main St', category: 'Eating out', date: '2026-10-20',
       items: [{ name: 'Caesar Salad', qty: 1, cents: 1250 }, { name: 'Beer', qty: 3, cents: 1800 }],
-      tax: 240, tip: 500, discount: 0, total: 3790, hidden: ['card number', 'cardholder name'],
+      tax: 240, tip: 500, discount: 0, total: 3790, mergedLines: 0, hidden: ['card number', 'cardholder name'],
     })
+  })
+  it('reports how many repeated lines from overlapping photos were counted once, clamped to something sensible', () => {
+    expect(parseScan({ ...good, overlap_lines_merged: 3 })?.mergedLines).toBe(3)
+    expect(parseScan({ ...good, overlap_lines_merged: -2 })?.mergedLines).toBe(0)
+    expect(parseScan({ ...good, overlap_lines_merged: 'many' })?.mergedLines).toBe(0)
+    expect(parseScan({ ...good, overlap_lines_merged: 9999 })?.mergedLines).toBe(80)
+  })
+  it('asks the reader to merge overlap only for several images, and the schema requires the count', () => {
+    expect(multiPageNote(3)).toMatch(/3 images/)
+    expect(multiPageNote(3)).toMatch(/overlap_lines_merged/)
+    expect(RECEIPT_SCHEMA.required).toContain('overlap_lines_merged')
+    expect(SCAN_PROMPT).toMatch(/0 when there is a single image/)
   })
   it('refuses what is not a receipt or has no items', () => {
     expect(parseScan({ ...good, is_receipt: false })).toBeNull()

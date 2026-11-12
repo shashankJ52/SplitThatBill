@@ -428,3 +428,15 @@ button,.tab,[role="button"]{-webkit-user-select:none;user-select:none;-webkit-to
 
 /* a primary-looking button that is just an icon in a circle (group settings) */
 button.secondary.roundbtn{width:var(--icon-btn);height:var(--icon-btn);padding:0;flex:none;display:grid;place-items:center;font-size:18px}
+
+/* the photos of one long receipt, in reading order */
+.pages{margin-top:10px}
+.pages h2{margin-top:0}
+.page-list{list-style:none;margin:0 0 10px;padding:0}
+.page{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:var(--r-m);margin-bottom:8px;background:var(--card)}
+.page-n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-size:13px;font-weight:700}
+.page img{flex:none;width:44px;height:56px;object-fit:cover;border-radius:var(--r-s);background:var(--line)}
+.page-pdf{flex:none;width:44px;height:56px;border-radius:var(--r-s);background:var(--line);display:grid;place-items:center;font-size:12px;font-weight:700}
+.page-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.page .mv{flex:none;width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--line);background:none;color:var(--fg);display:grid;place-items:center;font-size:16px;cursor:pointer;padding:0}
+.page .mv:disabled{opacity:.3;cursor:default}

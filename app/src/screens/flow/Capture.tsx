@@ -4,7 +4,7 @@ import { Screen } from '../../app/Screen'
 import { useAccount, useAccountMode } from '../../data/account'
 import { useAppState, useStore } from '../../data/store'
 import * as D from '../../domain/draft'
-import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, shownPeople, others } from '../../domain/selectors'
+import { groupGlyph, ledgerById, personName, realGroups, recentGroups, recentPeople, splitPeople, others } from '../../domain/selectors'
 import { ME } from '../../domain/types'
 import { useAddPerson } from '../../ui/useAddPerson'
 import { useFlow } from '../../flow/FlowProvider'
@@ -15,10 +15,10 @@ import { PickSheet } from '../../sheets/PickSheet'
 import { Avatar, Bullet } from '../../ui/bits'
 import { useSheet } from '../../ui/Sheet'
 import { useToast } from '../../ui/Toast'
-import { limitMessage, prepareFile, scanReceipt, ScanError } from '../../scan/client'
+import { limitMessage, prepareFiles, scanReceipt, ScanError } from '../../scan/client'
+import { addFiles, movePage, removeAt, skippedMessage } from '../../scan/pages'
+import { PagesPanel } from './PagesPanel'
 import { CloseIcon } from '../../ui/icons'
-
-const MAX_UPLOAD = 15 * 1024 * 1024
 
 export function Capture() {
   const { draft: d, set, begin } = useFlow()
@@ -34,6 +34,11 @@ export function Capture() {
   const [reading, setReading] = useState(false)
   const [stage, setStage] = useState<'prep' | 'read'>('prep')
   const busy = useRef(false)
+  // the photos of one receipt, when it has more than one; the usual single photo is read straight away
+  const [pages, setPages] = useState<File[]>([])
+  const [multi, setMulti] = useState(false)
+  const camRef = useRef<HTMLInputElement>(null)
+  const galRef = useRef<HTMLInputElement>(null)
   const account = useAccount()
   // only a signed-in account can read real receipts; the demo keeps the sample receipt
   const real = useAccountMode() === 'cloud'
@@ -90,27 +95,25 @@ export function Capture() {
     set(() => next)
     nav('/scan/review')
   }
-  /** Read the chosen photo or PDF, then move on to the privacy screen with what was found. */
-  const read = async (f: File | undefined) => {
-    if (!f || busy.current) return
-    if (!/^(image\/|application\/pdf)/.test(f.type)) return toast('Choose a photo or a PDF')
-    if (f.size > MAX_UPLOAD) return toast('That file is over 15 MB. Try a smaller photo.')
+  /** Read the chosen photos (or the one PDF), then move on to the privacy screen with what was found. */
+  const readPages = async (files: File[]) => {
+    if (!files.length || busy.current) return
     if (!real) return void proceed()
     busy.current = true
     setReading(true)
     setStage('prep')
-    // shrinking the photo starts straight away, while the rest is checked, instead of after it
-    const prepared = prepareFile(f)
+    // shrinking the photos starts straight away, while the rest is checked, instead of after it
+    const prepared = prepareFiles(files)
     prepared.catch(() => undefined)
     try {
       const cur = await settle()
       if (!cur) return
       const token = await account?.accessToken()
       if (!token) return toast('Sign in again to scan receipts.')
-      const photo = await prepared
+      const photos = await prepared
       setStage('read')
-      const { scan } = await scanReceipt(photo, token)
-      const next = D.loadScan(cur, scan)
+      const { scan } = await scanReceipt(photos, token)
+      const next = D.loadScan(cur, scan, files.length)
       set(() => next)
       nav('/scan/privacy')
     } catch (e) {
@@ -120,10 +123,39 @@ export function Capture() {
       setReading(false)
     }
   }
-  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
+  /** Add picked files to the receipt's photos (and show them), telling the person about any that were left out. */
+  const addPicked = (picked: File[]) => {
+    const r = addFiles(pages, picked)
+    setPages(r.files)
+    setMulti(true)
+    if (r.skipped) toast(skippedMessage(r))
+  }
+  const picked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = [...(e.target.files ?? [])]
     e.target.value = ''
-    void read(f)
+    return list
+  }
+  /** A camera shot is one photo: read it at once, unless this receipt is being built from several. */
+  const onCamera = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = picked(e)
+    if (!list.length) return
+    if (multi) return addPicked(list)
+    const r = addFiles([], list.slice(0, 1))
+    if (r.skipped) return toast(skippedMessage(r))
+    void readPages(r.files)
+  }
+  /** One file from the gallery is read at once as before; two or more become the photos of one long receipt. */
+  const onGallery = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = picked(e)
+    if (!list.length) return
+    if (multi || list.length > 1) return addPicked(list)
+    const r = addFiles([], list)
+    if (r.skipped) return toast(skippedMessage(r))
+    void readPages(r.files)
+  }
+  const stopMulti = () => {
+    setPages([])
+    setMulti(false)
   }
 
   return (
@@ -136,7 +168,7 @@ export function Capture() {
             <div className="row">
               <Bullet letter={groupGlyph(selGroup)} color={selGroup.color ?? '#A7A9AC'} size={30} />
               <b style={{ color: 'var(--fg)' }}>{selGroup.name}</b>
-              <span>· {shownPeople(selGroup).length} people</span>
+              <span>· {splitPeople(selGroup).length} people</span>
             </div>
           ) : sel === 'me' ? (
             <div className="row">
@@ -196,34 +228,49 @@ export function Capture() {
             <input id="cap-new" className={bad ? 'bad' : ''} maxLength={30} placeholder="e.g. Marie or @marie" value={newName} onChange={(e) => { setNewName(e.target.value); setBad(false) }} />
           </div>
         )}
-        <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
-          {reading ? (
-            stage === 'prep' ? (
-              <><b>Preparing your photo…</b>Step 1 of 2</>
+        <input ref={camRef} type="file" accept="image/*" capture="environment" hidden disabled={reading} onChange={onCamera} />
+        <input ref={galRef} type="file" accept="image/*,application/pdf" multiple hidden disabled={reading} onChange={onGallery} />
+        {reading ? (
+          <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
+            {stage === 'prep' ? (
+              <><b>Preparing your photo{pages.length > 1 ? 's' : ''}…</b>Step 1 of 2</>
             ) : (
-              <><b>Reading your receipt…</b>Step 2 of 2. This usually takes a few seconds.</>
-            )
-          ) : real ? (
-            <><b>Photograph the whole receipt</b>Lay it flat in good light so every line is readable.</>
-          ) : (
-            <><b>Camera preview</b>Sign in to scan real receipts. In the demo, any photo loads a sample receipt.</>
-          )}
-        </div>
-        {real ? (
-          <label aria-disabled={reading} style={{ display: 'block', textAlign: 'center', padding: 15, background: 'var(--btn-bg)', color: 'var(--btn-fg)', border: '2px solid var(--btn-bg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer', opacity: reading ? 0.5 : 1 }}>
-            Take photo
-            <input type="file" accept="image/*" capture="environment" hidden disabled={reading} onChange={pickFile} />
-          </label>
+              <><b>Reading your receipt…</b>Step 2 of 2. {pages.length > 1 ? `Putting ${pages.length} photos together can take a little longer.` : 'This usually takes a few seconds.'}</>
+            )}
+          </div>
+        ) : multi ? (
+          <PagesPanel
+            files={pages}
+            busy={reading}
+            onMove={(i, dir) => setPages((p) => movePage(p, i, dir))}
+            onRemove={(i) => setPages((p) => removeAt(p, i))}
+            onCamera={() => camRef.current?.click()}
+            onGallery={() => galRef.current?.click()}
+            onRead={() => void readPages(pages)}
+            onCancel={stopMulti}
+            readLabel={pages.length > 1 ? `Read these ${pages.length} photos as one receipt` : 'Read receipt'}
+          />
         ) : (
-          <button className="primary" onClick={() => void proceed()}>Take photo (sample receipt)</button>
+          <>
+            <div className="empty" style={{ marginTop: 10, padding: '28px 14px' }}>
+              {real ? (
+                <><b>Photograph the whole receipt</b>Lay it flat in good light so every line is readable.</>
+              ) : (
+                <><b>Camera preview</b>Sign in to scan real receipts. In the demo, any photo loads a sample receipt.</>
+              )}
+            </div>
+            {real ? (
+              <button className="primary" onClick={() => camRef.current?.click()}>Take photo</button>
+            ) : (
+              <button className="primary" onClick={() => void proceed()}>Take photo (sample receipt)</button>
+            )}
+            <div style={{ height: 10 }} />
+            <button className="secondary" onClick={() => galRef.current?.click()}>Upload a bill</button>
+            <button className="linkbtn" style={{ margin: '8px 0 0' }} onClick={() => setMulti(true)}>Long receipt? Add several photos</button>
+            <div style={{ height: 10 }} />
+            <button className="secondary" onClick={() => void manual()}>No receipt? Enter items yourself</button>
+          </>
         )}
-        <div style={{ height: 10 }} />
-        <label className="secondary" aria-disabled={reading} style={{ display: 'block', textAlign: 'center', padding: 15, border: '2px solid var(--fg)', borderRadius: 999, fontWeight: 700, cursor: 'pointer', opacity: reading ? 0.5 : 1 }}>
-          Upload a bill
-          <input type="file" accept="image/*,application/pdf" hidden disabled={reading} onChange={pickFile} />
-        </label>
-        <div style={{ height: 10 }} />
-        <button className="secondary" disabled={reading} onClick={() => void manual()}>No receipt? Enter items yourself</button>
         <p className="mute">
           {real
             ? 'We never store your photo. It is sent once to Claude, Anthropic’s AI, only to read the items, and card numbers and names are left out. 20 scans a day.'

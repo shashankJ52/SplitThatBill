@@ -1,6 +1,6 @@
 import { calc, creditsSum, splitProp, discCents, extrasSum, itemsSum, itemWeights, type Credit, type Discount, type Extra, type ExtraSplit, type Item, type PersonId } from '../money'
 import { ev, makeBill } from './bills'
-import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups, shownPeople } from './selectors'
+import { currencyOf, ledgerById, oneLedger, personalLedger, realGroups, splitPeople } from './selectors'
 import type { ScanResult } from '../scan/receipt'
 import { ME, type AppBill, type AppLedger, type AppState, type Comment } from './types'
 
@@ -59,6 +59,9 @@ export interface Draft {
   currency?: string
   /** the items came from reading a receipt photo (not the sample) */
   scanned?: boolean
+  /** how many photos were read as this one receipt, and how many repeated lines from overlapping photos were counted once */
+  scanPages?: number
+  scanMerged?: number
   /** private details the reader saw on the photo and left out */
   hidden?: string[]
 }
@@ -124,12 +127,14 @@ export function loadSample(d: Draft): Draft {
     cat: r.cat,
     manual: false,
     scanned: false,
+    scanPages: undefined,
+    scanMerged: undefined,
     hidden: [],
   }
 }
 
 /** Fill the draft from a receipt that was read. The date is kept only when it is a real past or present day. */
-export function loadScan(d: Draft, r: ScanResult): Draft {
+export function loadScan(d: Draft, r: ScanResult, pages = 1): Draft {
   return {
     ...d,
     items: r.items.map((x, i) => ({ id: i + 1, name: x.name, qty: x.qty, price: x.cents, a: ev([]) })),
@@ -146,12 +151,14 @@ export function loadScan(d: Draft, r: ScanResult): Draft {
     date: r.date && r.date <= d.date ? r.date : d.date,
     manual: false,
     scanned: true,
+    scanPages: pages,
+    scanMerged: r.mergedLines,
     hidden: r.hidden,
   }
 }
 
 export function startManual(d: Draft): Draft {
-  return { ...d, manual: true, scanned: false, hidden: [], items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, credits: [], fixed: null, title: 'New bill', loc: '', cat: 'Other' }
+  return { ...d, manual: true, scanned: false, scanPages: undefined, scanMerged: undefined, hidden: [], items: [], nextId: 1, rt: 0, tax: 0, tip: 0, disc: null, credits: [], fixed: null, title: 'New bill', loc: '', cat: 'Other' }
 }
 
 export function newDraft(s: AppState, ids: NewDraftIds, want?: string | null): Draft {
@@ -182,7 +189,7 @@ export function setTarget(s: AppState, d: Draft, target: string): Draft {
     if (g) {
       kind = 'group'
       gid = g.id
-      people = shownPeople(g)
+      people = splitPeople(g)
     }
   } else if (target.startsWith('p:')) {
     withP = target.slice(2)

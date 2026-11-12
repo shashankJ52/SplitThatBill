@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { RECEIPT_SCHEMA, SCAN_PROMPT } from '../src/scan/receipt.js'
+import { multiPageNote, RECEIPT_SCHEMA, SCAN_PROMPT } from '../src/scan/receipt.js'
 import { handleScan } from './_handler.js'
 
 const MODEL = 'claude-haiku-5-5'
@@ -10,7 +10,7 @@ export function GET(): Response {
   return Response.json({ ready }, { headers: { 'cache-control': 'no-store' } })
 }
 
-/** Vercel function: POST /api/scan with {mime, data (base64)} and a signed-in person's token. */
+/** Vercel function: POST /api/scan with {pages: [{mime, data (base64)}]} (one to six photos of one receipt) and a signed-in person's token. */
 export async function POST(request: Request): Promise<Response> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   const supabaseUrl = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL
@@ -23,24 +23,19 @@ export async function POST(request: Request): Promise<Response> {
     supabaseUrl,
     supabaseKey,
     fetch,
-    async read({ mime, data }) {
-      const source = { type: 'base64' as const, media_type: mime, data }
+    async read(pages) {
+      const image = (p: { mime: string; data: string }) =>
+        p.mime === 'application/pdf'
+          ? ({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: p.data } } as const)
+          : ({ type: 'image', source: { type: 'base64', media_type: p.mime as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif', data: p.data } } as const)
+      // several pages are labelled in order so the reader knows which comes first; one page is sent as before
+      const content = pages.length > 1 ? pages.flatMap((p, i) => [{ type: 'text' as const, text: `Image ${i + 1} of ${pages.length}:` }, image(p)]) : [image(pages[0])]
       const res = await client.messages.create({
         model: MODEL,
         max_tokens: 4000,
-        system: SCAN_PROMPT,
+        system: pages.length > 1 ? `${SCAN_PROMPT}\n\n${multiPageNote(pages.length)}` : SCAN_PROMPT,
         output_config: { effort: 'low', format: { type: 'json_schema', schema: RECEIPT_SCHEMA as unknown as Record<string, unknown> } },
-        messages: [
-          {
-            role: 'user',
-            content: [
-              mime === 'application/pdf'
-                ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
-                : { type: 'image', source: source as { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'; data: string } },
-              { type: 'text', text: 'Read this receipt.' },
-            ],
-          },
-        ],
+        messages: [{ role: 'user', content: [...content, { type: 'text', text: pages.length > 1 ? `Read these ${pages.length} images as one receipt.` : 'Read this receipt.' }] }],
       })
       if (res.stop_reason === 'refusal' || res.stop_reason === 'max_tokens') throw new Error(res.stop_reason)
       const block = res.content.find((b) => b.type === 'text')

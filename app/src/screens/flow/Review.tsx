@@ -107,6 +107,13 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
             )}
           </div>
         )}
+        {d.scanned && (d.scanPages ?? 1) > 1 && (
+          <div className="bar info">
+            Read {d.scanPages} photos as one receipt.{' '}
+            {d.scanMerged ? `${d.scanMerged} repeated ${d.scanMerged === 1 ? 'line was' : 'lines were'} counted once because the photos overlapped.` : 'No overlap was found.'}{' '}
+            Check the list for an item that is missing or repeated.
+          </div>
+        )}
         <div className="row" style={{ gap: 6, marginBottom: 8 }}>
           <input ref={qtyRef} className={`qty${bad === 'qty' ? ' bad' : ''}`} value={qty} inputMode="numeric" aria-label="Quantity" onChange={(e) => { setQty(e.target.value); setBad(null) }} onKeyDown={enter} />
           <input ref={nameRef} className="grow" placeholder="Item name" maxLength={60} aria-label="Item name" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={enter} />
