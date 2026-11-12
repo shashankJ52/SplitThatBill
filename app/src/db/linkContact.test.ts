@@ -71,13 +71,10 @@ describe('linking a placeholder name to a real account', () => {
     await expect(link(ben, ben)).rejects.toThrow(/Only an admin/)
   })
 
-  it('refuses a real member, an unknown account, someone already in the group and a made-up contact', async () => {
+  it('refuses a real member as the placeholder, an unknown account and a made-up contact', async () => {
     await expect(link(ann, ben, ann)).rejects.toThrow(/without an account/)
     await expect(link(ann, randomUUID())).rejects.toThrow(/No such user/)
-    await expect(link(ann, ann)).rejects.toThrow(/already in this group/)
     await expect(link(ann, ben, randomUUID())).rejects.toThrow(/without an account/)
-    await t.as(ann, () => t.sql('select invite_user($1, $2)', [g, ben]))
-    await expect(link(ann, ben)).rejects.toThrow(/already in this group/)
   })
 
   it('works for someone who left the group earlier, and cannot be done twice to the same name', async () => {
@@ -98,5 +95,68 @@ describe('linking a placeholder name to a real account', () => {
     })
     await link(ann, ben)
     expect((await one('select user_id from members where group_id = $1 and person_id = $2', [g2, sam])).user_id).toBeNull()
+  })
+})
+
+describe('matching a placeholder to someone who is already in the group', () => {
+  const dana = randomUUID()
+  const bill = (title: string, people: string[], total: number, payer: string) =>
+    t.as(ann, () => t.sql(`insert into bills (id, group_id, bill_date, token, data) values ($1, $2, '2026-10-22', $3, $4)`, [randomUUID(), g, `tok${randomUUID().replace(/-/g, '')}`, JSON.stringify({ title, total, people, payer, shares: Object.fromEntries(people.map((p) => [p, total / people.length])), items: [{ id: 1, name: title, price: total, a: { mode: 'even', even: people, por: {} } }] })]))
+  const joinBen = async (how: 'invite' | 'accepted') => {
+    await t.as(ann, () => t.sql('select invite_user($1, $2)', [g, ben]))
+    if (how === 'accepted') await t.as(ben, () => t.sql('select accept_invite($1)', [g]))
+  }
+
+  beforeEach(async () => {
+    await t.as(ann, () => t.sql(`insert into members (group_id, person_id, user_id, display_name, role, status) values ($1, $2, null, 'Dana', 'member', 'active')`, [g, dana]))
+  })
+
+  it('moves the placeholder’s bills and payments to the member and removes the placeholder, leaving the other placeholder alone', async () => {
+    await joinBen('accepted')
+    await link(ann, ben)
+    const rows = await t.sql('select person_id, status from members where group_id = $1 order by display_name', [g])
+    expect(rows.map((r) => r.person_id)).toEqual(expect.arrayContaining([ann, ben, dana]))
+    expect(rows.some((r) => r.person_id === sam)).toBe(false)
+    expect((await one('select status from members where group_id = $1 and person_id = $2', [g, ben])).status).toBe('active') // unchanged
+    const b = (await one('select data::text as d from bills where group_id = $1', [g])).d as string
+    expect(b).not.toContain(sam)
+    expect(JSON.parse(b).payer).toBe(ben)
+  })
+
+  it('works for someone who was only invited, without sending a second invite', async () => {
+    await joinBen('invite')
+    const before = (await one('select count(*)::int as n from notifs where user_id = $1', [ben])).n
+    await link(ann, ben)
+    expect((await one('select status from members where group_id = $1 and person_id = $2', [g, ben])).status).toBe('invited')
+    expect((await one('select count(*)::int as n from notifs where user_id = $1', [ben])).n).toBe(before)
+    expect((await one('select data::text as d from payments where group_id = $1', [g])).d).toContain(ben)
+  })
+
+  it('is refused when the two are in the same bill, and nothing changes', async () => {
+    await joinBen('accepted')
+    await bill('Shared dinner', [ann, sam, ben], 9000, ann)
+    await expect(link(ann, ben)).rejects.toThrow(/same bill or payment/)
+    expect((await one('select count(*)::int as n from members where group_id = $1 and person_id = $2', [g, sam])).n).toBe(1)
+    expect((await one(`select count(*)::int as n from bills where group_id = $1 and data::text like $2`, [g, `%${sam}%`])).n).toBeGreaterThan(0)
+  })
+
+  it('is refused when one pays the other, because that would be a payment to themselves', async () => {
+    await joinBen('accepted')
+    await t.as(ann, () => t.sql(`insert into payments (id, group_id, pay_date, data) values ($1, $2, '2026-10-23', $3)`, [randomUUID(), g, JSON.stringify({ from: sam, to: ben, amt: 300, date: '2026-10-23' })]))
+    await expect(link(ann, ben)).rejects.toThrow(/same bill or payment/)
+  })
+
+  it('still needs an admin', async () => {
+    await joinBen('accepted')
+    await expect(link(ben, ben)).rejects.toThrow(/Only an admin/)
+  })
+
+  it('two placeholders can be matched to two different people one after the other', async () => {
+    await joinBen('accepted')
+    await t.as(ann, () => t.sql('select invite_user($1, $2)', [g, cat]))
+    await link(ann, ben)
+    await link(ann, cat, dana)
+    const ids = (await t.sql('select person_id from members where group_id = $1', [g])).map((r) => r.person_id)
+    expect(ids.sort()).toEqual([ann, ben, cat].sort())
   })
 })

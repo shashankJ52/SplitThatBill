@@ -25,6 +25,8 @@ export function LinkContactSheet({ pid, close }: { pid: string; close: () => voi
   const [busy, setBusy] = useState(false)
   const person = s.people[pid]
   const targets = linkTargets(s, pid)
+  // in how many of those places the person is already a member or invited (their bills are then combined, with no new invite)
+  const alreadyIn = found ? targets.filter((id) => { const g = s.ledgers.find((l) => l.id === id); return !!g && (g.members.includes(found.id) || !!g.invited?.includes(found.id)) }).length : 0
   if (!account || !person) return <p className="mute">This is not available right now.</p>
 
   const find = async () => {
@@ -52,7 +54,7 @@ export function LinkContactSheet({ pid, close }: { pid: string; close: () => voi
     if (problems.length === targets.length) return setErr(problems[0])
     // keep them in your people list, then let the sheet go: the invite and the rewritten bills have already been reloaded
     store.update((st) => A.rememberFriend(st, found))
-    toast(problems.length ? `Linked in some places. ${problems[0]}` : `${person.name} is now ${found.name}. They have been invited.`)
+    toast(problems.length ? `Linked in some places. ${problems[0]}` : alreadyIn === targets.length ? `${person.name} is now ${found.name}` : `${person.name} is now ${found.name}. They have been invited.`)
     close()
   }
 
@@ -76,7 +78,12 @@ export function LinkContactSheet({ pid, close }: { pid: string; close: () => voi
             <div className="grow"><b>{found.name}</b> <span className="pill">@{found.tag}</span></div>
           </div>
           <p className="mute" style={{ margin: '8px 0' }}>
-            Link {person.name} to {found.name} in {targets.length === 1 ? `${ledgerName(s, s.ledgers.find((l) => l.id === targets[0])!)}` : `${targets.length} groups and splits`}? {found.name} gets an invite and can see the group after accepting.
+            Link {person.name} to {found.name} in {targets.length === 1 ? `${ledgerName(s, s.ledgers.find((l) => l.id === targets[0])!)}` : `${targets.length} groups and splits`}?{' '}
+            {alreadyIn === targets.length
+              ? `${found.name} is already there, so no invite is needed: everything entered for ${person.name} simply becomes ${found.name}'s.`
+              : alreadyIn > 0
+                ? `Where ${found.name} is already in, everything for ${person.name} becomes theirs. Elsewhere they get an invite and can see it after accepting.`
+                : `${found.name} gets an invite and can see the group after accepting.`}
           </p>
           <button className="primary" disabled={busy || targets.length === 0} onClick={() => void link()}>{busy ? 'Linking…' : `Link to ${found.name}`}</button>
         </div>

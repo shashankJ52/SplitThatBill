@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as A from '../data/actions'
 import { useAccount } from '../data/account'
 import { useAppState, useStore } from '../data/store'
-import { isAdmin, isOwner, isShared, memberActions, memberLines, myRole, removalCheck, writeOffPayments, type MemberLine } from '../domain/membership'
+import { isAdmin, isOwner, isShared, memberActions, memberLines, myRole, placeholdersIn, removalCheck, writeOffPayments, type MemberLine } from '../domain/membership'
 import { currencyLabel } from '../domain/currency'
 import { currencyOf, ledgerById, letterOf, personName } from '../domain/selectors'
 import { CurrencyPicker } from '../ui/CurrencyPicker'
@@ -19,6 +19,7 @@ import { GroupSheet } from './GroupSheet'
 import { FindFriend } from '../ui/FindFriend'
 import { CloseIcon } from '../ui/icons'
 import { LinkContactSheet } from './LinkContactSheet'
+import { MatchPlaceholderSheet } from './MatchPlaceholderSheet'
 import { PaySheet } from './PaySheet'
 
 const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member' } as const
@@ -46,6 +47,9 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
   const admin = isAdmin(l)
   const owner = isOwner(l)
   const lines = memberLines(s, l)
+  // placeholder names an admin could match a real person to
+  const hasNames = admin && placeholdersIn(s, l).length > 0
+  const match = (pid: string, join = false) => sheet.open(join ? 'Who is this?' : 'Match to a name', (c) => <MatchPlaceholderSheet gid={gid} pid={pid} join={join} close={c} />)
   const link = l.inviteCode ? `${window.location.origin}/join/${l.inviteCode}` : null
   const name = l.name ?? '1-1 split'
 
@@ -152,6 +156,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
                 {m.role !== 'member' && <span className="pill">{ROLE_LABEL[m.role]}</span>}
                 <div className="mute">{m.net > 0 ? `is owed ${fmt(m.net)}` : m.net < 0 ? `owes ${fmt(-m.net)}` : 'settled up'}</div>
               </div>
+ {hasNames && !m.contact && !m.isYou && <button className="linkbtn" disabled={busy} onClick={() => match(m.pid)}>Match to a name</button>}
               {admin && m.contact && <button className="linkbtn" disabled={busy} onClick={() => sheet.open('Link to an account', (c) => <LinkContactSheet pid={m.pid} close={c} />)}>Link to account</button>}
               {a.promote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'admin'), `${m.name} is now an admin`)}>Make admin</button>}
               {a.demote && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.setRole(gid, m.pid, 'member'), `${m.name} is a member again`)}>Remove admin</button>}
@@ -168,9 +173,24 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
             <b>{personName(s, p)}</b> <span className="pill">invited</span>
             <div className="mute">Waiting to accept{(nets(l)[p] ?? 0) !== 0 && ` · ${(nets(l)[p] ?? 0) < 0 ? 'owes' : 'is owed'} ${fmt(Math.abs(nets(l)[p] ?? 0))}`}</div>
           </div>
+          {hasNames && <button className="linkbtn" disabled={busy} onClick={() => match(p)}>Match to a name</button>}
           {admin && <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.removeMember(gid, p), 'Invite cancelled')}>Cancel</button>}
         </div>
       ))}
+
+      {admin && (l.former ?? []).filter((p) => s.people[p]?.user).map((p) => {
+        const n = nets(l)[p] ?? 0
+        return (
+          <div className="row" style={{ padding: '6px 0' }} key={p}>
+            <Avatar pid={p} size={32} />
+            <div className="grow">
+              <b>{personName(s, p)}</b> <span className="pill">left</span>
+              <div className="mute">Left or declined{n !== 0 && ` · ${n < 0 ? 'owes' : 'is owed'} ${fmt(Math.abs(n))}`}</div>
+            </div>
+            <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.invite(gid, p), `Invite sent to ${personName(s, p)}`)}>Invite again</button>
+          </div>
+        )
+      })}
 
       {admin && (
         <>
@@ -190,7 +210,7 @@ export function GroupManageSheet({ gid, close }: { gid: string; close: () => voi
                 <b>{r.name}</b> {r.tag && <span className="pill">@{r.tag}</span>}
                 <div className="mute">Opened the group link</div>
               </div>
-              <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.decideJoin(gid, r.pid, true), `${r.name} joined`)}>Approve</button>
+              <button className="linkbtn" disabled={busy} onClick={() => (hasNames ? match(r.pid, true) : void act(() => account.decideJoin(gid, r.pid, true), `${r.name} joined`))}>Approve</button>
               <button className="linkbtn" disabled={busy} onClick={() => void act(() => account.decideJoin(gid, r.pid, false), 'Request declined')}>Deny</button>
             </div>
           ))}

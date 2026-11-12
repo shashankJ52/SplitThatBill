@@ -64,6 +64,14 @@ export interface MemberLine {
   net: Cents
 }
 
+/**
+ * The names in this group that have no account (placeholders), which an admin can match to a real person who has joined.
+ * Excludes you, and anyone who has an account.
+ */
+export function placeholdersIn(s: AppState, l: AppLedger): PersonId[] {
+  return l.members.filter((p) => p !== ME && !s.people[p]?.user)
+}
+
 /** Who to list under People in group settings: you first, then the rest in the order they joined. */
 export function memberLines(s: AppState, l: AppLedger): MemberLine[] {
   return l.members.map((p) => ({

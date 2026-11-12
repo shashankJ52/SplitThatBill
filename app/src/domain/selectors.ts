@@ -1,4 +1,4 @@
-import { involves, myNet, overall, pairNet, paidMap, transfers, type Cents, type PersonId } from '../money'
+import { involves, myNet, nets, overall, pairNet, paidMap, transfers, type Cents, type PersonId } from '../money'
 import { currencyOr } from './currency'
 import type { AppBill, AppLedger, AppState, Notif, NoteList } from './types'
 import { ME } from './types'
@@ -6,13 +6,22 @@ import { mAdd, nowKey } from './util'
 
 export const realGroups = (s: AppState) => s.ledgers.filter((l) => l.kind === 'group')
 /**
- * Everyone who counts as being in a group: its members, and anyone invited who has not accepted yet. An invited person is
- * still part of the group for showing balances and for splitting new bills, so linking a name to an account (or inviting
- * someone) never makes them disappear before they accept.
+ * Who a new bill in this group can include: its members, and anyone invited who has not accepted yet. An invited person is
+ * still part of the group for splitting, so linking a name to an account (or inviting someone) never makes them disappear.
  */
-export function shownPeople(l: AppLedger): PersonId[] {
+export function splitPeople(l: AppLedger): PersonId[] {
   const out = l.members.slice()
   for (const p of l.invited ?? []) if (!out.includes(p)) out.push(p)
+  return out
+}
+/**
+ * Who to show on a group's balances and charts: those people, plus anyone who left or declined but still owes or is owed
+ * something in it. Their money does not stop counting because they went, so they stay on screen until it is settled.
+ */
+export function shownPeople(l: AppLedger): PersonId[] {
+  const out = splitPeople(l)
+  const owed = nets(l)
+  for (const p of l.former ?? []) if (!out.includes(p) && (owed[p] ?? 0) !== 0) out.push(p)
   return out
 }
 export const ledgerById = (s: AppState, id: string) => s.ledgers.find((l) => l.id === id)

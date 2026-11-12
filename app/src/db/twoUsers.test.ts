@@ -9,8 +9,8 @@ import * as A from '../data/actions'
 import { createCloudRepository, type CloudRepository } from '../data/cloud/cloudRepository.ts'
 import { makeBill } from '../domain/bills'
 import { billWithCredit } from '../domain/draft'
-import { linkTargets, pendingInvites } from '../domain/membership'
-import { alertTarget, findBill, pairBalance, personalLedger, personName, shownPeople } from '../domain/selectors'
+import { linkTargets, pendingInvites, placeholdersIn } from '../domain/membership'
+import { alertTarget, findBill, pairBalance, personalLedger, personName, shownPeople, splitPeople } from '../domain/selectors'
 import type { AppBill, AppLedger, AppState, Comment, NoteList } from '../domain/types'
 import { ME } from '../domain/types'
 import { nets, transfers } from '../money'
@@ -445,3 +445,86 @@ describe('what a signed-in person could try directly against the database', () =
     await expect(as(ben, 'select admin_users()')).rejects.toThrow()
   })
 })
+
+describe('two placeholders, one linked by tag, one matched after joining by the group link', () => {
+  async function twoNames() {
+    const a = await Client.open(ann)
+    const sam = randomUUID()
+    const dana = randomUUID()
+    const g = randomUUID()
+    await a.do((s) => ({ ...s, people: { ...s.people, [sam]: { id: sam, name: 'Sam', user: false }, [dana]: { id: dana, name: 'Dana', user: false } } }))
+    await a.do((s) => A.createGroup(s, group(g, 'Flat', [ME, sam, dana])))
+    await a.do((s) => A.addBill(s, g, bill('Pizza', ME, [ME, sam, dana], 9000)))
+    await a.do((s) => A.addBill(s, g, bill('Taxi', ME, [ME, sam], 3000)))
+    await a.do((s) => A.addBill(s, g, bill('Cinema', ME, [ME, dana], 4000)))
+    await a.settle()
+    return { a, g, sam, dana }
+  }
+
+  it('both end up as real people, keep their own bills, and the totals never change', async () => {
+    const { a, g, sam, dana } = await twoNames()
+    const before = nets(a.ledger('Flat'))
+    expect(placeholderCount(a)).toBe(2)
+
+    // Sam is linked to Ben by tag: Ben is invited and accepts
+    await a.rpc('select link_contact($1, $2, $3)', [g, sam, ben])
+    const b = await Client.open(ben)
+    await b.rpc('select accept_invite($1)', [g])
+
+    // Cat opens the group link, the admin approves, and then says this is Dana
+    const code = a.ledger('Flat').inviteCode as string
+    const c = await Client.open(cat)
+    await c.rpc('select request_join($1)', [code])
+    await a.reload()
+    await a.rpc('select decide_join($1, $2, true)', [g, cat])
+    expect(a.ledger('Flat').members).toContain(cat)
+    expect(placeholderCount(a)).toBe(1) // only Dana is left as a name
+    await a.rpc('select link_contact($1, $2, $3)', [g, dana, cat])
+
+    const after = nets(a.ledger('Flat'))
+    expect(after[ben]).toBe(before[sam])
+    expect(after[cat]).toBe(before[dana])
+    expect(after[sam]).toBeUndefined()
+    expect(after[dana]).toBeUndefined()
+    expect(sum(after)).toBe(0)
+    expect(placeholderCount(a)).toBe(0)
+    await Promise.all([b.reload(), c.reload()])
+    expect(nets(b.ledger('Flat'))[ME]).toBe(before[sam])
+    expect(nets(c.ledger('Flat'))[ME]).toBe(before[dana])
+    expect(b.ledger('Flat').bills.map((x) => x.title).sort()).toEqual(['Cinema', 'Pizza', 'Taxi'])
+  })
+
+  it('a person who is both a joiner and in a shared bill with the placeholder cannot be merged by accident', async () => {
+    const { a, g, sam } = await twoNames()
+    // Ben joins by invite, then Ann splits a new bill with both Sam and Ben
+    await a.edit((s) => A.rememberFriend(s, { id: ben, name: 'Ben Ray', tag: 'ben' }))
+    await a.rpc('select invite_user($1, $2)', [g, ben])
+    const b = await Client.open(ben)
+    await b.rpc('select accept_invite($1)', [g])
+    await a.reload()
+    await a.do((s) => A.addBill(s, g, bill('Everyone', ME, [ME, sam, ben], 6000)))
+    await expect(t.as(ann, () => t.sql('select link_contact($1, $2, $3)', [g, sam, ben]))).rejects.toThrow(/same bill or payment/)
+    await a.reload()
+    expect(a.ledger('Flat').members).toContain(sam) // nothing changed
+  })
+
+  it('someone linked and then declining stays on the balances, and can be invited again', async () => {
+    const { a, g, sam } = await twoNames()
+    await a.rpc('select link_contact($1, $2, $3)', [g, sam, ben])
+    const b = await Client.open(ben)
+    await b.rpc('select decline_invite($1)', [g])
+    await a.reload()
+    const l = a.ledger('Flat')
+    expect(l.former).toContain(ben)
+    expect(shownPeople(l)).toContain(ben) // still owed money, so still shown
+    expect(splitPeople(l)).not.toContain(ben)
+    await a.rpc('select invite_user($1, $2)', [g, ben])
+    expect(a.ledger('Flat').invited).toContain(ben)
+    expect(splitPeople(a.ledger('Flat'))).toContain(ben)
+    await b.reload()
+    await b.rpc('select accept_invite($1)', [g])
+    expect(b.ledger('Flat').bills.map((x) => x.title)).toContain('Taxi')
+  })
+})
+
+const placeholderCount = (c: Client) => placeholdersIn(c.s, c.ledger('Flat')).length

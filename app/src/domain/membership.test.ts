@@ -3,8 +3,8 @@ import { makeBill } from './bills'
 import { emptyState } from './seed'
 import type { AppLedger, AppState } from './types'
 import { ME } from './types'
-import { shownPeople } from './selectors'
-import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, linkTargets, memberActions, memberLines, myRole, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
+import { shownPeople, splitPeople } from './selectors'
+import { balanceWith, deletionPlan, handoverCandidates, isAdmin, isOwner, linkTargets, memberActions, memberLines, myRole, placeholdersIn, pendingInvites, reminderRoute, removalCheck, writeOffPayments } from './membership'
 import { balanceOf } from './membership'
 import { nets } from '../money'
 
@@ -216,5 +216,32 @@ describe('people who count as being in a group', () => {
     const { l } = setup({ members: [ME, A], invited: [A] })
     expect(shownPeople(l)).toEqual([ME, A])
     expect(shownPeople(setup().l)).toEqual([ME, A, SAM])
+  })
+})
+
+describe('who a new bill can include, and who stays on the balances', () => {
+  it('a new bill includes members and invited people, but not someone who left', () => {
+    const left = '77777777-7777-4777-8777-777777777777'
+    const { l } = setup({ members: [ME, A], invited: [SAM], former: [left] })
+    expect(splitPeople(l)).toEqual([ME, A, SAM])
+  })
+  it('someone who left or declined stays on the balances while they still owe or are owed, and goes once settled', () => {
+    const left = '77777777-7777-4777-8777-777777777777'
+    const owing = setup({ members: [ME, A], former: [left], bills: [bill(ME, [ME, A, left])] })
+    expect(shownPeople(owing.l)).toEqual([ME, A, left])
+    expect(splitPeople(owing.l)).toEqual([ME, A])
+    const settled = setup({ members: [ME, A], former: [left], bills: [] })
+    expect(shownPeople(settled.l)).toEqual([ME, A])
+  })
+})
+
+describe('placeholders an admin could match a person to', () => {
+  it('are the members without an account, never you or anyone with one', () => {
+    const { s, l } = setup()
+    expect(placeholdersIn(s, l)).toEqual([SAM])
+  })
+  it('are none when everyone has an account', () => {
+    const { s, l } = setup({ members: [ME, A] })
+    expect(placeholdersIn(s, l)).toEqual([])
   })
 })
