@@ -135,7 +135,7 @@ function drawSign(m: ExportModel, ink: Ink, showLink: boolean, doc = false): Dra
   font(x, g.plate, 700)
   text(x, fmt(m.total, m.currency), 64, y + g.plate * 0.93, ink.fg)
   font(x, 32, 400)
-  text(x, m.people.length > 1 ? `split ${m.people.length} ways` : '', W - 64, y + g.plate * 0.9, ink.mute, 'right')
+  text(x, m.ways > 1 ? `split ${m.ways} ways` : '', W - 64, y + g.plate * 0.9, ink.mute, 'right')
   y += g.plateH
   x.fillStyle = ink.fg
   x.fillRect(64, y, W - 128, 8)
@@ -351,7 +351,7 @@ function drawSquare(m: ExportModel, ink: Ink, showLink: boolean): Drawn {
   font(x, 210, 700)
   text(x, fmt(m.total, m.currency), pad - 6, pad + 300, ink.fg)
   font(x, 34, 400)
-  const sub = [m.paidBy ? `Paid by ${m.paidBy}` : '', m.people.length > 1 ? `split ${m.people.length} ways` : '', m.groupName].filter(Boolean).join(' · ')
+  const sub = [m.paidBy ? `Paid by ${m.paidBy}` : '', m.ways > 1 ? `split ${m.ways} ways` : '', m.groupName].filter(Boolean).join(' · ')
   text(x, fit(x, sub, W - pad * 2), pad, pad + 360, ink.mute)
 
   // whoever paid comes first, marked as having paid, then everyone who owes

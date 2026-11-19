@@ -39,6 +39,8 @@ export interface ExportModel {
   /** who paid and how much, biggest first (one person, or several when the bill was paid together) */
   payers: { person: ExportPerson; paid: Cents }[]
   people: ExportPerson[]
+  /** how many people the bill is really split between: those with a share or who paid (not everyone listed on it) */
+  ways: number
   /** empty when the whole bill was split by custom amounts instead of item by item */
   lines: ExportLine[]
   extras: ExportExtra[]
@@ -108,6 +110,7 @@ export function buildExportModel(s: AppState, b: ShareBill, opts: { groupName: s
     paidBy: payerNames.join(' & '),
     payers,
     people,
+    ways: c.rows.filter((r) => r.total > 0 || (pm[r.p] ?? 0) > 0).length,
     lines,
     extras,
     settle,

@@ -87,3 +87,24 @@ describe('extra discounts on a picture', () => {
     expect(m.total).toBe(8500)
   })
 })
+
+describe('how many ways a bill is split', () => {
+  it('counts people who have a share or paid, not everyone listed on the bill (an invited person with no items is not a way)', () => {
+    const s = emptyState({ name: 'Ann', email: 'a@b.co', tag: 'ann' }, '')
+    const b = makeBill({
+      id: 'b', title: 'Groceries', date: '2026-10-20', payer: 'sagar', by: ME, rt: 10000, people: [ME, 'sagar', 'ajith', 'sumit'],
+      items: [{ id: 1, name: 'Food', qty: 1, price: 10000, a: { mode: 'even', even: [ME, 'sagar', 'ajith'], por: {} } }],
+    })
+    const m = buildExportModel(s, b, { groupName: 'JANS', currency: 'USD', link: null })
+    expect(m.people).toHaveLength(4)
+    expect(m.ways).toBe(3)
+  })
+  it('counts a person who only paid', () => {
+    const s = emptyState({ name: 'Ann', email: 'a@b.co', tag: 'ann' }, '')
+    const b = makeBill({
+      id: 'b', title: 'Gift', date: '2026-10-20', payer: 'sagar', by: ME, rt: 5000, people: [ME, 'sagar'],
+      items: [{ id: 1, name: 'Gift', qty: 1, price: 5000, a: { mode: 'even', even: [ME], por: {} } }],
+    })
+    expect(buildExportModel(s, b, { groupName: null, currency: 'USD', link: null }).ways).toBe(2)
+  })
+})
