@@ -18,6 +18,7 @@ import { useTheme } from '../ui/useTheme'
 import { uid } from '../domain/util'
 import { useNavigate } from 'react-router-dom'
 import { ChevronIcon } from '../ui/icons'
+import { AuditSheet } from '../sheets/AuditSheet'
 
 export function AccountTab() {
   const s = useAppState()
@@ -124,6 +125,10 @@ export function AccountTab() {
         <Fold id="invite" title="Invite friends" summary={`@${p.tag}`} open={unfolded === 'invite'} onToggle={toggleFold}>
           <button className="primary" onClick={share}>Share my tag @{p.tag}</button>
           <p className="mute">Friends can add you by your tag. Share the app link at the same time.</p>
+        </Fold>
+ <Fold id="check" title="Check my numbers" summary="Every bill" open={unfolded === 'check'} onToggle={toggleFold}>
+          <button className="secondary" onClick={() => sheet.open('Check my numbers', (close) => <AuditSheet close={close} />)}>Check every bill and payment</button>
+          <p className="mute">Recomputes each bill from its items and checks that shares, payments and balances all add up. It only reads; nothing changes.</p>
         </Fold>
         {!live && (
           <Fold id="demo" title="Demo tools" summary="Sample data" open={unfolded === 'demo'} onToggle={toggleFold}>

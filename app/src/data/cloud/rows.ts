@@ -1,6 +1,7 @@
 import type { PersonId } from '../../money/types'
 import type { Layout, AppBill, AppLedger, AppPayment, AppState, JoinRequest, Notif, NoteList, Person, Profile, Role, SentReminder } from '../../domain/types'
 import { ME } from '../../domain/types'
+import { refreshBill } from '../../domain/bills'
 
 /**
  * Converting between the app's state and the shared database. Pure functions, so they are easy to test.
@@ -83,6 +84,19 @@ export class Positions {
 }
 
 // ---------- database -> app ----------
+/**
+ * The total and shares saved with a bill are only a copy, so work them out again when the bill is loaded. A bill that is
+ * missing the parts a calculation needs is left exactly as it was stored: one odd row must never stop the app from loading.
+ */
+export function freshOrAsStored(b: AppBill): AppBill {
+  const usable = Array.isArray(b.people) && Array.isArray(b.items) && Array.isArray(b.extras) && typeof b.rt === 'number'
+  if (!usable) return b
+  try {
+    return refreshBill(b)
+  } catch {
+    return b
+  }
+}
 const ts = (iso: string) => Date.parse(iso) || 0
 const byCreated = <T extends { created_at?: string; id?: string }>(a: T, b: T) => (a.created_at ?? '').localeCompare(b.created_at ?? '') || (a.id ?? '').localeCompare(b.id ?? '')
 
@@ -126,7 +140,7 @@ export function fromLoaded(l: Loaded, pos: Positions): AppState {
       ? l.requests.filter((r) => r.group_id === g.id).map((r) => ({ pid: r.user_id, name: profileOf.get(r.user_id)?.name ?? 'Someone', tag: profileOf.get(r.user_id)?.tag, ts: ts(r.created_at) }))
       : []
 
-    const bills: AppBill[] = l.bills.filter((b) => b.group_id === g.id).sort(byCreated).map((b) => ({
+    const bills: AppBill[] = l.bills.filter((b) => b.group_id === g.id).sort(byCreated).map((b) => freshOrAsStored({
       ...(t(b.data) as unknown as AppBill),
       id: b.id,
       by: t(b.created_by),

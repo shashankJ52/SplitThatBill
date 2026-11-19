@@ -103,6 +103,12 @@ export const Review = withDraft(function Review({ d }: { d: D.Draft }) {
               <>
                 ⚠ Items + tax + tip{dc ? ' − discount' : ''} = {fmt(sum)}, receipt says {fmt(d.rt)} (off by {fmt(Math.abs(sum - d.rt))}). Fix an item or{' '}
                 <button type="button" className="linkbtn" onClick={() => set(D.acceptSum)}>use {fmt(sum)}</button>
+                {D.missingDiscount(d) > 0 && (
+                  <>
+                    {' '}or{' '}
+                    <button type="button" className="linkbtn" onClick={() => set(D.countGapAsDiscount)}>count the {fmt(D.missingDiscount(d))} as a discount</button>
+                  </>
+                )}
               </>
             )}
           </div>

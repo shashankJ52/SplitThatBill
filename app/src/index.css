@@ -440,3 +440,22 @@ button.secondary.roundbtn{width:var(--icon-btn);height:var(--icon-btn);padding:0
 .page-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
 .page .mv{flex:none;width:var(--icon-btn);height:var(--icon-btn);border-radius:50%;border:2px solid var(--line);background:none;color:var(--fg);display:grid;place-items:center;font-size:16px;cursor:pointer;padding:0}
 .page .mv:disabled{opacity:.3;cursor:default}
+
+/* the numbers check */
+.audit>summary{cursor:pointer;list-style:none}
+.audit>summary::-webkit-details-marker{display:none}
+.audit-lines{margin-top:8px}
+.audit-line{padding:8px 0;border-top:1px solid var(--line)}
+.audit-mark{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--green-t);color:#000}
+.audit-line.err .audit-mark{background:var(--red-b);color:#fff}
+.audit-detail{margin:2px 0 0 32px;font-size:13px}
+.audit-problem{margin:4px 0 0 32px;font-size:13px;color:var(--red-t)}
+.audit-problem.warn{color:var(--mute)}
+.pill.bad{background:var(--red-b);color:#fff}
+
+/* the items of a bill, folded away until wanted */
+h2.ifold-h{margin:22px 0 10px}
+.ifold{display:flex;align-items:center;gap:10px;width:100%;padding:0;background:none;border:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;text-align:left}
+.ifold-sum{margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;font-size:14px}
+.ifold .chev{width:auto;font-size:18px}
+.seg.s2{margin:0 0 10px}

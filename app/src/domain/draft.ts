@@ -313,6 +313,17 @@ export function setItemPe(d: Draft, id: number, m: 'total' | 'each'): { d: Draft
 }
 
 export const acceptSum = (d: Draft): Draft => ({ ...d, rt: itemsPlusFees(d) })
+/**
+ * When the printed total is lower than the items, tax and tip, the gap is usually a discount line that was not picked up.
+ * How much that would be, or 0 when the total is not lower. Always the app's own arithmetic, applied only when asked.
+ */
+export const missingDiscount = (d: Draft): number => (d.manual || d.fixed ? 0 : Math.max(0, itemsSum(d.items) + d.tax + d.tip - discCents(d) - d.rt))
+/** Count that gap as part of the discount, so the items and the printed total agree. */
+export function countGapAsDiscount(d: Draft): Draft {
+  const gap = missingDiscount(d)
+  if (!gap) return d
+  return keep({ ...d, disc: { m: 'amt', v: discCents(d) + gap } })
+}
 
 // ---------- assigning ----------
 const toggle = (a: PersonId[], p: PersonId) => (a.includes(p) ? a.filter((x) => x !== p) : [...a, p])

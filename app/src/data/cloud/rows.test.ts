@@ -4,7 +4,7 @@ import type { AppLedger, AppState } from '../../domain/types'
 import { ME } from '../../domain/types'
 import { emptyState } from '../../domain/seed'
 import { uid } from '../../domain/util'
-import { diff, emptySynced, fromLoaded, markSynced, Positions, stable, swapId, toSnapshot, type Loaded } from './rows'
+import { diff, emptySynced, freshOrAsStored, fromLoaded, markSynced, Positions, stable, swapId, toSnapshot, type Loaded } from './rows'
 
 const USER = '11111111-1111-4111-8111-111111111111'
 const OTHER = '22222222-2222-4222-8222-222222222222'
@@ -151,5 +151,37 @@ describe('people you found by @tag', () => {
       profiles: [{ id: OTHER, name: 'Sumit R', tag: 'sumitgamer' } as never],
     }
     expect(fromLoaded(l, new Positions()).people[OTHER]).toMatchObject({ name: 'Sumit R', tag: 'sumitgamer' })
+  })
+})
+
+describe('the totals saved with a bill', () => {
+  it('are only a copy: when a bill is loaded its total and shares are worked out again, so a stale copy never reaches a screen', () => {
+    const gid = uid()
+    const data = {
+      title: 'Dinner', date: '2026-10-20', loc: '', cat: 'Eating out', notes: '', payer: USER, paid: null, tax: 0, tip: 0, disc: null, fixed: null,
+      extras: [], guests: {}, people: [USER, OTHER], rt: 8000,
+      items: [{ id: 1, name: 'Food', qty: 1, price: 8000, a: { mode: 'even', even: [USER, OTHER], por: {} } }],
+      // what an older version might have saved: wrong
+      total: 5000, shares: { [USER]: 1, [OTHER]: 2 },
+    }
+    const l: Loaded = {
+      userId: USER, profile, prefs: null,
+      groups: [{ id: gid, kind: 'group', name: 'Flat', color: null, simplify: true, owner_id: USER, invite_code: null, created_at: '2026-10-20T00:00:00Z' }],
+      members: [{ group_id: gid, person_id: USER, user_id: USER, display_name: 'Ann', role: 'owner', status: 'active', created_at: '2026-10-20T00:00:00Z', joined_at: null } as never],
+      profiles: [], requests: [], bills: [{ id: uid(), group_id: gid, created_by: USER, bill_date: '2026-10-20', token: 'tokentokentoken1', data: data as never, created_at: '2026-10-20T00:00:01Z' }],
+      comments: [], payments: [], lists: [], listItems: [], notes: [], notifs: [], sent: [],
+    }
+    const b = fromLoaded(l, new Positions()).ledgers[0].bills[0]
+    expect(b.total).toBe(8000)
+    expect(Object.values(b.shares).sort()).toEqual([4000, 4000])
+  })
+})
+
+describe('loading a bill that is missing parts', () => {
+  it('leaves it exactly as stored instead of failing, so one odd row cannot stop the app loading', () => {
+    const odd = { id: 'b', title: 'Old', total: 1000, shares: {}, items: [], comments: [], by: 'me', token: 'x' } as never
+    expect(freshOrAsStored(odd)).toBe(odd)
+    const bad = { id: 'b', title: 'Bad', people: ['me'], items: [{ id: 1, name: 'x', qty: 1, price: 100 }], extras: [], rt: 100, total: 1, shares: {} } as never
+    expect(() => freshOrAsStored(bad)).not.toThrow()
   })
 })

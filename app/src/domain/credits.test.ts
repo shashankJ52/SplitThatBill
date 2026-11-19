@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { creditLines, myNet, nets } from '../money'
-import { loadScan, startManual, addCredit, billWithCredit, canContinue, draftFromBill, grandTotal, newDraft, removeCredit, setCreditMode, setCreditName, setCreditValue, toBill } from './draft'
+import { countGapAsDiscount, missingDiscount, reconciles, loadScan, startManual, addCredit, billWithCredit, canContinue, draftFromBill, grandTotal, newDraft, removeCredit, setCreditMode, setCreditName, setCreditValue, toBill } from './draft'
 import { makeBill } from './bills'
 import { seedState } from './seed'
 import type { AppLedger, Comment } from './types'
@@ -131,5 +131,31 @@ describe('a receipt read from several photos', () => {
     const typed = startManual(loadScan(base(), scan, 3))
     expect(typed.scanPages).toBeUndefined()
     expect(typed.scanMerged).toBeUndefined()
+  })
+})
+
+describe('a printed total lower than the items', () => {
+  const scan = { merchant: 'Uber Eats', location: '', category: 'Groceries', date: '', items: [{ name: 'A', qty: 1, cents: 15000 }, { name: 'B', qty: 1, cents: 3371 }], tax: 0, tip: 1629, discount: 0, total: 10000, mergedLines: 0, hidden: [] }
+  const base = () => newDraft(s0, { id: 'b', token: 't', date: '2026-10-19' }, 'g:g1')
+
+  it('works out the missing discount from the numbers, and counts it only when asked', () => {
+    const d = loadScan(base(), scan)
+    expect(reconciles(d)).toBe(false)
+    expect(missingDiscount(d)).toBe(10000)
+    expect(d.disc).toBeNull() // nothing was changed on its own
+    const fixed = countGapAsDiscount(d)
+    expect(fixed.disc).toEqual({ m: 'amt', v: 10000 })
+    expect(reconciles(fixed)).toBe(true)
+    expect(missingDiscount(fixed)).toBe(0)
+  })
+  it('adds to a discount that was already read instead of replacing it', () => {
+    const d = loadScan(base(), { ...scan, discount: 2500 })
+    expect(missingDiscount(d)).toBe(7500)
+    expect(countGapAsDiscount(d).disc).toEqual({ m: 'amt', v: 10000 })
+  })
+  it('offers nothing when the total is higher than the items, or already matches', () => {
+    expect(missingDiscount(loadScan(base(), { ...scan, total: 25000 }))).toBe(0)
+    expect(missingDiscount(loadScan(base(), { ...scan, discount: 10000 }))).toBe(0)
+    expect(countGapAsDiscount(loadScan(base(), { ...scan, discount: 10000 })).disc).toEqual({ m: 'amt', v: 10000 })
   })
 })
