@@ -1,11 +1,13 @@
 import { allocCents, calc, creditLines, creditsSum, discCents, extrasSum, itemWeights, paidMap, type Extra } from '../money'
+import { useState } from 'react'
 import { useAppState } from '../data/store'
 import { personName } from '../domain/selectors'
 import type { AppBill } from '../domain/types'
 import { pf } from '../domain/util'
 import type { AppLedger } from '../domain/types'
 import { useMoney } from './useMoney'
-import { Avatar } from './bits'
+import { Avatar, Seg } from './bits'
+import { ChevronIcon } from './icons'
 
 export function extraLabel(e: Extra, name: (p: string) => string): string {
   return e.split === 'prop' ? 'split in proportion to items' : e.split === 'even' ? 'split evenly between people with items' : `split between ${e.people.map(name).join(', ')}`
@@ -20,39 +22,91 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
   const pm = paidMap(b, c.total)
   const dc = discCents(b)
   const credits = creditLines(b).filter((l) => l.amt > 0)
+  const [open, setOpen] = useState(false)
+  const [view, setView] = useState<'item' | 'person'>('item')
+  // who had which item: the same split, read by person
+  const byPerson = b.fixed
+    ? []
+    : c.rows
+        .map((r) => ({
+          p: r.p,
+          sub: r.sub,
+          lines: b.items.flatMap((it) => {
+            const w = itemWeights(b, it)
+            if (!w || !(w[r.p] > 0)) return []
+            const g = b.guests[r.p] ?? 0
+            const lab = it.a.mode === 'por' ? `${pf(w[r.p])} ${w[r.p] === 1 ? 'portion' : 'portions'}` : g ? `+${g} guest${g > 1 ? 's' : ''}` : ''
+            return [{ it, cents: allocCents(it.price, w)[r.p], lab }]
+          }),
+        }))
+        .filter((x) => x.lines.length)
+  const itemsTotal = b.items.reduce((a, i) => a + i.price, 0)
   return (
     <>
-      <h2>Items</h2>
-      {b.items.map((it) => {
-        const w = b.fixed ? null : itemWeights(b, it)
-        const parts = w ? allocCents(it.price, w) : {}
-        return (
-          <div className="card" key={it.id} style={{ display: 'block' }}>
-            <div className="row">
-              <div className="grow"><b>{it.qty > 1 ? `${it.qty}× ` : ''}{it.name}</b></div>
-              <b>{fmt(it.price)}</b>
-            </div>
-            {!b.fixed && (
-              <div className="lines" style={{ marginTop: 6 }}>
-                {w ? (
-                  Object.keys(parts).map((p) => {
-                    const g = b.guests[p] ?? 0
-                    const lab = it.a.mode === 'por' ? `${pf(w[p])} ${w[p] === 1 ? 'portion' : 'portions'}` : g ? `+${g} guest${g > 1 ? 's' : ''}` : ''
-                    return (
-                      <div key={p}>
-                        <span>{name(p)}{lab && <span className="mute"> · {lab}</span>}</span>
-                        <span>{fmt(parts[p])}</span>
+      {!b.fixed && (
+        <>
+          <h2 className="ifold-h">
+            <button type="button" className="ifold" aria-expanded={open} aria-controls="bill-items" onClick={() => setOpen(!open)}>
+              <span>Items</span>
+              <span className="ifold-sum">{b.items.length} {b.items.length === 1 ? 'item' : 'items'} · {fmt(itemsTotal)}</span>
+              <span className="chev" aria-hidden="true"><ChevronIcon up={open} /></span>
+            </button>
+          </h2>
+          {open && (
+            <div id="bill-items">
+              <Seg label="Show items" className="s2" value={view} onChange={setView} options={[{ value: 'item', label: 'By item' }, { value: 'person', label: 'By person' }]} />
+              {view === 'item' ? (
+                b.items.map((it) => {
+                  const w = itemWeights(b, it)
+                  const parts = w ? allocCents(it.price, w) : {}
+                  return (
+                    <div className="card" key={it.id} style={{ display: 'block' }}>
+                      <div className="row">
+                        <div className="grow"><b>{it.qty > 1 ? `${it.qty}× ` : ''}{it.name}</b></div>
+                        <b>{fmt(it.price)}</b>
                       </div>
-                    )
-                  })
-                ) : (
-                  <div className="mute">Not fully assigned</div>
-                )}
-              </div>
-            )}
-          </div>
-        )
-      })}
+                      <div className="lines" style={{ marginTop: 6 }}>
+                        {w ? (
+                          Object.keys(parts).map((p) => {
+                            const g = b.guests[p] ?? 0
+                            const lab = it.a.mode === 'por' ? `${pf(w[p])} ${w[p] === 1 ? 'portion' : 'portions'}` : g ? `+${g} guest${g > 1 ? 's' : ''}` : ''
+                            return (
+                              <div key={p}>
+                                <span>{name(p)}{lab && <span className="mute"> · {lab}</span>}</span>
+                                <span>{fmt(parts[p])}</span>
+                              </div>
+                            )
+                          })
+                        ) : (
+                          <div className="mute">Not fully assigned</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                byPerson.map((x) => (
+                  <div className="card" key={x.p} style={{ display: 'block' }}>
+                    <div className="row">
+                      <Avatar pid={x.p} size={28} />
+                      <div className="grow"><b>{name(x.p)}</b></div>
+                      <b>{fmt(x.sub)}</b>
+                    </div>
+                    <div className="lines" style={{ marginTop: 6 }}>
+                      {x.lines.map(({ it, cents, lab }) => (
+                        <div key={it.id}>
+                          <span>{it.qty > 1 ? `${it.qty}× ` : ''}{it.name}{lab && <span className="mute"> · {lab}</span>}</span>
+                          <span>{fmt(cents)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      )}
       {b.fixed && <div className="bar info">The whole bill was split by custom amounts, not item by item.</div>}
       {(b.tax > 0 || b.tip > 0 || dc > 0 || b.extras.length > 0 || credits.length > 0) && (
         <>
@@ -84,8 +138,16 @@ export function BillBreakdown({ bill: b, ledger, forOthers = false }: { bill: Ap
                 {r.ex ? ` · extras ${fmt(r.ex)}` : ''}
                 {r.cr ? ` · extra discounts −${fmt(r.cr)}` : ''}
               </div>
+              {r.total - (pm[r.p] ?? 0) !== 0 && (
+                <div className={`stat ${r.total - (pm[r.p] ?? 0) > 0 ? 'r' : 'g'}`} style={{ textAlign: 'left', marginTop: 2 }}>
+                  {r.total - (pm[r.p] ?? 0) > 0 ? `owes ${fmt(r.total - (pm[r.p] ?? 0))}` : `is owed ${fmt((pm[r.p] ?? 0) - r.total)}`}
+                </div>
+              )}
             </div>
-            <b>{fmt(r.total)}</b>
+            <div style={{ textAlign: 'right' }}>
+              <b>{fmt(r.total)}</b>
+              <div className="mute" style={{ fontSize: 12 }}>their share</div>
+            </div>
           </div>
         )
       })}
